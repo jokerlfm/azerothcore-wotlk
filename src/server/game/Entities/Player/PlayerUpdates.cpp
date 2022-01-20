@@ -422,6 +422,17 @@ void Player::Update(uint32 p_time)
         m_delayed_unit_relocation_timer = 0;
         RemoveFromNotify(NOTIFY_VISIBILITY_CHANGED);
     }
+
+    // lfm auto fish
+    if (fishingDelay > 0)
+    {
+        fishingDelay -= p_time;
+        if (fishingDelay <= 0)
+        {
+            CastSpell(this, 7620, true);
+            fishingDelay = 0;
+        }
+    }
 }
 
 void Player::UpdateMirrorTimers()

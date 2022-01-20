@@ -405,6 +405,9 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
 
     m_isInstantFlightOn = true;
 
+    // lfm auto fish
+    fishingDelay = 0;
+
     sScriptMgr->OnConstructPlayer(this);
 }
 
@@ -822,7 +825,9 @@ int32 Player::getMaxTimer(MirrorTimerType timer)
             {
                 if (!IsAlive() || HasAuraType(SPELL_AURA_WATER_BREATHING) || GetSession()->GetSecurity() >= AccountTypes(sWorld->getIntConfig(CONFIG_DISABLE_BREATHING)))
                     return DISABLED_MIRROR_TIMER;
-                int32 UnderWaterTime = 3 * MINUTE * IN_MILLISECONDS;
+                // lfm classic water breath 
+                //int32 UnderWaterTime = 3 * MINUTE * IN_MILLISECONDS;
+                int32 UnderWaterTime = 1 * MINUTE * IN_MILLISECONDS;
                 AuraEffectList const& mModWaterBreathing = GetAuraEffectsByType(SPELL_AURA_MOD_WATER_BREATHING);
                 for (AuraEffectList::const_iterator i = mModWaterBreathing.begin(); i != mModWaterBreathing.end(); ++i)
                     AddPct(UnderWaterTime, (*i)->GetAmount());

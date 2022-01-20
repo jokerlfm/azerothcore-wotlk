@@ -1042,6 +1042,9 @@ public:
     explicit Player(WorldSession* session);
     ~Player() override;
 
+    // lfm auto fish
+    int fishingDelay;
+
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 
     void AddToWorld() override;

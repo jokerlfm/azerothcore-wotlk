@@ -2441,6 +2441,13 @@ bool Unit::GetMeleeAttackPoint(Unit* attacker, Position& pos)
 
     float x, y, z;
     float distance = meleeReach - GetObjectSize();
+
+    // lfm melee attack closer
+    if (distance > 2.0f)
+    {
+        distance = distance - frand(0.5f, 1.0f);
+    }
+
     GetNearPoint(attacker, x, y, z, distance, 0.0f, absAngle);
 
     if (!GetMap()->CanReachPositionAndGetValidCoords(this, x, y, z, true, true))
