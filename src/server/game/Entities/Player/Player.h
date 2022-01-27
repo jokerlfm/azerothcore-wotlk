@@ -41,6 +41,12 @@
 #include <string>
 #include <vector>
 
+ // lfm ninger
+#include "NingerStrategy_Base.h"
+#include "NingerAction_Base.h"
+class NingerStrategy_Base;
+class NingerAction_Base;
+
 struct CreatureTemplate;
 struct Mail;
 struct TrainerSpell;
@@ -1044,6 +1050,12 @@ public:
 
     // lfm auto fish
     int fishingDelay;
+
+    // lfm ninger
+    std::unordered_map<uint32, NingerStrategy_Base*> strategyMap;
+    uint32 activeStrategyIndex;
+    // 0 dps, 1 tank, 2 healer
+    uint32 groupRole;
 
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 

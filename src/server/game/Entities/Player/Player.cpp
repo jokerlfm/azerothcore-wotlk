@@ -408,6 +408,11 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     // lfm auto fish
     fishingDelay = 0;
 
+    // lfm ninger
+    groupRole = 0;
+    strategyMap.clear();
+    activeStrategyIndex = 0;
+
     sScriptMgr->OnConstructPlayer(this);
 }
 

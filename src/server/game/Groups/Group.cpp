@@ -1584,6 +1584,28 @@ void Group::SetTargetIcon(uint8 id, ObjectGuid whoGuid, ObjectGuid targetGuid)
     BroadcastPacket(&data, true);
 }
 
+// lfm ninger
+uint32 Group::GetTargetIconByGuid(ObjectGuid ogTarget)
+{
+    for (uint32 i = 0; i < TARGETICONCOUNT; ++i)
+    {
+        if (m_targetIcons[i] == ogTarget)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+ObjectGuid Group::GetGuidByTargetIcon(uint32 icon)
+{
+    if (icon >= 0 && icon < TARGETICONCOUNT)
+    {
+        return m_targetIcons[icon];
+    }
+    return ObjectGuid::Empty;
+}
+
 void Group::SendTargetIconList(WorldSession* session)
 {
     if (!session)

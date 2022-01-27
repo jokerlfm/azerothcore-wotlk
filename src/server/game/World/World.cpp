@@ -93,6 +93,9 @@
 #include <boost/asio/ip/address.hpp>
 #include <cmath>
 
+// lfm ninger
+#include "NingerManager.h"
+
 namespace
 {
     TaskScheduler playersSaveScheduler;
@@ -2113,6 +2116,12 @@ void World::SetInitialWorldSettings()
 
     METRIC_EVENT("events", "World initialized", "World initialized in " + std::to_string(startupDuration / 60000) + " minutes " + std::to_string((startupDuration % 60000) / 1000) + " seconds");
 
+    // lfm ninger
+    if (sNingerConfig->StartNinger())
+    {
+        sNingerManager->InitializeManager();
+    }
+
     if (sConfigMgr->isDryRun())
     {
         sMapMgr->UnloadAll();
@@ -2476,6 +2485,9 @@ void World::Update(uint32 diff)
         sMetric->Update();
         METRIC_VALUE("update_time_diff", diff);
     }
+
+    // lfm ninger
+    sNingerManager->UpdateNingerManager(diff);
 }
 
 void World::ForceGameEventUpdate()

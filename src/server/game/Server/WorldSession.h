@@ -244,7 +244,9 @@ class CharacterCreateInfo
     friend class WorldSession;
     friend class Player;
 
-protected:
+    // lfm ninger
+//protected:
+public:
     /// User specified variables
     std::string Name;
     uint8 Race = 0;
@@ -306,6 +308,9 @@ class WorldSession
 public:
     WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime);
     ~WorldSession();
+
+    // lfm ninger
+    bool isNinger;
 
     bool PlayerLoading() const { return m_playerLoading; }
     bool PlayerLogout() const { return m_playerLogout; }

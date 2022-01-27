@@ -8707,6 +8707,36 @@ void ObjectMgr::LoadVendors()
         }
     } while (result->NextRow());
 
+    // lfm vendor
+    VendorItemData& vi16083 = _cacheVendorItemStore[2626];
+    bool has16083 = false;
+    for (VendorItemList::const_iterator i = vi16083.m_items.begin(); i != vi16083.m_items.end(); ++i)
+    {
+        if ((*i)->item == 16083)
+        {
+            has16083 = true;
+        }        
+    }
+    if (!has16083)
+    {
+        vi16083.AddItem(16083, 0, 0, 0);
+        ++count;
+    }
+    VendorItemData& vi16072 = _cacheVendorItemStore[3955];
+    bool has16072 = false;
+    for (VendorItemList::const_iterator i = vi16072.m_items.begin(); i != vi16072.m_items.end(); ++i)
+    {
+        if ((*i)->item == 16072)
+        {
+            has16072 = true;
+        }
+    }
+    if (!has16072)
+    {
+        vi16072.AddItem(16072, 0, 0, 0);
+        ++count;
+    }
+
     LOG_INFO("server.loading", ">> Loaded %d Vendors in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }

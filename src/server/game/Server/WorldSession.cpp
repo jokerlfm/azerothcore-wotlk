@@ -148,6 +148,9 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
         ResetTimeOutTime(false);
         LoginDatabase.PExecute("UPDATE account SET online = 1 WHERE id = %u;", GetAccountId()); // One-time query
     }
+
+    // lfm ninger
+    isNinger = false;
 }
 
 /// WorldSession destructor
@@ -208,6 +211,14 @@ void WorldSession::SendPacket(WorldPacket const* packet)
     if (packet->GetOpcode() == NULL_OPCODE)
     {
         LOG_ERROR("network.opcode", "%s send NULL_OPCODE", GetPlayerInfo().c_str());
+        return;
+    }
+
+    // lfm ninger    
+    if (isNinger)
+    {
+        WorldPacket eachCopy(*packet);
+        sNingerManager->HandlePacket(this, eachCopy);
         return;
     }
 
@@ -287,6 +298,34 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
+    // lfm ninger    
+    if (isNinger)
+    {
+        ProcessQueryCallbacks();
+        if (_player)
+        {
+            if (_player->IsBeingTeleportedNear())
+            {
+                WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
+                pkt << _player->GetPackGUID();
+                pkt << uint32(0); // flags
+                pkt << uint32(0); // time
+                HandleMoveTeleportAck(pkt);
+            }
+            else if (_player->IsBeingTeleportedFar())
+            {
+                HandleMoveWorldportAck();
+                _player->activeStrategyIndex = 0;
+                if (NingerStrategy_Base* ab = _player->strategyMap[_player->activeStrategyIndex])
+                {
+                    ab->Report();
+                }
+            }
+        }
+
+        return true;
+    }
+
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)
