@@ -78,12 +78,12 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     Unit* target = i_target.getTarget();
 
     bool const mutualChase = IsMutualChase(owner, target);
-    // lfm hitbox should be closer 
+    // lfm should be closer 
     //float const hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
     float meleeRange = owner->GetMeleeRange(target);
-    if (meleeRange > 2.0f)
+    if (meleeRange > 2.5f)
     {
-        meleeRange = meleeRange - frand(0.5f, 1.0f);
+        meleeRange = meleeRange - frand(2.1f, 2.4f);
     }
     float minRange = meleeRange / 2;
     float const minTarget = (_range ? _range->MinTolerance : 0.0f) + minRange;

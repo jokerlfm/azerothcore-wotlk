@@ -670,8 +670,14 @@ bool Unit::GetRandomContactPoint(const Unit* obj, float& x, float& y, float& z, 
         if (c->isWorldBoss() || c->IsDungeonBoss() || (obj->IsPet() && const_cast<Unit*>(obj)->ToPet()->isControlled()))
             attacker_number = 0; // pussywizard: pets and bosses just come to target from their angle
 
-    GetNearPoint(obj, x, y, z, isMoving() ? (obj->GetCombatReach() > 7.75f ? obj->GetCombatReach() - 7.5f : 0.25f) : obj->GetCombatReach(), 0.0f,
-                 GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI / 2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / combat_reach * 0.3f : 0));
+    // lfm combat reach
+    float contactDistance = isMoving() ? (obj->GetCombatReach() > 7.75f ? obj->GetCombatReach() - 7.5f : 0.25f) : obj->GetCombatReach();
+    if (contactDistance > 2.5f)
+    {
+        contactDistance = contactDistance - frand(2.1f, 2.4f);
+    }
+    if(contactDistance)
+    GetNearPoint(obj, x, y, z, contactDistance, 0.0f, GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI / 2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / combat_reach * 0.3f : 0));
 
     // pussywizard
     if (std::fabs(this->GetPositionZ() - z) > this->GetCollisionHeight() || !IsWithinLOS(x, y, z))
