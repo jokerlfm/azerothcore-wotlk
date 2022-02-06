@@ -2365,6 +2365,39 @@ void ObjectMgr::LoadGameobjects()
 
     uint32 count = 0;
 
+    // lfm vein entries  
+    std::unordered_set<uint32> veinEntrySet;
+    veinEntrySet.insert(324);
+    veinEntrySet.insert(1610);
+    veinEntrySet.insert(1667);
+    veinEntrySet.insert(1731);
+    veinEntrySet.insert(1732);
+    veinEntrySet.insert(1733);
+    veinEntrySet.insert(1734);
+    veinEntrySet.insert(2054);
+    veinEntrySet.insert(2055);
+    veinEntrySet.insert(3763);
+    veinEntrySet.insert(3764);
+    veinEntrySet.insert(19903);
+    veinEntrySet.insert(73940);
+    veinEntrySet.insert(73941);
+    veinEntrySet.insert(103711);
+    veinEntrySet.insert(103713);
+    veinEntrySet.insert(105569);
+    veinEntrySet.insert(123848);
+    veinEntrySet.insert(150080);
+    veinEntrySet.insert(150082);
+    veinEntrySet.insert(175404);
+    veinEntrySet.insert(176643);
+    veinEntrySet.insert(177388);
+    veinEntrySet.insert(180215);
+    veinEntrySet.insert(181109);
+    veinEntrySet.insert(181248);
+    veinEntrySet.insert(181249);
+    veinEntrySet.insert(181557);
+    veinEntrySet.insert(185557);
+    veinEntrySet.insert(191133);
+
     //                                                0                1   2    3           4           5           6
     QueryResult result = WorldDatabase.Query("SELECT gameobject.guid, id, map, position_x, position_y, position_z, orientation, "
                          //   7          8          9          10         11             12            13     14         15         16          17
@@ -2523,7 +2556,14 @@ void ObjectMgr::LoadGameobjects()
         }
 
         if (gameEvent == 0 && PoolId == 0)                      // if not this is to be managed by GameEvent System or Pool system
-            AddGameobjectToGrid(guid, &data);
+        {
+            // lfm vein will only spawn pools
+            //AddGameobjectToGrid(guid, &data);
+            if (veinEntrySet.find(data.id) == veinEntrySet.end())
+            {
+                AddGameobjectToGrid(guid, &data);
+            }
+        }            
         ++count;
     } while (result->NextRow());
 

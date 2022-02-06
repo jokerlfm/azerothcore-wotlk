@@ -80,17 +80,17 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     bool const mutualChase = IsMutualChase(owner, target);
     // lfm should be closer 
     //float const hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
+    //float const maxRange = _range ? _range->MaxRange + hitboxSum : owner->GetMeleeRange(target); // melee range already includes hitboxes
+    //float const maxTarget = _range ? _range->MaxTolerance + hitboxSum : CONTACT_DISTANCE + hitboxSum;
     float meleeRange = owner->GetMeleeRange(target);
+    float minRange = meleeRange / 2;
     if (meleeRange > 2.5f)
     {
-        meleeRange = meleeRange - frand(2.1f, 2.4f);
+        minRange = 0.2f;
+        meleeRange = meleeRange - 2.0f;
     }
-    float minRange = meleeRange / 2;
     float const minTarget = (_range ? _range->MinTolerance : 0.0f) + minRange;
-    //float const maxRange = _range ? _range->MaxRange + hitboxSum : owner->GetMeleeRange(target); // melee range already includes hitboxes
-    float const maxRange = _range ? _range->MaxRange + minRange : meleeRange; // melee range already includes hitboxes
-    // lfm max target should be closer 
-    //float const maxTarget = _range ? _range->MaxTolerance + hitboxSum : CONTACT_DISTANCE + hitboxSum;
+    float const maxRange = _range ? _range->MaxRange + minRange : meleeRange;
     float const maxTarget = _range ? _range->MaxTolerance + minRange : meleeRange;
 
     Optional<ChaseAngle> angle = mutualChase ? Optional<ChaseAngle>() : _angle;

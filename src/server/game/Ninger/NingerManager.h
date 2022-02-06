@@ -72,7 +72,7 @@ public:
     std::unordered_map<uint32, std::unordered_map<uint32, uint32>> allianceRaces;
     std::unordered_map<uint32, std::unordered_map<uint32, uint32>> hordeRaces;    
     std::unordered_map<uint32, std::unordered_map<uint32, NingerEntity*>> ningerEntityMap;
-    std::unordered_map<uint32, std::unordered_map<uint32, std::string>> characterTalentTabNameMap;    
+    std::unordered_map<uint32, std::unordered_map<uint32, std::string>> characterTalentTabNameMap;   
 
 private:
     int checkDelay;

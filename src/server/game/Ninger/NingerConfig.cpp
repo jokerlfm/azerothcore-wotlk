@@ -1,3 +1,20 @@
+/*
+ * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Affero General Public License as published by the
+ * Free Software Foundation; either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "NingerConfig.h"
 #include "Log.h"
 #include "StringConvert.h"
@@ -17,57 +34,17 @@ namespace
     std::mutex _configLock;
     bool _usingDistConfig = false;
 
-    // Check system configs like *server.conf*
-    bool IsAppConfig(std::string_view fileName)
-    {
-        size_t foundAuth = fileName.find("authserver.conf");
-        size_t foundWorld = fileName.find("worldserver.conf");
-
-        return foundAuth != std::string_view::npos || foundWorld != std::string_view::npos;
-    }
-
-    // Check logging system configs like Appender.* and Logger.*
-    bool IsLoggingSystemOptions(std::string_view optionName)
-    {
-        size_t foundAppender = optionName.find("Appender.");
-        size_t foundLogger = optionName.find("Logger.");
-
-        return foundAppender != std::string_view::npos || foundLogger != std::string_view::npos;
-    }
-
     template<typename Format, typename... Args>
     inline void PrintError(std::string_view filename, Format&& fmt, Args&& ... args)
     {
         std::string message = Acore::StringFormatFmt(std::forward<Format>(fmt), std::forward<Args>(args)...);
 
-        if (IsAppConfig(filename))
-        {
-            fmt::print("{}\n", message);
-        }
-        else
-        {
-            FMT_LOG_ERROR("server.loading", message);
-        }
+        fmt::print("{}\n", message);
     }
 
     void AddKey(std::string const& optionName, std::string const& optionKey, std::string_view fileName, bool isOptional, [[maybe_unused]] bool isReload)
     {
         auto const& itr = _configOptions.find(optionName);
-
-        // Check old option
-        if (isOptional && itr == _configOptions.end())
-        {
-            if (!IsLoggingSystemOptions(optionName) && !isReload)
-            {
-                PrintError(fileName, "> Config::LoadFile: Found incorrect option '{}' in config file '{}'. Skip", optionName, fileName);
-
-#ifdef CONFIG_ABORT_INCORRECT_OPTIONS
-                ABORT_MSG("> Core can't start if found incorrect options");
-#endif
-
-                return;
-            }
-        }
 
         // Check exit option
         if (itr != _configOptions.end())
@@ -238,7 +215,7 @@ T NingerConfig::GetValueDefault(std::string const& name, T const& def, bool show
     {
         if (showLogs)
         {
-            FMT_LOG_ERROR("server.loading", "> Config: Missing property {} in all config files, at least the .dist file must contain: \"{} = {}\"",
+            LOG_ERROR("server.loading", "> Config: Missing property {} in all config files, at least the .dist file must contain: \"{} = {}\"",
                 name, name, Acore::ToString(def));
         }
 
@@ -250,7 +227,7 @@ T NingerConfig::GetValueDefault(std::string const& name, T const& def, bool show
     {
         if (showLogs)
         {
-            FMT_LOG_ERROR("server.loading", "> Config: Bad value defined for name '{}', going to use '{}' instead",
+            LOG_ERROR("server.loading", "> Config: Bad value defined for name '{}', going to use '{}' instead",
                 name, Acore::ToString(def));
         }
 
@@ -268,7 +245,7 @@ std::string NingerConfig::GetValueDefault<std::string>(std::string const& name, 
     {
         if (showLogs)
         {
-            FMT_LOG_ERROR("server.loading", "> Config: Missing option {}, add \"{} = {}\"",
+            LOG_ERROR("server.loading", "> Config: Missing option {}, add \"{} = {}\"",
                 name, name, def);
         }
 
@@ -294,7 +271,7 @@ bool NingerConfig::GetOption<bool>(std::string const& name, bool const& def, boo
     {
         if (showLogs)
         {
-            FMT_LOG_ERROR("server.loading", "> Config: Bad value defined for name '{}', going to use '{}' instead",
+            LOG_ERROR("server.loading", "> Config: Bad value defined for name '{}', going to use '{}' instead",
                 name, def ? "true" : "false");
         }
 
@@ -385,8 +362,8 @@ bool NingerConfig::LoadModulesConfigs(bool isReload /*= false*/, bool isNeedPrin
 
     if (isNeedPrintInfo)
     {
-        FMT_LOG_INFO("server.loading", " ");
-        FMT_LOG_INFO("server.loading", "Loading modules configuration...");
+        LOG_INFO("server.loading", " ");
+        LOG_INFO("server.loading", "Loading modules configuration...");
     }
 
     // Start loading module configs
@@ -408,7 +385,7 @@ bool NingerConfig::LoadModulesConfigs(bool isReload /*= false*/, bool isNeedPrin
 
         if (!isReload && !isExistDistConfig)
         {
-            FMT_LOG_FATAL("server.loading", "> NingerConfig::LoadModulesConfigs: Not found original config '{}'. Stop loading", distFileName);
+            LOG_FATAL("server.loading", "> NingerConfig::LoadModulesConfigs: Not found original config '{}'. Stop loading", distFileName);
             ABORT();
         }
 
@@ -430,23 +407,23 @@ bool NingerConfig::LoadModulesConfigs(bool isReload /*= false*/, bool isNeedPrin
         if (!_moduleConfigFiles.empty())
         {
             // Print modules configurations
-            FMT_LOG_INFO("server.loading", " ");
-            FMT_LOG_INFO("server.loading", "Using modules configuration:");
+            LOG_INFO("server.loading", " ");
+            LOG_INFO("server.loading", "Using modules configuration:");
 
             for (auto const& itr : _moduleConfigFiles)
             {
-                FMT_LOG_INFO("server.loading", "> {}", itr);
+                LOG_INFO("server.loading", "> {}", itr);
             }
         }
         else
         {
-            FMT_LOG_INFO("server.loading", "> Not found modules config files");
+            LOG_INFO("server.loading", "> Not found modules config files");
         }
     }
 
     if (isNeedPrintInfo)
     {
-        FMT_LOG_INFO("server.loading", " ");
+        LOG_INFO("server.loading", " ");
     }
 
     return true;

@@ -2310,6 +2310,10 @@ void Creature::CallForHelp(float radius, Unit* target /*= nullptr*/)
 
 bool Creature::CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction /*= true*/) const
 {
+    // lfm stun creature will not assist
+    if (HasUnitState(UNIT_STATE_STUNNED))
+        return false;
+
     // is it true?
     if (!HasReactState(REACT_AGGRESSIVE))
         return false;
