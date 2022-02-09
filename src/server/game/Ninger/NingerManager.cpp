@@ -126,13 +126,13 @@ void NingerManager::InitializeManager()
         {
             Field* fields = ningerQR->Fetch();
             NingerEntity* re = new NingerEntity();
-            re->ninger_id = fields[0].GetUInt32();
-            re->account_name = fields[1].GetString();
-            re->character_id = fields[2].GetUInt32();
-            re->target_level = fields[3].GetUInt32();
-            re->target_race = fields[4].GetUInt32();
-            re->target_class = fields[5].GetUInt32();
-            re->target_specialty = fields[6].GetUInt32();
+            re->ninger_id = fields[0].Get<uint32>();
+            re->account_name = fields[1].Get<std::string>();
+            re->character_id = fields[2].Get<uint32>();
+            re->target_level = fields[3].Get<uint32>();
+            re->target_race = fields[4].Get<uint32>();
+            re->target_class = fields[5].Get<uint32>();
+            re->target_specialty = fields[6].Get<uint32>();
             ningerEntityMap[re->target_level][re->ninger_id] = re;
         } while (ningerQR->NextRow());
     }
@@ -214,8 +214,8 @@ bool NingerManager::Deleteningers()
         do
         {
             Field* fields = accountQR->Fetch();
-            uint32 id = fields[0].GetUInt32();
-            std::string userName = fields[1].GetString();            
+            uint32 id = fields[0].Get<uint32>();
+            std::string userName = fields[1].Get<std::string>();            
             AccountMgr::DeleteAccount(id);
             sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Delete ninger account %d - %s", id, userName.c_str());
         } while (accountQR->NextRow());
@@ -234,7 +234,7 @@ uint32 NingerManager::CheckNingerAccount(std::string pmAccountName)
     if (accountQR)
     {
         Field* idFields = accountQR->Fetch();
-        accountID = idFields[0].GetUInt32();
+        accountID = idFields[0].Get<uint32>();
     }
 
     return accountID;
@@ -265,7 +265,7 @@ uint32 NingerManager::CheckAccountCharacter(uint32 pmAccountID)
     if (characterQR)
     {
         Field* characterFields = characterQR->Fetch();
-        result = characterFields[0].GetUInt32();
+        result = characterFields[0].Get<uint32>();
     }
 
     return result;
@@ -279,7 +279,7 @@ uint32 NingerManager::GetCharacterRace(uint32 pmCharacterID)
     if (characterQR)
     {
         Field* characterFields = characterQR->Fetch();
-        result = characterFields[0].GetUInt32();
+        result = characterFields[0].Get<uint32>();
     }
 
     return result;
@@ -328,7 +328,7 @@ uint32 NingerManager::CreateNingerCharacter(uint32 pmAccountID, uint32 pmCharact
         else
         {
             Field* nameCountFields = checkNameQR->Fetch();
-            uint32 nameCount = nameCountFields[0].GetUInt32();
+            uint32 nameCount = nameCountFields[0].Get<uint32>();
             if (nameCount == 0)
             {
                 nameValid = true;
@@ -807,11 +807,11 @@ bool NingerManager::LoginNinger(uint32 pmLevel)
     if (pmLevel >= 20)
     {
         uint32 currentCount = 0;
-        QueryResult levelNingerQR = CharacterDatabase.PQuery("SELECT count(*) FROM ninger where target_level = %d", pmLevel);
+        QueryResult levelNingerQR = CharacterDatabase.Query("SELECT count(*) FROM ninger where target_level = %d", pmLevel);
         if (levelNingerQR)
         {
             Field* fields = levelNingerQR->Fetch();
-            currentCount = fields[0].GetUInt32();
+            currentCount = fields[0].Get<uint32>();
         }
         if (currentCount < sNingerConfig->NingerCountEachLevel)
         {
@@ -879,14 +879,14 @@ bool NingerManager::LoginNinger(uint32 pmLevel)
         {
 
         }
-        QueryResult levelNingerIdQR = CharacterDatabase.PQuery("SELECT ninger_id, account_name FROM ninger where target_level = %d order by rand()", pmLevel);
+        QueryResult levelNingerIdQR = CharacterDatabase.Query("SELECT ninger_id, account_name FROM ninger where target_level = %d order by rand()", pmLevel);
         if (levelNingerIdQR)
         {
             do
             {
                 Field* fields = levelNingerIdQR->Fetch();
-                uint32 ninger_id = fields[0].GetUInt32();
-                std::string account_name = fields[1].GetString();
+                uint32 ninger_id = fields[0].Get<uint32>();
+                std::string account_name = fields[1].Get<std::string>();
                 if (ningerEntityMap.find(pmLevel) != ningerEntityMap.end())
                 {
                     if (ningerEntityMap[pmLevel].find(ninger_id) != ningerEntityMap[pmLevel].end())

@@ -548,18 +548,6 @@ void Map::InitializeObject(GameObject*  /*obj*/)
 template<class T>
 bool Map::AddToMap(T* obj, bool checkTransport)
 {
-    // lfm debug 
-    if (obj->GetTypeId() == TYPEID_GAMEOBJECT)
-    {
-        if (GameObjectTemplate const* goInfo = sObjectMgr->GetGameObjectTemplate(obj->GetEntry()))
-        {
-            if (goInfo->type == GameobjectTypes::GAMEOBJECT_TYPE_CHEST)
-            {
-                bool breakPoint = true;
-            }
-        }
-    }
-
     //TODO: Needs clean up. An object should not be added to map twice.
     if (obj->IsInWorld())
     {
