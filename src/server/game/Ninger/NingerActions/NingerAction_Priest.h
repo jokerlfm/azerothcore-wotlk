@@ -9,12 +9,14 @@ public:
     NingerAction_Priest(Player* pmMe);
     void Update(uint32 pmDiff);
     void Reset();
-    bool Cure(Unit* pmTarget);
-    bool Buff(Unit* pmTarget);
-    bool Revive(Player* pmTarget);
-    bool Heal(Unit* pmTarget);
-    bool Heal_Discipline(Unit* pmTarget);
-    bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    //bool Cure(Unit* pmTarget);
+    //bool Buff(Unit* pmTarget);
+    //bool Revive(Player* pmTarget);
+    //bool Heal(Unit* pmTarget);
+    //bool Heal_Discipline(Unit* pmTarget);
+    //bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
+
+    void LearnTalents(uint32 pmTabIndex);
 
     int manaCheckDelay;
     int powerWordShieldDelay;

@@ -7,11 +7,11 @@ class NingerAction_Rogue :public NingerAction_Base
 {
 public:    
     NingerAction_Rogue(Player* pmMe);
-    void Update(uint32 pmDiff);
-    void Reset();
-    bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
-    bool DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
-    bool Buff(Unit* pmTarget);
+    //void Update(uint32 pmDiff);
+    //void Reset();
+    //bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    //bool DPS_Combat(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    //bool Buff(Unit* pmTarget);
 
     int poisonStatus;
     int poisonDelay;

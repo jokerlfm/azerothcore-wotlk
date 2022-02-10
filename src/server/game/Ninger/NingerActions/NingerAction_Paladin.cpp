@@ -3,7 +3,6 @@
 #include "SpellAuras.h"
 #include "SpellAuraEffects.h"
 
-/*
 NingerAction_Paladin::NingerAction_Paladin(Player* pmMe) :NingerAction_Base(pmMe)
 {
     blessingType = PaladinBlessingType::PaladinBlessingType_Might;
@@ -32,6 +31,7 @@ void NingerAction_Paladin::Update(uint32 pmDiff)
     }
 }
 
+/*
 void NingerAction_Paladin::Reset()
 {
     blessingType = PaladinBlessingType::PaladinBlessingType_Might;

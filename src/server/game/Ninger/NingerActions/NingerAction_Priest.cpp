@@ -20,6 +20,20 @@ NingerAction_Priest::NingerAction_Priest(Player* pmMe) :NingerAction_Base(pmMe)
     mindBlastDelay = 0;
 }
 
+void NingerAction_Priest::LearnTalents(uint32 pmTabIndex)
+{
+    uint32 freePoints = me->GetFreeTalentPoints();
+    if (freePoints > 0)
+    {
+        me->LearnTalent(1, freePoints >= 5 ? 5 : freePoints);
+    }
+    freePoints = me->GetFreeTalentPoints();
+    if (freePoints > 0)
+    {
+        me->LearnTalent(1, freePoints >= 5 ? 5 : freePoints);
+    }
+}
+
 void NingerAction_Priest::Update(uint32 pmDiff)
 {
     NingerAction_Base::Update(pmDiff);

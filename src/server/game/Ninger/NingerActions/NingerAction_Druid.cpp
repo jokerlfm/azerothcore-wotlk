@@ -6,3 +6,8 @@ NingerAction_Druid::NingerAction_Druid(Player* pmMe) :NingerAction_Base(pmMe)
 {
 
 }
+
+void NingerAction_Druid::Prepare()
+{
+
+}

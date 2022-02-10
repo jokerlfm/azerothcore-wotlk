@@ -15,6 +15,7 @@ class NingerAction_Shaman :public NingerAction_Base
 {
 public:
     NingerAction_Shaman(Player* pmMe);
+    void Prepare();
 
     uint32 earthTotemType;
 };

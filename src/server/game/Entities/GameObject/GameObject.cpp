@@ -462,9 +462,9 @@ void GameObject::Update(uint32 diff)
             GameObjectTemplate const* goInfo = GetGOInfo();
             // Bombs
             if (goInfo->trap.type == 2)
-                                m_cooldownTime = GameTime::GetGameTimeMS().count() + 10 * IN_MILLISECONDS; // Hardcoded tooltip value
+                m_cooldownTime = GameTime::GetGameTimeMS().count() + 10 * IN_MILLISECONDS; // Hardcoded tooltip value
             else if (GetOwner())
-                                m_cooldownTime = GameTime::GetGameTimeMS().count() + goInfo->trap.startDelay * IN_MILLISECONDS;
+                m_cooldownTime = GameTime::GetGameTimeMS().count() + goInfo->trap.startDelay * IN_MILLISECONDS;
 
             m_lootState = GO_READY;
             break;
@@ -472,7 +472,7 @@ void GameObject::Update(uint32 diff)
         case GAMEOBJECT_TYPE_FISHINGNODE:
         {
             // fishing code (bobber ready)
-                            if (GameTime::GetGameTime().count() > m_respawnTime - FISHING_BOBBER_READY_TIME)
+            if (GameTime::GetGameTime().count() > m_respawnTime - FISHING_BOBBER_READY_TIME)
             {
                 // splash bobber (bobber ready now)
                 Unit* caster = GetOwner();
@@ -496,7 +496,7 @@ void GameObject::Update(uint32 diff)
         }
         case GAMEOBJECT_TYPE_SUMMONING_RITUAL:
         {
-                            if (GameTime::GetGameTimeMS().count() < m_cooldownTime)
+            if (GameTime::GetGameTimeMS().count() < m_cooldownTime)
                 return;
             GameObjectTemplate const* info = GetGOInfo();
             if (info->summoningRitual.animSpell)
@@ -577,7 +577,7 @@ void GameObject::Update(uint32 diff)
 
         if (m_respawnTime > 0)                          // timer on
         {
-                    time_t now = GameTime::GetGameTime().count();
+            time_t now = GameTime::GetGameTime().count();
             if (m_respawnTime <= now)            // timer expired
             {
                 ObjectGuid dbtableHighGuid = ObjectGuid::Create<HighGuid::GameObject>(GetEntry(), m_spawnId);
@@ -653,7 +653,7 @@ void GameObject::Update(uint32 diff)
             GameObjectTemplate const* goInfo = GetGOInfo();
             if (goInfo->type == GAMEOBJECT_TYPE_TRAP)
             {
-                        if (GameTime::GetGameTimeMS().count() < m_cooldownTime)
+                if (GameTime::GetGameTimeMS().count() < m_cooldownTime)
                     break;
 
                 // Type 2 - Bomb (will go away after casting it's spell)
@@ -711,7 +711,7 @@ void GameObject::Update(uint32 diff)
                     if (goInfo->trap.spellId)
                         CastSpell(target, goInfo->trap.spellId);
 
-                            m_cooldownTime = GameTime::GetGameTimeMS().count() + (goInfo->trap.cooldown ? goInfo->trap.cooldown :  uint32(4)) * IN_MILLISECONDS; // template or 4 seconds
+                    m_cooldownTime = GameTime::GetGameTimeMS().count() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS; // template or 4 seconds
 
                     if (goInfo->trap.type == 1)
                         SetLootState(GO_JUST_DEACTIVATED);
@@ -743,11 +743,11 @@ void GameObject::Update(uint32 diff)
         {
         case GAMEOBJECT_TYPE_DOOR:
         case GAMEOBJECT_TYPE_BUTTON:
-                        if (GetGOInfo()->GetAutoCloseTime() && GameTime::GetGameTimeMS().count() >= m_cooldownTime)
+            if (GetGOInfo()->GetAutoCloseTime() && GameTime::GetGameTimeMS().count() >= m_cooldownTime)
                 ResetDoorOrButton();
             break;
         case GAMEOBJECT_TYPE_GOOBER:
-                        if (GameTime::GetGameTimeMS().count() >= m_cooldownTime)
+            if (GameTime::GetGameTimeMS().count() >= m_cooldownTime)
             {
                 RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
 
@@ -834,7 +834,7 @@ void GameObject::Update(uint32 diff)
             return;
         }
 
-                m_respawnTime = GameTime::GetGameTime().count() + m_respawnDelayTime;
+        m_respawnTime = GameTime::GetGameTime().count() + m_respawnDelayTime;
 
         // if option not set then object will be saved at grid unload
         if (GetMap()->IsDungeon())
@@ -1476,7 +1476,7 @@ void GameObject::Use(Unit* user)
         if (goInfo->trap.spellId)
             CastSpell(user, goInfo->trap.spellId);
 
-                m_cooldownTime = GameTime::GetGameTimeMS().count() + (goInfo->trap.cooldown ? goInfo->trap.cooldown :  uint32(4)) * IN_MILLISECONDS; // template or 4 seconds
+        m_cooldownTime = GameTime::GetGameTimeMS().count() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS; // template or 4 seconds
 
         if (goInfo->trap.type == 1)         // Deactivate after trigger
             SetLootState(GO_JUST_DEACTIVATED);
@@ -1593,7 +1593,7 @@ void GameObject::Use(Unit* user)
 
             if (info->goober.eventId)
             {
-                        LOG_DEBUG("maps.script", "Goober ScriptStart id {} for GO entry {} (spawnId {}).", info->goober.eventId, GetEntry(), m_spawnId);
+                LOG_DEBUG("maps.script", "Goober ScriptStart id {} for GO entry {} (spawnId {}).", info->goober.eventId, GetEntry(), m_spawnId);
                 GetMap()->ScriptsStart(sEventScripts, info->goober.eventId, player, this);
                 EventInform(info->goober.eventId);
             }
@@ -1643,7 +1643,7 @@ void GameObject::Use(Unit* user)
         if (info->goober.customAnim)
             SendCustomAnim(GetGoAnimProgress());
 
-                m_cooldownTime = GameTime::GetGameTimeMS().count() + info->GetAutoCloseTime();
+        m_cooldownTime = GameTime::GetGameTimeMS().count() + info->GetAutoCloseTime();
 
         // cast this spell later if provided
         spellId = info->goober.spellId;
@@ -1694,7 +1694,17 @@ void GameObject::Use(Unit* user)
 
             //provide error, no fishable zone or area should be 0
             if (!zone_skill)
-                                LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
+                LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
+
+            // lfm zone fishing skill will be 50% higher, min 25,
+            if (zone_skill < 25)
+            {
+                zone_skill = 25;
+            }
+            else
+            {
+                zone_skill = zone_skill * 150 / 100;
+            }
 
             int32 skill = player->GetSkillValue(SKILL_FISHING);
 
@@ -1710,7 +1720,7 @@ void GameObject::Use(Unit* user)
 
             int32 roll = irand(1, 100);
 
-                            LOG_DEBUG("entities.gameobject", "Fishing check (skill: {} zone min skill: {} chance {} roll: {}", skill, zone_skill, chance, roll);
+            LOG_DEBUG("entities.gameobject", "Fishing check (skill: {} zone min skill: {} chance {} roll: {}", skill, zone_skill, chance, roll);
 
             // but you will likely cause junk in areas that require a high fishing skill (not yet implemented)
             if (chance >= roll)
@@ -1831,7 +1841,7 @@ void GameObject::Use(Unit* user)
             if (!info->summoningRitual.animSpell)
                 m_cooldownTime = 0;
             else // channel ready, maintain this
-                        m_cooldownTime = GameTime::GetGameTimeMS().count() + 5 * IN_MILLISECONDS;
+                m_cooldownTime = GameTime::GetGameTimeMS().count() + 5 * IN_MILLISECONDS;
         }
 
         return;
@@ -2006,8 +2016,8 @@ void GameObject::Use(Unit* user)
     }
     default:
         if (GetGoType() >= MAX_GAMEOBJECT_TYPE)
-                LOG_ERROR("entities.gameobject", "GameObject::Use(): unit ({}, name: {}) tries to use object ({}, name: {}) of unknown type ({})",
-                               user->GetGUID().ToString(), user->GetName(), GetGUID().ToString(),  GetGOInfo()->name, GetGoType());
+            LOG_ERROR("entities.gameobject", "GameObject::Use(): unit ({}, name: {}) tries to use object ({}, name: {}) of unknown type ({})",
+                user->GetGUID().ToString(), user->GetName(), GetGUID().ToString(), GetGOInfo()->name, GetGoType());
         break;
     }
 

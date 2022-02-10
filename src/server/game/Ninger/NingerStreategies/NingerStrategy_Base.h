@@ -39,8 +39,7 @@ public:
     virtual void SetGroupRole(std::string pmRoleName);    
 
 public:
-    Player* me;
-    NingerAction_Base* sb;
+    Player* me;    
     uint32 groupRole;
 
     ObjectGuid ogEngageTarget;

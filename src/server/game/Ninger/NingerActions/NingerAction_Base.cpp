@@ -8,6 +8,426 @@
 #include "SpellMgr.h"
 #include "Pet.h"
 
+NingerMovement::NingerMovement(Player* pmMe)
+{
+    me = pmMe;
+}
+
+void NingerMovement::ResetMovement()
+{
+
+}
+
+void NingerMovement::Update(uint32 pmDiff)
+{
+
+}
+
+bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float pmChaseDistanceMax, uint32 pmLimitDelay)
+{
+    return false;
+}
+
+void NingerMovement::MovePoint(Position pmTargetPosition, uint32 pmLimitDelay)
+{
+
+}
+
+void NingerMovement::MovePoint(float pmX, float pmY, float pmZ, uint32 pmLimitDelay)
+{
+
+}
+
+void NingerMovement::MoveTargetPosition()
+{
+
+}
+
+void NingerMovement::MoveTargetPosition(float pmX, float pmY, float pmZ)
+{
+
+}
+
+
+NingerAction_Base::NingerAction_Base(Player* pmMe)
+{
+    me = pmMe;
+    rm = new NingerMovement(me);
+    maxTalentTab = 0;
+    chaseDistanceMin = 1.0f;
+    chaseDistanceMax = 3.0f;
+    rti = 0;
+}
+
+void NingerAction_Base::Reset()
+{
+
+}
+
+void NingerAction_Base::Update(uint32 pmDiff)
+{
+
+}
+
+bool NingerAction_Base::DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax)
+{
+    return false;
+}
+
+bool NingerAction_Base::Tank(Unit* pmTarget, bool pmChase, bool pmAOE)
+{
+    return false;
+}
+
+bool NingerAction_Base::Heal(Unit* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Base::Cure(Unit* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Base::Buff(Unit* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Base::Assist(Unit* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Base::Revive(Player* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Base::Petting(bool pmSummon)
+{
+    return false;
+}
+
+void NingerAction_Base::Prepare()
+{
+
+}
+
+void LearnTalents(uint32 pmTabIndex)
+{
+
+}
+
+void NingerAction_Base::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex)
+{
+    if (!me)
+    {
+        return;
+    }    
+    me->ClearInCombat();
+    if (me->getLevel() != pmTargetLevel)
+    {
+        me->GiveLevel(pmTargetLevel);
+        me->LearnDefaultSkills();
+        me->LearnCustomSpells();
+
+        // todo : learn talents
+        LearnTalents(pmSpecialtyTabIndex);
+        // todo : learn spells
+
+        // todo : initial equipments
+        InitializeEquipments(true);
+    }    
+    std::ostringstream msgStream;
+    msgStream << me->GetName() << " initialized";
+    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+}
+
+void NingerAction_Base::InitializeEquipments(bool pmReset)
+{
+    if (pmReset)
+    {
+        for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        {
+            if (Item* inventoryItem = me->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            {
+                me->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+            }
+        }
+        for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
+        {
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+            }
+        }
+    }
+    uint32 minQuality = ItemQualities::ITEM_QUALITY_UNCOMMON;
+    if (me->getLevel() < 20)
+    {
+        minQuality = ItemQualities::ITEM_QUALITY_POOR;
+    }
+    for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
+    {
+        if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_CHEST || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_WAIST || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_LEGS || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FEET || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_WRISTS || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HANDS)
+        {
+            if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
+            {
+                if (me->getLevel() < 30)
+                {
+                    continue;
+                }
+            }
+            else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS)
+            {
+                if (me->getLevel() < 20)
+                {
+                    continue;
+                }
+            }
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+                {
+                    if (checkIT->Quality >= minQuality)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                    }
+                }
+            }
+            std::unordered_set<uint32> usableItemClass;
+            std::unordered_set<uint32> usableItemSubClass;
+            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
+            usableItemSubClass.insert(GetUsableArmorSubClass(me));
+            TryEquip(me, usableItemClass, usableItemSubClass, checkEquipSlot);
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_MAINHAND)
+        {
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+                {
+                    if (checkIT->Quality >= minQuality)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                    }
+                }
+            }
+            int weaponSubClass_mh = -1;
+            int weaponSubClass_oh = -1;
+            int weaponSubClass_r = -1;
+            switch (me->getClass())
+            {
+            case Classes::CLASS_WARRIOR:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
+                weaponSubClass_oh = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD;
+                break;
+            }
+            case Classes::CLASS_PALADIN:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE;
+                uint32 weaponType = urand(0, 100);
+                if (weaponType < 50)
+                {
+                    weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
+                }
+                weaponSubClass_oh = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD;
+                break;
+            }
+            case Classes::CLASS_HUNTER:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_AXE2;
+                uint32 rType = urand(0, 2);
+                if (rType == 0)
+                {
+                    weaponSubClass_r = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_BOW;
+                }
+                else if (rType == 1)
+                {
+                    weaponSubClass_r = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_CROSSBOW;
+                }
+                else
+                {
+                    weaponSubClass_r = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_GUN;
+                }
+                break;
+            }
+            case Classes::CLASS_ROGUE:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
+                weaponSubClass_oh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
+                break;
+            }
+            case Classes::CLASS_PRIEST:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
+                break;
+            }
+            case Classes::CLASS_SHAMAN:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE;
+                weaponSubClass_oh = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD;
+                break;
+            }
+            case Classes::CLASS_MAGE:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
+                break;
+            }
+            case Classes::CLASS_WARLOCK:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
+                break;
+            }
+            case Classes::CLASS_DRUID:
+            {
+                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
+                break;
+            }
+            default:
+            {
+                continue;
+            }
+            }
+            if (weaponSubClass_mh >= 0)
+            {
+                std::unordered_set<uint32> usableItemClass;
+                std::unordered_set<uint32> usableItemSubClass;
+                usableItemClass.insert(ItemClass::ITEM_CLASS_WEAPON);
+                usableItemSubClass.insert(weaponSubClass_mh);
+                TryEquip(me, usableItemClass, usableItemSubClass, checkEquipSlot);
+            }
+            if (weaponSubClass_oh >= 0)
+            {
+                std::unordered_set<uint32> usableItemClass;
+                std::unordered_set<uint32> usableItemSubClass;
+                usableItemClass.insert(ItemClass::ITEM_CLASS_WEAPON);
+                usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
+                usableItemSubClass.insert(weaponSubClass_oh);
+                TryEquip(me, usableItemClass, usableItemSubClass, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND);
+            }
+            if (weaponSubClass_r >= 0)
+            {
+                std::unordered_set<uint32> usableItemClass;
+                std::unordered_set<uint32> usableItemSubClass;
+                usableItemClass.insert(ItemClass::ITEM_CLASS_WEAPON);
+                usableItemSubClass.insert(weaponSubClass_r);
+                TryEquip(me, usableItemClass, usableItemSubClass, EquipmentSlots::EQUIPMENT_SLOT_RANGED);
+            }
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_BACK)
+        {
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+                {
+                    if (checkIT->Quality >= minQuality)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                    }
+                }
+            }
+            std::unordered_set<uint32> usableItemClass;
+            std::unordered_set<uint32> usableItemSubClass;
+            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
+            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_CLOTH);
+            TryEquip(me, usableItemClass, usableItemSubClass, checkEquipSlot);
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER1)
+        {
+            if (me->getLevel() < 20)
+            {
+                continue;
+            }
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+                {
+                    if (checkIT->Quality >= minQuality)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                    }
+                }
+            }
+            std::unordered_set<uint32> usableItemClass;
+            std::unordered_set<uint32> usableItemSubClass;
+            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
+            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MISC);
+            TryEquip(me, usableItemClass, usableItemSubClass, checkEquipSlot);
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER2)
+        {
+            if (me->getLevel() < 20)
+            {
+                continue;
+            }
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+                {
+                    if (checkIT->Quality >= minQuality)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                    }
+                }
+            }
+            std::unordered_set<uint32> usableItemClass;
+            std::unordered_set<uint32> usableItemSubClass;
+            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
+            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MISC);
+            TryEquip(me, usableItemClass, usableItemSubClass, checkEquipSlot);
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_NECK)
+        {
+            if (me->getLevel() < 30)
+            {
+                continue;
+            }
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+                {
+                    if (checkIT->Quality >= minQuality)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                    }
+                }
+            }
+            std::unordered_set<uint32> usableItemClass;
+            std::unordered_set<uint32> usableItemSubClass;
+            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
+            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MISC);
+            TryEquip(me, usableItemClass, usableItemSubClass, checkEquipSlot);
+        }
+    }
+}
+
 /*
 NingerMovement::NingerMovement(Player* pmMe)
 {
@@ -1163,15 +1583,15 @@ void Script_Base::InitializeTalents()
         {
             if (specialty == 0)
             {
-                //pmTargetPlayer->LearnTalent(eachTE->ID, maxRank);
+                //me->LearnTalent(eachTE->ID, maxRank);
             }
             else if (specialty == 1)
             {
-                //pmTargetPlayer->LearnTalent(eachTE->ID, maxRank);
+                //me->LearnTalent(eachTE->ID, maxRank);
             }
             else if (specialty == 2)
             {
-                //pmTargetPlayer->LearnTalent(eachTE->ID, maxRank);
+                //me->LearnTalent(eachTE->ID, maxRank);
             }
         }
         else if (targetClass == Classes::CLASS_ROGUE)
@@ -1206,17 +1626,17 @@ void Script_Base::InitializeTalents()
         {
 
         }
-        pmTargetPlayer->SaveToDB(false, false);
+        me->SaveToDB(false, false);
     }
 }
 
-void Script_Base::LearnPlayerSpells(Player* pmTargetPlayer)
+void Script_Base::LearnPlayerSpells(Player* me)
 {
     CreatureTemplateContainer const* ctc = sObjectMgr->GetCreatureTemplates();
     for (CreatureTemplateContainer::const_iterator itr = ctc->begin(); itr != ctc->end(); ++itr)
     {
         CreatureTemplate cInfo = itr->second;
-        if (cInfo.trainer_class == pmTargetPlayer->getClass())
+        if (cInfo.trainer_class == me->getClass())
         {
             if (cInfo.trainer_type == TrainerType::TRAINER_TYPE_CLASS)
             {
@@ -1236,7 +1656,7 @@ void Script_Base::LearnPlayerSpells(Player* pmTargetPlayer)
                             {
                                 if (!tSpell->learnedSpell[i])
                                     continue;
-                                if (!pmTargetPlayer->IsSpellFitByClassAndRace(tSpell->learnedSpell[i]))
+                                if (!me->IsSpellFitByClassAndRace(tSpell->learnedSpell[i]))
                                 {
                                     valid = false;
                                     break;
@@ -1249,15 +1669,15 @@ void Script_Base::LearnPlayerSpells(Player* pmTargetPlayer)
                             if (!valid)
                                 continue;
 
-                            if (tSpell->reqSpell && !pmTargetPlayer->HasSpell(tSpell->reqSpell))
+                            if (tSpell->reqSpell && !me->HasSpell(tSpell->reqSpell))
                             {
                                 continue;
                             }
 
-                            TrainerSpellState state = pmTargetPlayer->GetTrainerSpellState(tSpell);
+                            TrainerSpellState state = me->GetTrainerSpellState(tSpell);
                             if (state == TRAINER_SPELL_GREEN)
                             {
-                                pmTargetPlayer->learnSpell(tSpell->spell);
+                                me->learnSpell(tSpell->spell);
                                 hasNew = true;
                             }
                         }
@@ -1272,344 +1692,18 @@ void Script_Base::LearnPlayerSpells(Player* pmTargetPlayer)
     }
 }
 
-bool Script_Base::InitializeCharacter(Player* pmTargetPlayer, uint32 pmTargetLevel)
+uint32 Script_Base::GetUsableArmorSubClass(Player* me)
 {
-    if (!pmTargetPlayer)
-    {
-        return false;
-    }
-    pmTargetPlayer->RemoveAllAttackers();
-    pmTargetPlayer->ClearInCombat();
-    bool needToLogout = false;
-    if (pmTargetPlayer->getLevel() != pmTargetLevel)
-    {
-        pmTargetPlayer->GiveLevel(pmTargetLevel);
-        pmTargetPlayer->LearnDefaultSkills();
-        pmTargetPlayer->LearnCustomSpells();
-
-        for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
-        {
-            if (Item* pItem = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, i))
-            {
-                pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, i, true);
-            }
-        }
-    }
-    if (LearnPlayerTalents(pmTargetPlayer))
-    {
-        needToLogout = true;
-    }
-    LearnPlayerSpells(pmTargetPlayer);
-
-    bool resetEquipments = false;
-    if (needToLogout)
-    {
-        resetEquipments = true;
-    }
-    InitializeEquipments(pmTargetPlayer, resetEquipments);
-    std::ostringstream msgStream;
-    msgStream << pmTargetPlayer->GetName() << " initialized";
-    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
-
-    return needToLogout;
-}
-
-void Script_Base::InitializeEquipments(Player* pmTargetPlayer, bool pmReset)
-{
-    if (pmReset)
-    {
-        for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
-        {
-            if (Item* inventoryItem = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
-            {
-                pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
-            }
-        }
-        for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
-        {
-            if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-            {
-                pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-            }
-        }
-    }
-    uint32 minQuality = ItemQualities::ITEM_QUALITY_UNCOMMON;
-    if (pmTargetPlayer->getLevel() < 20)
-    {
-        minQuality = ItemQualities::ITEM_QUALITY_POOR;
-    }
-    for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
-    {
-        if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_CHEST || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_WAIST || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_LEGS || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FEET || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_WRISTS || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HANDS)
-        {
-            if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
-            {
-                if (pmTargetPlayer->getLevel() < 30)
-                {
-                    continue;
-                }
-            }
-            else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS)
-            {
-                if (pmTargetPlayer->getLevel() < 20)
-                {
-                    continue;
-                }
-            }
-            if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-            {
-                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                {
-                    if (checkIT->Quality >= minQuality)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                    }
-                }
-            }
-            std::unordered_set<uint32> usableItemClass;
-            std::unordered_set<uint32> usableItemSubClass;
-            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
-            usableItemSubClass.insert(GetUsableArmorSubClass(pmTargetPlayer));
-            TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, checkEquipSlot);
-        }
-        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_MAINHAND)
-        {
-            if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-            {
-                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                {
-                    if (checkIT->Quality >= minQuality)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                    }
-                }
-            }
-            int weaponSubClass_mh = -1;
-            int weaponSubClass_oh = -1;
-            int weaponSubClass_r = -1;
-            switch (pmTargetPlayer->getClass())
-            {
-            case Classes::CLASS_WARRIOR:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
-                weaponSubClass_oh = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD;
-                break;
-            }
-            case Classes::CLASS_PALADIN:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE;
-                uint32 weaponType = urand(0, 100);
-                if (weaponType < 50)
-                {
-                    weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
-                }
-                weaponSubClass_oh = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD;
-                break;
-            }
-            case Classes::CLASS_HUNTER:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_AXE2;
-                uint32 rType = urand(0, 2);
-                if (rType == 0)
-                {
-                    weaponSubClass_r = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_BOW;
-                }
-                else if (rType == 1)
-                {
-                    weaponSubClass_r = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_CROSSBOW;
-                }
-                else
-                {
-                    weaponSubClass_r = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_GUN;
-                }
-                break;
-            }
-            case Classes::CLASS_ROGUE:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
-                weaponSubClass_oh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD;
-                break;
-            }
-            case Classes::CLASS_PRIEST:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
-                break;
-            }
-            case Classes::CLASS_SHAMAN:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE;
-                weaponSubClass_oh = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD;
-                break;
-            }
-            case Classes::CLASS_MAGE:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
-                break;
-            }
-            case Classes::CLASS_WARLOCK:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
-                break;
-            }
-            case Classes::CLASS_DRUID:
-            {
-                weaponSubClass_mh = ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF;
-                break;
-            }
-            default:
-            {
-                continue;
-            }
-            }
-            if (weaponSubClass_mh >= 0)
-            {
-                std::unordered_set<uint32> usableItemClass;
-                std::unordered_set<uint32> usableItemSubClass;
-                usableItemClass.insert(ItemClass::ITEM_CLASS_WEAPON);
-                usableItemSubClass.insert(weaponSubClass_mh);
-                TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, checkEquipSlot);
-            }
-            if (weaponSubClass_oh >= 0)
-            {
-                std::unordered_set<uint32> usableItemClass;
-                std::unordered_set<uint32> usableItemSubClass;
-                usableItemClass.insert(ItemClass::ITEM_CLASS_WEAPON);
-                usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
-                usableItemSubClass.insert(weaponSubClass_oh);
-                TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND);
-            }
-            if (weaponSubClass_r >= 0)
-            {
-                std::unordered_set<uint32> usableItemClass;
-                std::unordered_set<uint32> usableItemSubClass;
-                usableItemClass.insert(ItemClass::ITEM_CLASS_WEAPON);
-                usableItemSubClass.insert(weaponSubClass_r);
-                TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, EquipmentSlots::EQUIPMENT_SLOT_RANGED);
-            }
-        }
-        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_BACK)
-        {
-            if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-            {
-                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                {
-                    if (checkIT->Quality >= minQuality)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                    }
-                }
-            }
-            std::unordered_set<uint32> usableItemClass;
-            std::unordered_set<uint32> usableItemSubClass;
-            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
-            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_CLOTH);
-            TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, checkEquipSlot);
-        }
-        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER1)
-        {
-            if (pmTargetPlayer->getLevel() < 20)
-            {
-                continue;
-            }
-            if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-            {
-                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                {
-                    if (checkIT->Quality >= minQuality)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                    }
-                }
-            }
-            std::unordered_set<uint32> usableItemClass;
-            std::unordered_set<uint32> usableItemSubClass;
-            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
-            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MISC);
-            TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, checkEquipSlot);
-        }
-        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER2)
-        {
-            if (pmTargetPlayer->getLevel() < 20)
-            {
-                continue;
-            }
-            if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-            {
-                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                {
-                    if (checkIT->Quality >= minQuality)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                    }
-                }
-            }
-            std::unordered_set<uint32> usableItemClass;
-            std::unordered_set<uint32> usableItemSubClass;
-            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
-            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MISC);
-            TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, checkEquipSlot);
-        }
-        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_NECK)
-        {
-            if (pmTargetPlayer->getLevel() < 30)
-            {
-                continue;
-            }
-            if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-            {
-                if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                {
-                    if (checkIT->Quality >= minQuality)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                    }
-                }
-            }
-            std::unordered_set<uint32> usableItemClass;
-            std::unordered_set<uint32> usableItemSubClass;
-            usableItemClass.insert(ItemClass::ITEM_CLASS_ARMOR);
-            usableItemSubClass.insert(ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MISC);
-            TryEquip(pmTargetPlayer, usableItemClass, usableItemSubClass, checkEquipSlot);
-        }
-    }
-}
-
-uint32 Script_Base::GetUsableArmorSubClass(Player* pmTargetPlayer)
-{
-    if (!pmTargetPlayer)
+    if (!me)
     {
         return false;
     }
     uint32 resultArmorSubClass = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_CLOTH;
-    switch (pmTargetPlayer->getClass())
+    switch (me->getClass())
     {
     case Classes::CLASS_WARRIOR:
     {
-        if (pmTargetPlayer->getLevel() < 40)
+        if (me->getLevel() < 40)
         {
             // use mail armor
             resultArmorSubClass = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MAIL;
@@ -1623,7 +1717,7 @@ uint32 Script_Base::GetUsableArmorSubClass(Player* pmTargetPlayer)
     }
     case Classes::CLASS_PALADIN:
     {
-        if (pmTargetPlayer->getLevel() < 40)
+        if (me->getLevel() < 40)
         {
             // use mail armor
             resultArmorSubClass = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MAIL;
@@ -1637,7 +1731,7 @@ uint32 Script_Base::GetUsableArmorSubClass(Player* pmTargetPlayer)
     }
     case Classes::CLASS_HUNTER:
     {
-        if (pmTargetPlayer->getLevel() < 40)
+        if (me->getLevel() < 40)
         {
             resultArmorSubClass = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_LEATHER;
         }
@@ -1659,7 +1753,7 @@ uint32 Script_Base::GetUsableArmorSubClass(Player* pmTargetPlayer)
     }
     case Classes::CLASS_SHAMAN:
     {
-        if (pmTargetPlayer->getLevel() < 40)
+        if (me->getLevel() < 40)
         {
             resultArmorSubClass = ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_LEATHER;
         }
@@ -1693,33 +1787,33 @@ uint32 Script_Base::GetUsableArmorSubClass(Player* pmTargetPlayer)
     return resultArmorSubClass;
 }
 
-bool Script_Base::EquipNewItem(Player* pmTargetPlayer, uint32 pmItemEntry, uint8 pmEquipSlot)
+bool Script_Base::EquipNewItem(Player* me, uint32 pmItemEntry, uint8 pmEquipSlot)
 {
-    if (!pmTargetPlayer)
+    if (!me)
     {
         return false;
     }
     uint16 eDest;
-    InventoryResult tryEquipResult = pmTargetPlayer->CanEquipNewItem(NULL_SLOT, eDest, pmItemEntry, false);
+    InventoryResult tryEquipResult = me->CanEquipNewItem(NULL_SLOT, eDest, pmItemEntry, false);
     if (tryEquipResult == EQUIP_ERR_OK)
     {
         ItemPosCountVec sDest;
-        InventoryResult storeResult = pmTargetPlayer->CanStoreNewItem(INVENTORY_SLOT_BAG_0, NULL_SLOT, sDest, pmItemEntry, 1);
+        InventoryResult storeResult = me->CanStoreNewItem(INVENTORY_SLOT_BAG_0, NULL_SLOT, sDest, pmItemEntry, 1);
         if (storeResult == EQUIP_ERR_OK)
         {
-            Item* pItem = pmTargetPlayer->StoreNewItem(sDest, pmItemEntry, true, Item::GenerateItemRandomPropertyId(pmItemEntry));
+            Item* pItem = me->StoreNewItem(sDest, pmItemEntry, true, Item::GenerateItemRandomPropertyId(pmItemEntry));
             if (pItem)
             {
-                InventoryResult equipResult = pmTargetPlayer->CanEquipItem(NULL_SLOT, eDest, pItem, false);
+                InventoryResult equipResult = me->CanEquipItem(NULL_SLOT, eDest, pItem, false);
                 if (equipResult == EQUIP_ERR_OK)
                 {
-                    pmTargetPlayer->RemoveItem(INVENTORY_SLOT_BAG_0, pItem->GetSlot(), true);
-                    pmTargetPlayer->EquipItem(pmEquipSlot, pItem, true);
+                    me->RemoveItem(INVENTORY_SLOT_BAG_0, pItem->GetSlot(), true);
+                    me->EquipItem(pmEquipSlot, pItem, true);
                     return true;
                 }
                 else
                 {
-                    pItem->DestroyForPlayer(pmTargetPlayer);
+                    pItem->DestroyForPlayer(me);
                 }
             }
         }
@@ -1728,14 +1822,14 @@ bool Script_Base::EquipNewItem(Player* pmTargetPlayer, uint32 pmItemEntry, uint8
     return false;
 }
 
-void Script_Base::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pmClassSet, std::unordered_set<uint32> pmSubClassSet, uint32 pmTargetSlot)
+void Script_Base::TryEquip(Player* me, std::unordered_set<uint32> pmClassSet, std::unordered_set<uint32> pmSubClassSet, uint32 pmTargetSlot)
 {
-    if (!pmTargetPlayer)
+    if (!me)
     {
         return;
     }
     uint32 minQuality = ItemQualities::ITEM_QUALITY_UNCOMMON;
-    if (pmTargetPlayer->getLevel() < 20)
+    if (me->getLevel() < 20)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
@@ -1777,7 +1871,7 @@ void Script_Base::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pm
             }
             if (proto->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF)
             {
-                if (pmTargetPlayer->getClass() == Classes::CLASS_WARLOCK || pmTargetPlayer->getClass() == Classes::CLASS_PRIEST || pmTargetPlayer->getClass() == Classes::CLASS_MAGE)
+                if (me->getClass() == Classes::CLASS_WARLOCK || me->getClass() == Classes::CLASS_PRIEST || me->getClass() == Classes::CLASS_MAGE)
                 {
                     bool hasSpellPower = false;
                     for (uint32 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
@@ -1814,7 +1908,7 @@ void Script_Base::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pm
         std::unordered_set<uint32> usableSlotSet = GetUsableEquipSlot(proto);
         if (usableSlotSet.find(pmTargetSlot) != usableSlotSet.end())
         {
-            uint32 checkMinRequiredLevel = pmTargetPlayer->getLevel();
+            uint32 checkMinRequiredLevel = me->getLevel();
             if (checkMinRequiredLevel > 10)
             {
                 checkMinRequiredLevel = checkMinRequiredLevel - 5;
@@ -1823,7 +1917,7 @@ void Script_Base::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pm
             {
                 checkMinRequiredLevel = 5;
             }
-            if (proto->RequiredLevel <= pmTargetPlayer->getLevel() && proto->RequiredLevel >= checkMinRequiredLevel)
+            if (proto->RequiredLevel <= me->getLevel() && proto->RequiredLevel >= checkMinRequiredLevel)
             {
                 validEquipSet[validEquipSet.size()] = proto->ItemId;
             }
@@ -1836,7 +1930,7 @@ void Script_Base::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pm
         {
             uint32 equipEntry = urand(0, validEquipSet.size() - 1);
             equipEntry = validEquipSet[equipEntry];
-            if (EquipNewItem(pmTargetPlayer, equipEntry, pmTargetSlot))
+            if (EquipNewItem(me, equipEntry, pmTargetSlot))
             {
                 break;
             }
@@ -1845,24 +1939,24 @@ void Script_Base::TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pm
     }
 }
 
-bool Script_Base::RandomTeleport(Player* pmTargetPlayer)
+bool Script_Base::RandomTeleport(Player* me)
 {
-    if (!pmTargetPlayer)
+    if (!me)
     {
         return false;
     }
-    if (pmTargetPlayer->IsBeingTeleported())
+    if (me->IsBeingTeleported())
     {
         return false;
     }
-    if (!pmTargetPlayer->IsAlive())
+    if (!me->IsAlive())
     {
-        pmTargetPlayer->ResurrectPlayer(1.0f);
-        pmTargetPlayer->SpawnCorpseBones();
+        me->ResurrectPlayer(1.0f);
+        me->SpawnCorpseBones();
     }
-    pmTargetPlayer->ClearInCombat();
-    pmTargetPlayer->StopMoving();
-    uint32 targetLevel = pmTargetPlayer->getLevel();
+    me->ClearInCombat();
+    me->StopMoving();
+    uint32 targetLevel = me->getLevel();
     std::unordered_map<uint32, uint32> onlinePlayerZoneIDMap;
     std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
     for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
@@ -1897,31 +1991,31 @@ bool Script_Base::RandomTeleport(Player* pmTargetPlayer)
             destX = frand(destPosition.m_positionX - destZone->spawnDistance, destPosition.m_positionX + destZone->spawnDistance);
             destY = frand(destPosition.m_positionY - destZone->spawnDistance, destPosition.m_positionY + destZone->spawnDistance);
             destZ = destPosition.m_positionZ;
-            TeleportPlayer(pmTargetPlayer, destZone->mapID, destX, destY, destZ);
-            sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "PVP Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
+            TeleportPlayer(me, destZone->mapID, destX, destY, destZ);
+            sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "PVP Teleport ninger %s (level %d)", me->GetName(), me->getLevel());
             return true;
         }
     }
-    pmTargetPlayer->TeleportTo(pmTargetPlayer->m_homebindMapId, pmTargetPlayer->m_homebindX, pmTargetPlayer->m_homebindY, pmTargetPlayer->m_homebindZ, 0.0f);
-    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Home Teleport ninger %s (level %d)", pmTargetPlayer->GetName(), pmTargetPlayer->getLevel());
+    me->TeleportTo(me->m_homebindMapId, me->m_homebindX, me->m_homebindY, me->m_homebindZ, 0.0f);
+    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Home Teleport ninger %s (level %d)", me->GetName(), me->getLevel());
     return true;
 }
 
-void Script_Base::TeleportTo(Player* pmTargetPlayer, uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ)
+void Script_Base::TeleportTo(Player* me, uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ)
 {
-    if (!pmTargetPlayer)
+    if (!me)
     {
         return;
     }
-    if (pmTargetPlayer->IsBeingTeleported())
+    if (me->IsBeingTeleported())
     {
         return;
     }
-    pmTargetPlayer->ClearInCombat();
-    pmTargetPlayer->StopMoving();
-    pmTargetPlayer->GetMotionMaster()->Initialize();
-    pmTargetPlayer->TeleportTo(pmTargetPlayer->m_homebindMapId, pmTargetPlayer->m_homebindX, pmTargetPlayer->m_homebindY, pmTargetPlayer->m_homebindZ, 0.0f);
-    if (Awareness_Base* ab = pmTargetPlayer->awarenessMap[pmTargetPlayer->activeAwarenessIndex])
+    me->ClearInCombat();
+    me->StopMoving();
+    me->GetMotionMaster()->Initialize();
+    me->TeleportTo(me->m_homebindMapId, me->m_homebindX, me->m_homebindY, me->m_homebindZ, 0.0f);
+    if (Awareness_Base* ab = me->awarenessMap[me->activeAwarenessIndex])
     {
         ab->teleportDelay = 5000;
         ab->wlTeleportDestination.m_mapId = pmMapID;
@@ -2097,3 +2191,4 @@ Unit* Script_Base::GetAnyUnitInRange(Player* pmSearcher, float pmMinRange, float
     return nullptr;
 }
 */
+

@@ -44,7 +44,6 @@ class NingerAction_Base
 {
 public:
     NingerAction_Base(Player* pmMe);
-    void Initialize();
     virtual void Reset();
     virtual void Update(uint32 pmDiff);
     virtual bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
@@ -55,6 +54,8 @@ public:
     virtual bool Assist(Unit* pmTarget);
     virtual bool Revive(Player* pmTarget);
     virtual bool Petting(bool pmSummon = true);
+    virtual void Prepare();
+    virtual void LearnTalents(uint32 pmTabIndex);
 
     void PetAttack(Unit* pmTarget);
     void PetStop();
@@ -76,7 +77,8 @@ public:
     void ChooseTarget(Unit* pmTarget);
     void ClearTarget();
 
-    bool InitializeCharacter(uint32 pmTargetLevel);
+    void InitializeCharacter(uint32 pmTargetLevel,uint32 pmSpecialtyTabIndex);
+    void InitializeEquipments(bool pmReset = false);
     bool RandomTeleport();
     void TeleportTo(uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ);
 
@@ -87,6 +89,7 @@ public:
     Player* GetNearbyHostilePlayer(float pmRange = RANGE_HEAL_DISTANCE);
     Unit* GetNearbyHostileUnit(float pmRange = RANGE_HEAL_DISTANCE);
     Unit* GetAnyUnitInRange(float pmMinRange = 0.0f, float pmMaxRange = VISIBILITY_DISTANCE_NORMAL);
+
 
     Player* me;
     NingerMovement* rm;    
@@ -99,7 +102,6 @@ public:
 private:
     void InitializeSpells();
     void InitializeTalents();
-    void InitializeEquipments();
     bool EquipNewItem(uint32 pmItemEntry, uint8 pmEquipSlot);
     uint32 GetUsableArmorSubClass(Player* pmTargetPlayer);
     void TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pmClassSet, std::unordered_set<uint32> pmSubClassSet, uint32 pmTargetSlot);

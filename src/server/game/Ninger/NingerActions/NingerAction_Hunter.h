@@ -15,6 +15,7 @@ class NingerAction_Hunter :public NingerAction_Base
 {
 public:
     NingerAction_Hunter(Player* pmMe);
+    void Prepare();
 
     uint32 aspectType;
 };
