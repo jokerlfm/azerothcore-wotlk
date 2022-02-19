@@ -1499,7 +1499,7 @@ void ObjectMgr::LoadEquipmentTemplates()
             if (!equipmentInfo.ItemEntry[i])
                 continue;
 
-            const ItemTemplate* item = GetItemTemplate(equipmentInfo.ItemEntry[i]);
+            ItemTemplate const* item = GetItemTemplate(equipmentInfo.ItemEntry[i]);
 
             if (!item)
             {
@@ -1770,7 +1770,7 @@ void ObjectMgr::LoadLinkedRespawn()
                         break;
                     }
 
-                    const MapEntry* const map = sMapStore.LookupEntry(master->mapid);
+                    MapEntry const* const map = sMapStore.LookupEntry(master->mapid);
                     if (!map || !map->Instanceable() || (master->mapid != slave->mapid))
                     {
                         LOG_ERROR("sql.sql", "LinkedRespawn: Creature '{}' linking to Creature '{}' on an unpermitted map.", guidLow, linkedGuidLow);
@@ -1807,7 +1807,7 @@ void ObjectMgr::LoadLinkedRespawn()
                         break;
                     }
 
-                    const MapEntry* const map = sMapStore.LookupEntry(master->mapid);
+                    MapEntry const* const map = sMapStore.LookupEntry(master->mapid);
                     if (!map || !map->Instanceable() || (master->mapid != slave->mapid))
                     {
                         LOG_ERROR("sql.sql", "LinkedRespawn: Creature '{}' linking to Gameobject '{}' on an unpermitted map.", guidLow, linkedGuidLow);
@@ -1844,7 +1844,7 @@ void ObjectMgr::LoadLinkedRespawn()
                         break;
                     }
 
-                    const MapEntry* const map = sMapStore.LookupEntry(master->mapid);
+                    MapEntry const* const map = sMapStore.LookupEntry(master->mapid);
                     if (!map || !map->Instanceable() || (master->mapid != slave->mapid))
                     {
                         LOG_ERROR("sql.sql", "LinkedRespawn: Gameobject '{}' linking to Gameobject '{}' on an unpermitted map.", guidLow, linkedGuidLow);
@@ -1881,7 +1881,7 @@ void ObjectMgr::LoadLinkedRespawn()
                         break;
                     }
 
-                    const MapEntry* const map = sMapStore.LookupEntry(master->mapid);
+                    MapEntry const* const map = sMapStore.LookupEntry(master->mapid);
                     if (!map || !map->Instanceable() || (master->mapid != slave->mapid))
                     {
                         LOG_ERROR("sql.sql", "LinkedRespawn: Gameobject '{}' linking to Creature '{}' on an unpermitted map.", guidLow, linkedGuidLow);
@@ -6696,13 +6696,13 @@ AreaTriggerTeleport const* ObjectMgr::GetGoBackTrigger(uint32 Map) const
 {
     bool useParentDbValue = false;
     uint32 parentId = 0;
-    const MapEntry* mapEntry = sMapStore.LookupEntry(Map);
+    MapEntry const* mapEntry = sMapStore.LookupEntry(Map);
     if (!mapEntry || mapEntry->entrance_map < 0)
         return nullptr;
 
     if (mapEntry->IsDungeon())
     {
-        const InstanceTemplate* iTemplate = sObjectMgr->GetInstanceTemplate(Map);
+        InstanceTemplate const* iTemplate = sObjectMgr->GetInstanceTemplate(Map);
 
         if (!iTemplate)
             return nullptr;
