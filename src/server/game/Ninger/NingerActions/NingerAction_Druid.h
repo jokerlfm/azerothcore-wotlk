@@ -6,7 +6,6 @@
 class NingerAction_Druid :public NingerAction_Base
 {
 public:
-    NingerAction_Druid(Player* pmMe);
-    void Prepare();
+    NingerAction_Druid();
 };
 #endif

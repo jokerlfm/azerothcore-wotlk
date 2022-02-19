@@ -219,7 +219,7 @@ void WorldSession::SendPacket(WorldPacket const* packet)
     if (isNinger)
     {
         WorldPacket eachCopy(*packet);
-        sNingerManager->HandlePacket(this, eachCopy);
+        HandlePacket(eachCopy);
         return;
     }
 
@@ -305,21 +305,20 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
         ProcessQueryCallbacks();
         if (_player)
         {
-            if (_player->IsBeingTeleportedNear())
+            if (_player->IsInWorld())
             {
-                WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
-                pkt << _player->GetPackGUID();
-                pkt << uint32(0); // flags
-                pkt << uint32(0); // time
-                HandleMoveTeleportAck(pkt);
-            }
-            else if (_player->IsBeingTeleportedFar())
-            {
-                HandleMoveWorldportAck();
-                _player->activeStrategyIndex = 0;
-                if (NingerStrategy_Base* ab = _player->strategyMap[_player->activeStrategyIndex])
+                if (_player->IsBeingTeleportedNear())
                 {
-                    ab->Report();
+                    WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
+                    pkt << _player->GetPackGUID();
+                    pkt << uint32(0); // flags
+                    pkt << uint32(0); // time
+                    HandleMoveTeleportAck(pkt);
+                }
+                else if (_player->IsBeingTeleportedFar())
+                {
+                    HandleMoveWorldportAck();
+                    _player->strategyMap[_player->activeStrategyIndex]->Report();
                 }
             }
         }
@@ -1651,4 +1650,164 @@ void WorldSession::SendTimeSync()
     // Schedule next sync in 10 sec (except for the 2 first packets, which are spaced by only 5s)
     _timeSyncTimer = _timeSyncNextCounter == 0 ? 5000 : 10000;
     _timeSyncNextCounter++;
+}
+
+// lfm ninger
+void WorldSession::HandlePacket(WorldPacket pmPacket)
+{
+    switch (pmPacket.GetOpcode())
+    {
+    case SMSG_CHAR_ENUM:
+    {
+        std::unordered_set<uint32> myCharacterIdSet;
+        QueryResult characterQR = CharacterDatabase.Query("SELECT guid FROM characters where account = {}", GetAccountId());
+        if (characterQR)
+        {
+            Field* characterFields = characterQR->Fetch();
+            uint32 character_id = characterFields[0].Get<uint32>();
+            if (character_id > 0)
+            {
+                myCharacterIdSet.insert(character_id);
+            }
+        }
+        for (std::unordered_set<NingerEntity*>::iterator reIT = sNingerManager->ningerEntitySet.begin(); reIT != sNingerManager->ningerEntitySet.end(); reIT++)
+        {
+            if (NingerEntity* re = *reIT)
+            {
+                if (myCharacterIdSet.find(re->character_id) != myCharacterIdSet.end())
+                {
+                    re->entityState = NingerEntityState::NingerEntityState_DoLogin;
+                }
+            }
+        }
+        break;
+    }
+    case SMSG_SPELL_FAILURE:
+    {
+        break;
+    }
+    case SMSG_SPELL_DELAYED:
+    {
+        break;
+    }
+    case SMSG_GROUP_INVITE:
+    {
+        if (!_player)
+        {
+            break;
+        }
+        else if(!_player->IsInWorld())
+        {
+            break;
+        }
+        if (Group* grp = _player->GetGroupInvite())
+        {
+            Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID());
+            if (!inviter)
+            {
+                break;
+            }
+            WorldPacket wpAccept(CMSG_GROUP_ACCEPT, 4);
+            wpAccept << uint32(0);
+            _player->GetSession()->HandleGroupAcceptOpcode(wpAccept);
+            std::ostringstream replyStream_Talent;
+            _player->ningerAction->Reset();
+            replyStream_Talent << "My talent category is " << sNingerManager->characterTalentTabNameMap[_player->getClass()][_player->ningerAction->maxTalentTab];
+            _player->Whisper(replyStream_Talent.str(), Language::LANG_UNIVERSAL, inviter);
+        }
+        break;
+    }
+    case BUY_ERR_NOT_ENOUGHT_MONEY:
+    {
+        break;
+    }
+    case BUY_ERR_REPUTATION_REQUIRE:
+    {
+        break;
+    }
+    case MSG_RAID_READY_CHECK:
+    {
+        break;
+    }
+    case SMSG_GROUP_SET_LEADER:
+    {
+        //std::string leaderName = "";
+        //pmPacket >> leaderName;
+        //Player* newLeader = ObjectAccessor::FindPlayerByName(leaderName);
+        //if (newLeader)
+        //{
+        //    if (newLeader->GetGUID() == me->GetGUID())
+        //    {
+        //        WorldPacket data(CMSG_GROUP_SET_LEADER, 8);
+        //        data << master->GetGUID().WriteAsPacked();
+        //        me->GetSession()->HandleGroupSetLeaderOpcode(data);
+        //    }
+        //    else
+        //    {
+        //        if (!newLeader->isninger)
+        //        {
+        //            master = newLeader;
+        //        }
+        //    }
+        //}
+        break;
+    }
+    case SMSG_RESURRECT_REQUEST:
+    {
+        if (!_player)
+        {
+            break;
+        }
+        else if (!_player->IsInWorld())
+        {
+            break;
+        }
+        if (_player->isResurrectRequested())
+        {
+            _player->ResurectUsingRequestData();
+            _player->ClearInCombat();
+            _player->ningerAction->rm->ResetMovement();
+            _player->ningerAction->ClearTarget();
+        }
+        break;
+    }
+    case SMSG_INVENTORY_CHANGE_FAILURE:
+    {
+        break;
+    }
+    case SMSG_TRADE_STATUS:
+    {
+        break;
+    }
+    case SMSG_LOOT_RESPONSE:
+    {
+        break;
+    }
+    case SMSG_ITEM_PUSH_RESULT:
+    {
+        break;
+    }
+    case SMSG_PARTY_COMMAND_RESULT:
+    {
+        break;
+    }
+    case SMSG_DUEL_REQUESTED:
+    {
+        if (!_player)
+        {
+            break;
+        }
+        if (!_player->duel)
+        {
+            break;
+        }
+        _player->DuelComplete(DuelCompleteType::DUEL_INTERRUPTED);
+        _player->Whisper("Not interested", Language::LANG_UNIVERSAL, _player->duel->Opponent);
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
 }

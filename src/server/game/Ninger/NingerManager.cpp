@@ -28,7 +28,7 @@ NingerManager::NingerManager()
 
 void NingerManager::InitializeManager()
 {
-    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Initialize ninger");
+    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Initialize ninger");
 
     checkDelay = sNingerConfig->ManagerCheckDelay;
 
@@ -105,7 +105,7 @@ void NingerManager::InitializeManager()
     characterTalentTabNameMap[Classes::CLASS_WARLOCK][1] = "Demonology";
     characterTalentTabNameMap[Classes::CLASS_WARLOCK][2] = "Destruction";
 
-    characterTalentTabNameMap[Classes::CLASS_PRIEST][0] = "Descipline";
+    characterTalentTabNameMap[Classes::CLASS_PRIEST][0] = "Discipline";
     characterTalentTabNameMap[Classes::CLASS_PRIEST][1] = "Holy";
     characterTalentTabNameMap[Classes::CLASS_PRIEST][2] = "Shadow";
 
@@ -120,6 +120,11 @@ void NingerManager::InitializeManager()
     characterTalentTabNameMap[Classes::CLASS_DRUID][0] = "Balance";
     characterTalentTabNameMap[Classes::CLASS_DRUID][1] = "Feral";
     characterTalentTabNameMap[Classes::CLASS_DRUID][2] = "Restoration";
+
+    if (sNingerConfig->Reset)
+    {
+        DeleteNingers();
+    }
 
     QueryResult ningerQR = CharacterDatabase.Query("SELECT ninger_id, account_name, character_id, target_level, target_race, target_class, target_specialty FROM ninger");
     if (ningerQR)
@@ -139,6 +144,7 @@ void NingerManager::InitializeManager()
         } while (ningerQR->NextRow());
     }
 
+    nameIndex = 0;
     QueryResult ningerNameQR = WorldDatabase.Query("SELECT name FROM ninger_names order by rand()");
     if (ningerNameQR)
     {
@@ -150,7 +156,7 @@ void NingerManager::InitializeManager()
         } while (ningerNameQR->NextRow());
     }
 
-    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "ninger initialized");
+    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "ninger initialized");
 }
 
 NingerManager* NingerManager::instance()
@@ -199,538 +205,15 @@ void NingerManager::UpdateNingerManager(uint32 pmDiff)
             LoginNinger(eachLevel);
         }
     }
+}
 
+void NingerManager::UpdateNingerEntities(uint32 pmDiff)
+{
     for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
     {
         (*reIT)->Update(pmDiff);
     }
 }
-
-/*
-uint32 NingerManager::CheckNingerAccount(std::string pmAccountName)
-{
-    uint32 accountID = 0;
-
-    QueryResult accountQR = LoginDatabase.PQuery("SELECT id FROM account where username = '%s'", pmAccountName.c_str());
-    if (accountQR)
-    {
-        Field* idFields = accountQR->Fetch();
-        accountID = idFields[0].Get<uint32>();
-    }
-
-    return accountID;
-}
-
-bool NingerManager::CreateNingerAccount(std::string pmAccountName)
-{
-    bool result = false;
-
-    AccountOpResult aor = AccountMgr::CreateAccount(pmAccountName, NINGER_PASSWORD);
-    if (aor == AccountOpResult::AOR_NAME_ALREADY_EXIST)
-    {
-        result = true;
-    }
-    else if (aor == AccountOpResult::AOR_OK)
-    {
-        result = true;
-    }
-
-    return result;
-}
-
-uint32 NingerManager::CheckAccountCharacter(uint32 pmAccountID)
-{
-    uint32 result = 0;
-
-    QueryResult characterQR = CharacterDatabase.PQuery("SELECT guid FROM characters where account = '%d'", pmAccountID);
-    if (characterQR)
-    {
-        Field* characterFields = characterQR->Fetch();
-        result = characterFields[0].Get<uint32>();
-    }
-
-    return result;
-}
-
-uint32 NingerManager::GetCharacterRace(uint32 pmCharacterID)
-{
-    uint32 result = 0;
-
-    QueryResult characterQR = CharacterDatabase.PQuery("SELECT race FROM characters where guid = '%d'", pmCharacterID);
-    if (characterQR)
-    {
-        Field* characterFields = characterQR->Fetch();
-        result = characterFields[0].Get<uint32>();
-    }
-
-    return result;
-}
-
-uint32 NingerManager::CreateNingerCharacter(uint32 pmAccountID)
-{
-    uint32  targetClass = Classes::CLASS_ROGUE;
-    uint32 classRandom = urand(0, 100);
-    if (classRandom < 40)
-    {
-        targetClass = Classes::CLASS_ROGUE;
-    }
-    else if (classRandom < 75)
-    {
-        targetClass = Classes::CLASS_WARLOCK;
-    }
-    else
-    {
-        targetClass = Classes::CLASS_PRIEST;
-    }
-    uint32 raceIndex = 0;
-    uint32 targetRace = 0;
-    raceIndex = urand(0, availableRaces[targetClass].size() - 1);
-    targetRace = availableRaces[targetClass][raceIndex];
-
-    return CreateNingerCharacter(pmAccountID, targetClass, targetRace);
-}
-
-uint32 NingerManager::CreateNingerCharacter(uint32 pmAccountID, uint32 pmCharacterClass, uint32 pmCharacterRace)
-{
-    uint32 result = 0;
-
-    std::string currentName = "";
-    bool nameValid = false;
-    while (nameIndex < ningerNameMap.size())
-    {
-        currentName = ningerNameMap[nameIndex];
-        QueryResult checkNameQR = CharacterDatabase.PQuery("SELECT count(*) FROM characters where name = '%s'", currentName.c_str());
-
-        if (!checkNameQR)
-        {
-            sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Name %s is available", currentName.c_str());
-            nameValid = true;
-        }
-        else
-        {
-            Field* nameCountFields = checkNameQR->Fetch();
-            uint32 nameCount = nameCountFields[0].Get<uint32>();
-            if (nameCount == 0)
-            {
-                nameValid = true;
-            }
-        }
-
-        nameIndex++;
-        if (nameValid)
-        {
-            break;
-        }
-    }
-    if (!nameValid)
-    {
-        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_ERROR, "No available names");
-        return false;
-    }
-
-    uint8 gender = 0, skin = 0, face = 0, hairStyle = 0, hairColor = 0, facialHair = 0;
-    while (true)
-    {
-        gender = urand(0, 100);
-        if (gender < 50)
-        {
-            gender = 0;
-        }
-        else
-        {
-            gender = 1;
-        }
-        face = urand(0, 5);
-        hairStyle = urand(0, 5);
-        hairColor = urand(0, 5);
-        facialHair = urand(0, 5);
-
-        CharacterCreateInfo* cci = new CharacterCreateInfo();
-        cci->Name = currentName;
-        cci->Race = pmCharacterRace;
-        cci->Class = pmCharacterClass;
-        cci->Gender = gender;
-        cci->Skin = skin;
-        cci->Face = face;
-        cci->HairStyle = hairStyle;
-        cci->HairColor = hairColor;
-        cci->FacialHair = facialHair;
-        cci->OutfitId = 0;
-
-        WorldSession* eachSession = new WorldSession(pmAccountID, "ninger", NULL, SEC_PLAYER, 2, 0, LOCALE_enUS, 0, false, true, 0);
-        Player* newPlayer = new Player(eachSession);
-        if (!newPlayer->Create(sObjectMgr->GetGenerator<HighGuid::Player>().Generate(), cci))
-        {
-            newPlayer->CleanupsBeforeDelete();
-            delete eachSession;
-            delete newPlayer;
-            sLog->outMessage("ninger", LogLevel::LOG_LEVEL_ERROR, "Character create failed, %s %d %d", currentName.c_str(), pmCharacterRace, pmCharacterClass);
-            sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Try again");
-            continue;
-        }
-        newPlayer->GetMotionMaster()->Initialize();
-        newPlayer->setCinematic(2);
-        newPlayer->SetAtLoginFlag(AT_LOGIN_NONE);
-        newPlayer->SaveToDB(true, true);
-        result = newPlayer->GetGUID().GetCounter();
-        eachSession->isNinger = true;
-        sWorld->AddSession(eachSession);
-        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Create character %d - %s for account %d", newPlayer->GetGUID().GetCounter(), currentName.c_str(), pmAccountID);
-        break;
-    }
-
-    return result;
-}
-
-Player* NingerManager::CheckLogin(uint32 pmAccountID, uint32 pmCharacterID)
-{
-    ObjectGuid guid = ObjectGuid(HighGuid::Player, pmCharacterID);
-    Player* currentPlayer = ObjectAccessor::FindPlayer(guid);
-    if (currentPlayer)
-    {
-        return currentPlayer;
-    }
-    return NULL;
-}
-
-bool NingerManager::LoginNinger(uint32 pmAccountID, uint32 pmCharacterID)
-{
-    ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, pmCharacterID);
-    if (Player* currentPlayer = ObjectAccessor::FindPlayer(playerGuid))
-    {
-        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "ninger %d %s is already in world", pmCharacterID, currentPlayer->GetName());
-        return false;
-    }
-    WorldSession* loginSession = sWorld->FindSession(pmAccountID);
-    if (!loginSession)
-    {
-        loginSession = new WorldSession(pmAccountID, "ninger", NULL, SEC_PLAYER, 2, 0, LOCALE_enUS, 0, false, true, 0);
-        sWorld->AddSession(loginSession);
-    }
-    loginSession->isNinger = true;
-    WorldPacket wpLogin(CMSG_PLAYER_LOGIN, 8);
-    wpLogin << playerGuid;
-    loginSession->HandleAcceptTradeOpcode(wpLogin);
-    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Log in character %d %d", pmAccountID, pmCharacterID);
-
-    return true;
-}
-
-void NingerManager::LogoutNinger(uint32 pmCharacterID)
-{
-    ObjectGuid guid = ObjectGuid(HighGuid::Player, pmCharacterID);
-    if (Player* checkP = ObjectAccessor::FindPlayer(guid))
-    {
-        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Log out ninger %s", checkP->GetName());
-        std::ostringstream msgStream;
-        msgStream << checkP->GetName() << " logged out";
-        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
-        if (WorldSession* checkWS = checkP->GetSession())
-        {
-            checkWS->LogoutPlayer(true);
-        }
-    }
-}
-
-void NingerManager::LogoutNingers(uint32 pmLevel)
-{
-    for (std::unordered_map<std::string, NingerEntity*>::iterator reIT = ningerEntityMap.begin(); reIT != ningerEntityMap.end(); reIT++)
-    {
-        if (NingerEntity* eachRE = reIT->second)
-        {
-            if (pmLevel > 0)
-            {
-                if (eachRE->target_level != pmLevel)
-                {
-                    continue;
-                }
-            }
-            ObjectGuid guid = ObjectGuid(HighGuid::Player, eachRE->character_id);
-            if (Player* checkP = ObjectAccessor::FindPlayer(guid))
-            {
-                if (Map* ningerMap = checkP->GetMap())
-                {
-                    if (ningerMap->Instanceable())
-                    {
-                        checkP->TeleportTo(checkP->m_homebindMapId, checkP->m_homebindX, checkP->m_homebindY, checkP->m_homebindZ, 0);
-                    }
-                }
-                eachRE->entityState = NingerEntityState::NingerEntityState_DoLogoff;
-                uint32 offlineWaiting = urand(1 * IN_MILLISECONDS, 2 * IN_MILLISECONDS);
-                eachRE->checkDelay = offlineWaiting;
-            }
-        }
-    }
-}
-
-bool NingerManager::PrepareNinger(Player* pmNinger)
-{
-    if (!pmNinger)
-    {
-        return false;
-    }
-    InitializeEquipments(pmNinger, false);
-    pmNinger->DurabilityRepairAll(false, 0, false);
-
-    //if (pmNinger->getClass() == Classes::CLASS_HUNTER)
-    //{
-    //    uint32 ammoEntry = 0;
-    //    Item* weapon = pmNinger->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_RANGED);
-    //    if (weapon)
-    //    {
-    //        if (const ItemTemplate* it = weapon->GetTemplate())
-    //        {
-    //            uint32 subClass = it->SubClass;
-    //            uint8 playerLevel = pmNinger->getLevel();
-    //            if (subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_BOW || subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_CROSSBOW)
-    //            {
-    //                if (playerLevel >= 40)
-    //                {
-    //                    ammoEntry = 11285;
-    //                }
-    //                else if (playerLevel >= 25)
-    //                {
-    //                    ammoEntry = 3030;
-    //                }
-    //                else
-    //                {
-    //                    ammoEntry = 2515;
-    //                }
-    //            }
-    //            else if (subClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_GUN)
-    //            {
-    //                if (playerLevel >= 40)
-    //                {
-    //                    ammoEntry = 11284;
-    //                }
-    //                else if (playerLevel >= 25)
-    //                {
-    //                    ammoEntry = 3033;
-    //                }
-    //                else
-    //                {
-    //                    ammoEntry = 2519;
-    //                }
-    //            }
-    //            if (ammoEntry > 0)
-    //            {
-    //                if (!pmNinger->HasItemCount(ammoEntry, 100))
-    //                {
-    //                    pmNinger->StoreNewItemInBestSlots(ammoEntry, 1000);
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-    //else if (pmNinger->getClass() == Classes::CLASS_SHAMAN)
-    //{
-    //    if (!pmNinger->HasItemCount(5175))
-    //    {
-    //        pmNinger->StoreNewItemInBestSlots(5175, 1);
-    //    }
-    //    if (!pmNinger->HasItemCount(5176))
-    //    {
-    //        pmNinger->StoreNewItemInBestSlots(5176, 1);
-    //    }
-    //}
-    //Pet* checkPet = pmNinger->GetPet();
-    //if (checkPet)
-    //{
-    //    checkPet->SetReactState(REACT_DEFENSIVE);
-    //    std::unordered_map<uint32, PetSpell> petSpellMap = checkPet->m_spells;
-    //    for (std::unordered_map<uint32, PetSpell>::iterator it = petSpellMap.begin(); it != petSpellMap.end(); it++)
-    //    {
-    //        if (it->second.active == ACT_DISABLED || it->second.active == ACT_ENABLED)
-    //        {
-    //            const SpellInfo* pS = sSpellMgr->GetSpellInfo(it->first);
-    //            if (pS)
-    //            {
-    //                std::string checkNameStr = std::string(pS->SpellName);
-    //                if (checkNameStr == "Prowl")
-    //                {
-    //                    checkPet->ToggleAutocast(pS, false);
-    //                }
-    //                else if (checkNameStr == "Phase Shift")
-    //                {
-    //                    checkPet->ToggleAutocast(pS, false);
-    //                }
-    //                else if (checkNameStr == "Cower")
-    //                {
-    //                    checkPet->ToggleAutocast(pS, false);
-    //                }
-    //                else if (checkNameStr == "Growl")
-    //                {
-    //                    if (pmNinger->GetGroup())
-    //                    {
-    //                        checkPet->ToggleAutocast(pS, false);
-    //                    }
-    //                    else
-    //                    {
-    //                        checkPet->ToggleAutocast(pS, true);
-    //                    }
-    //                }
-    //                else
-    //                {
-    //                    checkPet->ToggleAutocast(pS, true);
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    pmNinger->Say("Ready", Language::LANG_UNIVERSAL);
-
-    return true;
-}
-
-std::unordered_set<uint32> NingerManager::GetUsableEquipSlot(const ItemTemplate* pmIT)
-{
-    std::unordered_set<uint32> resultSet;
-
-    switch (pmIT->InventoryType)
-    {
-    case INVTYPE_HEAD:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_HEAD);
-        break;
-    }
-    case INVTYPE_NECK:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_NECK);
-        break;
-    }
-    case INVTYPE_SHOULDERS:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_SHOULDERS);
-        break;
-    }
-    case INVTYPE_BODY:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_BODY);
-        break;
-    }
-    case INVTYPE_CHEST:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_CHEST);
-        break;
-    }
-    case INVTYPE_ROBE:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_CHEST);
-        break;
-    }
-    case INVTYPE_WAIST:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_WAIST);
-        break;
-    }
-    case INVTYPE_LEGS:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_LEGS);
-        break;
-    }
-    case INVTYPE_FEET:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_FEET);
-        break;
-    }
-    case INVTYPE_WRISTS:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_WRISTS);
-        break;
-    }
-    case INVTYPE_HANDS:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_HANDS);
-        break;
-    }
-    case INVTYPE_FINGER:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_FINGER1);
-        resultSet.insert(EQUIPMENT_SLOT_FINGER2);
-        break;
-    }
-    case INVTYPE_TRINKET:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_TRINKET1);
-        resultSet.insert(EQUIPMENT_SLOT_TRINKET2);
-        break;
-    }
-    case INVTYPE_CLOAK:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_BACK);
-        break;
-    }
-    case INVTYPE_WEAPON:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_MAINHAND);
-        resultSet.insert(EQUIPMENT_SLOT_OFFHAND);
-        break;
-    }
-    case INVTYPE_SHIELD:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_OFFHAND);
-        break;
-    }
-    case INVTYPE_RANGED:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_RANGED);
-        break;
-    }
-    case INVTYPE_2HWEAPON:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_MAINHAND);
-        break;
-    }
-    case INVTYPE_TABARD:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_TABARD);
-        break;
-    }
-    case INVTYPE_WEAPONMAINHAND:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_MAINHAND);
-        break;
-    }
-    case INVTYPE_WEAPONOFFHAND:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_OFFHAND);
-        break;
-    }
-    case INVTYPE_HOLDABLE:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_OFFHAND);
-        break;
-    }
-    case INVTYPE_THROWN:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_RANGED);
-        break;
-    }
-    case INVTYPE_RANGEDRIGHT:
-    {
-        resultSet.insert(EQUIPMENT_SLOT_RANGED);
-        break;
-    }
-    case INVTYPE_BAG:
-    {
-        resultSet.insert(INVENTORY_SLOT_BAG_START);
-        break;
-    }
-    case INVTYPE_RELIC:
-    {
-        break;
-    }
-    default:
-    {
-        break;
-    }
-    }
-
-    return resultSet;
-}
-
-*/
 
 void NingerManager::DeleteNingers()
 {
@@ -747,8 +230,24 @@ void NingerManager::DeleteNingers()
             }
         } while (ningerQR->NextRow());
     }
-
     CharacterDatabase.DirectExecute("delete from ninger");
+
+    std::ostringstream accountQueryStream;
+    accountQueryStream << "SELECT id FROM account where username like '" << NINGER_MARK << "%'";
+    std::string accountQuerySQL = accountQueryStream.str();
+    QueryResult ningerAccountQR = LoginDatabase.Query(accountQuerySQL);
+    if (ningerAccountQR)
+    {
+        do
+        {
+            Field* fields = ningerAccountQR->Fetch();
+            uint32 eachAccountId = fields[0].Get<uint32>();
+            if (eachAccountId > 0)
+            {
+                AccountMgr::DeleteAccount(eachAccountId);
+            }
+        } while (ningerAccountQR->NextRow());
+    }
 }
 
 bool NingerManager::LoginNinger(uint32 pmLevel)
@@ -764,41 +263,20 @@ bool NingerManager::LoginNinger(uint32 pmLevel)
         }
         if (currentCount < sNingerConfig->NingerCountEachLevel)
         {
-            time_t now = time(NULL);
-            std::ostringstream accountNameStream;
-            accountNameStream << "Ninger" << now;
-            std::string checkAccountName = accountNameStream.str();
-            std::ostringstream querySQLStream;
-            querySQLStream << "SELECT * FROM account where username ='" << checkAccountName << "'";
-            std::string querySQL = querySQLStream.str();
-            QueryResult accountNameQR = LoginDatabase.Query(querySQL.c_str());
-            if (accountNameQR)
+            uint32 addCount = sNingerConfig->NingerCountEachLevel - currentCount;
+            uint32 allianceCount = addCount / 2;
+            uint32 hordeCount = addCount - allianceCount;
+            int checkCount = allianceCount;
+            while (checkCount > 0)
             {
-                sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "Account already %s exists.", checkAccountName.c_str());
+                CreateNinger(pmLevel, true);
+                checkCount--;
             }
-            else
+            checkCount = hordeCount;
+            while (checkCount > 0)
             {
-                uint32 target_race = 0;
-                uint32 target_class = 0;
-                uint32 target_specialty = 0;
-                std::ostringstream sqlStream;
-                sqlStream << "INSERT INTO ninger (ninger_id,account_id, account_name, character_id, target_level, target_race, target_class, target_specialty) VALUES (" << now << ", 0, '" << checkAccountName << "', 0, " << pmLevel << ", " << target_race << ", " << target_class << ", " << target_specialty << ")";
-                std::string sql = sqlStream.str();
-                CharacterDatabase.DirectExecute(sql.c_str());
-                NingerEntity* re = new NingerEntity();
-                re->ninger_id = now;
-                re->account_id = 0;
-                re->account_name = checkAccountName;
-                re->character_id = 0;
-                re->target_level = pmLevel;
-                re->target_race = target_race;
-                re->target_class = target_class;
-                re->target_specialty = target_specialty;
-                ningerEntitySet.insert(re);
-                std::ostringstream replyStream;
-                replyStream << "ninger " << checkAccountName << " created";
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str());
-                return true;
+                CreateNinger(pmLevel, false);
+                checkCount--;
             }
         }
         uint32 onlineCount = 0;
@@ -820,19 +298,22 @@ bool NingerManager::LoginNinger(uint32 pmLevel)
         {
             toOnline = sNingerConfig->NingerCountEachLevel - onlineCount;
         }
-        for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
+        if (toOnline > 0)
         {
-            if (NingerEntity* eachRE = *reIT)
+            for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
             {
-                if (eachRE->target_level == pmLevel)
+                if (NingerEntity* eachRE = *reIT)
                 {
-                    if (eachRE->entityState == NingerEntityState::NingerEntityState_OffLine)
+                    if (eachRE->target_level == pmLevel)
                     {
-                        eachRE->entityState = NingerEntityState::NingerEntityState_Enter;
-                        toOnline--;
-                        if (toOnline <= 0)
+                        if (eachRE->entityState == NingerEntityState::NingerEntityState_OffLine)
                         {
-                            break;
+                            eachRE->entityState = NingerEntityState::NingerEntityState_Enter;
+                            toOnline--;
+                            if (toOnline <= 0)
+                            {
+                                break;
+                            }
                         }
                     }
                 }
@@ -840,6 +321,61 @@ bool NingerManager::LoginNinger(uint32 pmLevel)
         }
     }
     return true;
+}
+
+void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
+{
+    uint32 currentNingerCount = 0;
+    QueryResult ningerQR = CharacterDatabase.Query("SELECT count(*) FROM ninger");
+    if (ningerQR)
+    {
+        Field* fields = ningerQR->Fetch();
+        currentNingerCount = fields[0].Get<uint32>();
+    }
+    std::ostringstream accountNameStream;
+    accountNameStream << NINGER_MARK << currentNingerCount;
+    std::string checkAccountName = accountNameStream.str();
+    std::ostringstream querySQLStream;
+    querySQLStream << "SELECT * FROM account where username ='" << checkAccountName << "'";
+    std::string querySQL = querySQLStream.str();
+    QueryResult accountNameQR = LoginDatabase.Query(querySQL.c_str());
+    if (accountNameQR)
+    {
+        sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Account already %s exists.", checkAccountName.c_str());
+    }
+    else
+    {
+        uint32 target_class = Classes::CLASS_PRIEST;
+        uint32 target_race = 0;
+        if (pmAlliance)
+        {
+            uint32 raceIndex = urand(0, allianceRaces[target_class].size() - 1);
+            target_race = allianceRaces[target_class][raceIndex];
+        }
+        else
+        {
+            uint32 raceIndex = urand(0, hordeRaces[target_class].size() - 1);
+            target_race = hordeRaces[target_class][raceIndex];
+        }
+        uint32 target_specialty = 0;
+        std::ostringstream sqlStream;
+        sqlStream << "INSERT INTO ninger (ninger_id,account_id, account_name, character_id, target_level, target_race, target_class, target_specialty) VALUES (" << currentNingerCount << ", 0, '" << checkAccountName << "', 0, " << pmLevel << ", " << target_race << ", " << target_class << ", " << target_specialty << ")";
+        std::string sql = sqlStream.str();
+        CharacterDatabase.DirectExecute(sql.c_str());
+        NingerEntity* re = new NingerEntity();
+        re->ninger_id = currentNingerCount;
+        re->account_id = 0;
+        re->account_name = checkAccountName;
+        re->character_id = 0;
+        re->target_level = pmLevel;
+        re->target_race = target_race;
+        re->target_class = target_class;
+        re->target_specialty = target_specialty;
+        ningerEntitySet.insert(re);
+        std::ostringstream replyStream;
+        replyStream << "ninger " << checkAccountName << " created";
+        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str());
+    }
 }
 
 void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
@@ -2519,143 +2055,6 @@ void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Playe
     //            }
     //        }
     //    }
-}
-
-void NingerManager::HandlePacket(WorldSession* pmSession, WorldPacket pmPacket)
-{
-    //if (pmSession)
-    //{
-    //    if (!pmSession->isNinger)
-    //    {
-    //        return;
-    //    }
-    //    if (Player* me = pmSession->GetPlayer())
-    //    {
-    //        if (Awareness_Base* ningerAI = me->awarenessMap[me->activeAwarenessIndex])
-    //        {
-    //            switch (pmPacket.GetOpcode())
-    //            {
-    //            case SMSG_SPELL_FAILURE:
-    //            {
-    //                break;
-    //            }
-    //            case SMSG_SPELL_DELAYED:
-    //            {
-    //                break;
-    //            }
-    //            case SMSG_GROUP_INVITE:
-    //            {
-    //                Group* grp = me->GetGroupInvite();
-    //                if (!grp)
-    //                {
-    //                    break;
-    //                }
-    //                Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID());
-    //                if (!inviter)
-    //                {
-    //                    break;
-    //                }
-    //                WorldPacket wpAccept(CMSG_GROUP_ACCEPT, 4);
-    //                wpAccept << uint32(0);
-    //                me->GetSession()->HandleGroupAcceptOpcode(wpAccept);
-    //                std::ostringstream replyStream_Talent;
-    //                if (Awareness_Base* ningerAI = me->awarenessMap[me->activeAwarenessIndex])
-    //                {
-    //                    ningerAI->Reset();
-    //                    if (Script_Base* sb = ningerAI->sb)
-    //                    {
-    //                        replyStream_Talent << "My talent category is " << characterTalentTabNameMap[me->getClass()][sb->maxTalentTab];
-    //                        WhisperTo(inviter, replyStream_Talent.str(), Language::LANG_UNIVERSAL, me);
-    //                    }
-    //                }
-    //                break;
-    //            }
-    //            case BUY_ERR_NOT_ENOUGHT_MONEY:
-    //            {
-    //                break;
-    //            }
-    //            case BUY_ERR_REPUTATION_REQUIRE:
-    //            {
-    //                break;
-    //            }
-    //            case MSG_RAID_READY_CHECK:
-    //            {
-    //                ningerAI->readyCheckDelay = urand(2000, 6000);
-    //                break;
-    //            }
-    //            case SMSG_GROUP_SET_LEADER:
-    //            {
-    //                //std::string leaderName = "";
-    //                //pmPacket >> leaderName;
-    //                //Player* newLeader = ObjectAccessor::FindPlayerByName(leaderName);
-    //                //if (newLeader)
-    //                //{
-    //                //    if (newLeader->GetGUID() == me->GetGUID())
-    //                //    {
-    //                //        WorldPacket data(CMSG_GROUP_SET_LEADER, 8);
-    //                //        data << master->GetGUID().WriteAsPacked();
-    //                //        me->GetSession()->HandleGroupSetLeaderOpcode(data);
-    //                //    }
-    //                //    else
-    //                //    {
-    //                //        if (!newLeader->isninger)
-    //                //        {
-    //                //            master = newLeader;
-    //                //        }
-    //                //    }
-    //                //}
-    //                break;
-    //            }
-    //            case SMSG_RESURRECT_REQUEST:
-    //            {
-    //                if (me->isResurrectRequested())
-    //                {
-    //                    me->RemoveAllAttackers();
-    //                    me->ClearInCombat();
-    //                    ningerAI->sb->rm->ResetMovement();
-    //                    ningerAI->sb->ClearTarget();
-    //                    me->ResurectUsingRequestData();
-    //                }
-    //                break;
-    //            }
-    //            case SMSG_INVENTORY_CHANGE_FAILURE:
-    //            {
-    //                break;
-    //            }
-    //            case SMSG_TRADE_STATUS:
-    //            {
-    //                break;
-    //            }
-    //            case SMSG_LOOT_RESPONSE:
-    //            {
-    //                break;
-    //            }
-    //            case SMSG_ITEM_PUSH_RESULT:
-    //            {
-    //                break;
-    //            }
-    //            case SMSG_PARTY_COMMAND_RESULT:
-    //            {
-    //                break;
-    //            }
-    //            case SMSG_DUEL_REQUESTED:
-    //            {
-    //                if (!me->duel)
-    //                {
-    //                    break;
-    //                }
-    //                me->DuelComplete(DuelCompleteType::DUEL_INTERRUPTED);
-    //                WhisperTo(me->duel->Opponent, "Not interested", Language::LANG_UNIVERSAL, me);
-    //                break;
-    //            }
-    //            default:
-    //            {
-    //                break;
-    //            }
-    //            }
-    //        }
-    //    }
-    //}
 }
 
 bool NingerManager::StringEndWith(const std::string& str, const std::string& tail)

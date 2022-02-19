@@ -1696,10 +1696,14 @@ void GameObject::Use(Unit* user)
             if (!zone_skill)
                 LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
 
-            // lfm zone fishing skill will be 50% higher, min 25,
-            if (zone_skill < 25)
+            // lfm zone fishing skill will be 50% higher, min 50,
+            if (zone_skill < 50)
             {
-                zone_skill = 25;
+                zone_skill = 50;
+            }
+            else if (zone_skill < 100)
+            {
+                zone_skill = 100;
             }
             else
             {
@@ -1716,7 +1720,19 @@ void GameObject::Use(Unit* user)
                     chance = 1;
             }
             else
+            {
                 chance = 100;
+            }                
+
+            // lfm fish chance will not be lower
+            if (skill < zone_skill)
+            {
+                chance = urand(1, 5);
+            }
+            else
+            {
+                chance = skill - zone_skill + 5;
+            }            
 
             int32 roll = irand(1, 100);
 
@@ -1934,9 +1950,22 @@ void GameObject::Use(Unit* user)
             return;
 
         Player* player = user->ToPlayer();
-
         player->SendLoot(GetGUID(), LOOT_FISHINGHOLE);
         player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_FISH_IN_GAMEOBJECT, GetGOInfo()->entry);
+
+        // lfm auto fish
+        uint32 maxSlot = loot.GetMaxSlotInLootFor(player);
+        for (uint32 slotIndex = 0; slotIndex <= maxSlot; slotIndex++)
+        {
+            if (LootItem* lootItem = loot.LootItemInSlot(slotIndex, player))
+            {
+                if (!lootItem->is_looted)
+                {
+                    player->StoreLootItem(slotIndex, &loot);
+                }
+            }
+        }
+        player->SendLootRelease(player->GetGUID());
         return;
     }
 

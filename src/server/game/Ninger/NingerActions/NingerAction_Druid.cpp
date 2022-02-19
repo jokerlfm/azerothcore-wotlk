@@ -2,12 +2,7 @@
 #include "Group.h"
 #include "NingerManager.h"
 
-NingerAction_Druid::NingerAction_Druid(Player* pmMe) :NingerAction_Base(pmMe)
+NingerAction_Druid::NingerAction_Druid() :NingerAction_Base()
 {
-
-}
-
-void NingerAction_Druid::Prepare()
-{
-
+    
 }

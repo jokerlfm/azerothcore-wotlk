@@ -6,82 +6,35 @@
 #include "Map.h"
 #include "Pet.h"
 
-NingerStrategy_Base::NingerStrategy_Base(Player* pmMe)
+NingerStrategy_Base::NingerStrategy_Base()
 {
-    initialized = false;
-    me = pmMe;
+    me = nullptr;
     groupRole = GroupRole::GroupRole_DPS;
-    ogEngageTarget = ObjectGuid::Empty;
-    teleportDelay = 0;    
-    reviveDelay = 0;
-    engageDelay = 0;
-    moveDelay = 0;
-    hostilePVPCheckDelay = 0;
-    staying = false;
-    holding = false;
-    following = true;
+    initialized = false;
+
+    updateDelay = DEFAULT_CHECK_DELAY;
+    dpsDelay = sNingerConfig->DPSDelay;
+    randomTeleportDelay = 0;
+
+    assembleDelay = 0;
+    gatherDelay = 0;
+    corpseRunDelay = 0;
+
+    restLimit = 0;
+    drinkDelay = 0;
+
+    wanderDuration = 0;
+    combatDuration = 0;
+
+    follow = true;
+    chase = true;
     cure = true;
     aoe = true;
-    mark = false;
     petting = true;
-    followDistance = FOLLOW_MIN_DISTANCE;
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
-    switch (me->getClass())
-    {
-    case Classes::CLASS_WARRIOR:
-    {        
-        break;
-    }
-    case Classes::CLASS_HUNTER:
-    {
-        followDistance = FOLLOW_FAR_DISTANCE;
-        chaseDistanceMin = FOLLOW_NORMAL_DISTANCE;
-        chaseDistanceMax = FOLLOW_FAR_DISTANCE;        
-        break;
-    }
-    case Classes::CLASS_SHAMAN:
-    {
-        followDistance = FOLLOW_FAR_DISTANCE;
-        chaseDistanceMax = RANGE_DPS_DISTANCE;        
-        break;
-    }
-    case Classes::CLASS_PALADIN:
-    {
-        followDistance = FOLLOW_NORMAL_DISTANCE;        
-        break;
-    }
-    case Classes::CLASS_WARLOCK:
-    {
-        followDistance = FOLLOW_FAR_DISTANCE;
-        chaseDistanceMax = RANGE_DPS_DISTANCE;        
-        break;
-    }
-    case Classes::CLASS_PRIEST:
-    {
-        followDistance = FOLLOW_FAR_DISTANCE;
-        chaseDistanceMax = RANGE_DPS_DISTANCE;        
-        break;
-    }
-    case Classes::CLASS_ROGUE:
-    {        
-        break;
-    }
-    case Classes::CLASS_MAGE:
-    {
-        followDistance = FOLLOW_FAR_DISTANCE;
-        chaseDistanceMax = RANGE_DPS_DISTANCE;        
-        break;
-    }
-    case Classes::CLASS_DRUID:
-    {        
-        break;
-    }
-    default:
-    {        
-        break;
-    }
-    }
+    followDistanceMin = MELEE_MIN_DISTANCE;
+    followDistanceMax = MELEE_MAX_DISTANCE;
 }
 
 void NingerStrategy_Base::Report()
@@ -92,7 +45,7 @@ void NingerStrategy_Base::Report()
         {
             if (leaderPlayer->GetGUID() != me->GetGUID())
             {
-                me->Whisper("My awareness set to base.", Language::LANG_UNIVERSAL, leaderPlayer);
+                me->Whisper("My strategy set to base.", Language::LANG_UNIVERSAL, leaderPlayer);
             }
         }
     }
@@ -100,637 +53,290 @@ void NingerStrategy_Base::Report()
 
 void NingerStrategy_Base::Reset()
 {
-    //groupRole = GroupRole::GroupRole_DPS;
-    //ogEngageTarget = ObjectGuid::Empty;
-    //randomTeleportDelay = urand(20 * MINUTE * IN_MILLISECONDS, 30 * MINUTE * IN_MILLISECONDS);
-    //deadTime = 0;
-    //teleportDelay = 0;
-    //reviveDelay = 0;
-    //engageDelay = 0;
-    //moveDelay = 0;
-    //combatTime = 0;
-    //teleportAssembleDelay = 0;
-    //resurrectDelay = 0;
-    //eatDelay = 0;
-    //drinkDelay = 0;
-    //readyCheckDelay = 0;
-    //hostilePVPCheckDelay = 0;
-    //staying = false;
-    //holding = false;
-    //following = true;
-    //cure = true;
-    //aoe = true;
-    //mark = false;
-    //petting = true;
-    //dpsDelay = sNingerConfig->DPSDelay;
-    //followDistance = FOLLOW_MIN_DISTANCE;
-    //chaseDistanceMin = MELEE_MIN_DISTANCE;
-    //chaseDistanceMax = MELEE_MAX_DISTANCE;
-    //sb->Reset();
-    //switch (me->getClass())
-    //{
-    //case Classes::CLASS_WARRIOR:
-    //{
-    //    break;
-    //}
-    //case Classes::CLASS_HUNTER:
-    //{
-    //    followDistance = FOLLOW_FAR_DISTANCE;
-    //    chaseDistanceMin = FOLLOW_NORMAL_DISTANCE;
-    //    chaseDistanceMax = FOLLOW_FAR_DISTANCE;
-    //    break;
-    //}
-    //case Classes::CLASS_SHAMAN:
-    //{
-    //    followDistance = FOLLOW_FAR_DISTANCE;
-    //    chaseDistanceMax = RANGE_DPS_DISTANCE;
-    //    break;
-    //}
-    //case Classes::CLASS_PALADIN:
-    //{
-    //    followDistance = FOLLOW_NORMAL_DISTANCE;
-    //    break;
-    //}
-    //case Classes::CLASS_WARLOCK:
-    //{
-    //    followDistance = FOLLOW_FAR_DISTANCE;
-    //    chaseDistanceMax = RANGE_DPS_DISTANCE;
-    //    break;
-    //}
-    //case Classes::CLASS_PRIEST:
-    //{
-    //    followDistance = FOLLOW_FAR_DISTANCE;
-    //    chaseDistanceMax = RANGE_DPS_DISTANCE;
-    //    break;
-    //}
-    //case Classes::CLASS_ROGUE:
-    //{
-    //    break;
-    //}
-    //case Classes::CLASS_MAGE:
-    //{
-    //    followDistance = FOLLOW_FAR_DISTANCE;
-    //    chaseDistanceMax = RANGE_DPS_DISTANCE;
-    //    break;
-    //}
-    //case Classes::CLASS_DRUID:
-    //{
-    //    break;
-    //}
-    //default:
-    //{
-    //    break;
-    //}
-    //}
-}
+    assembleDelay = 0;
+    gatherDelay = 0;
+    corpseRunDelay = 0;
 
-bool NingerStrategy_Base::Chasing()
-{
-    if (holding)
+    restLimit = 0;
+    drinkDelay = 0;
+
+    wanderDuration = 0;
+    combatDuration = 0;
+
+    follow = true;
+    chase = true;
+    cure = true;
+    aoe = true;
+    petting = true;
+    chaseDistanceMin = MELEE_MIN_DISTANCE;
+    chaseDistanceMax = MELEE_MAX_DISTANCE;
+    followDistanceMin = 0;
+    followDistanceMax = MELEE_MAX_DISTANCE;
+    switch (me->getClass())
     {
-        return false;
+    case Classes::CLASS_WARRIOR:
+    {
+        groupRole = GroupRole::GroupRole_Tank;
+        break;
     }
-    return true;
+    case Classes::CLASS_HUNTER:
+    {
+        followDistanceMin = FOLLOW_NORMAL_DISTANCE;
+        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMin = RANGE_MIN_DISTANCE;
+        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        break;
+    }
+    case Classes::CLASS_SHAMAN:
+    {
+        break;
+    }
+    case Classes::CLASS_PALADIN:
+    {
+        break;
+    }
+    case Classes::CLASS_WARLOCK:
+    {
+        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMin = RANGE_MIN_DISTANCE;
+        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        break;
+    }
+    case Classes::CLASS_PRIEST:
+    {
+        groupRole = GroupRole::GroupRole_Healer;
+        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMin = RANGE_MIN_DISTANCE;
+        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        break;
+    }
+    case Classes::CLASS_ROGUE:
+    {
+        break;
+    }
+    case Classes::CLASS_MAGE:
+    {
+        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        chaseDistanceMin = RANGE_MIN_DISTANCE;
+        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        break;
+    }
+    case Classes::CLASS_DRUID:
+    {
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
 }
 
 void NingerStrategy_Base::Update(uint32 pmDiff)
 {
-    //if (!me)
-    //{
-    //    return;
-    //}
-    //if (!initialized)
-    //{
-    //    return;
-    //}
-    //if (WorldSession* mySesson = me->GetSession())
-    //{
-    //    if (mySesson->isNinger)
-    //    {
-    //        sb->Update(pmDiff);
-    //        if (teleportDelay > 0)
-    //        {
-    //            teleportDelay -= pmDiff;
-    //            if (teleportDelay <= 0)
-    //            {
-    //                if (me->IsBeingTeleported())
-    //                {
-    //                    teleportDelay = 1000;                        
-    //                }
-    //                else
-    //                {
-    //                    me->ClearInCombat();
-    //                    sb->ClearTarget();
-    //                    sb->rm->ResetMovement();
-    //                    me->TeleportTo(wlTeleportDestination);
-    //                    return;
-    //                }                    
-    //            }
-    //        }
-    //        if (Group* myGroup = me->GetGroup())
-    //        {
-    //            if (readyCheckDelay > 0)
-    //            {
-    //                readyCheckDelay -= pmDiff;
-    //                if (readyCheckDelay <= 0)
-    //                {
-    //                    if (Player* leaderPlayer = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
-    //                    {
-    //                        if (WorldSession* leaderWS = leaderPlayer->GetSession())
-    //                        {
-    //                            if (!leaderWS->isNinger)
-    //                            {
-    //                                uint8 readyCheckValue = 0;
-    //                                if (!me->IsAlive())
-    //                                {
-    //                                    readyCheckValue = 0;
-    //                                }
-    //                                else if (me->GetDistance(leaderPlayer) > VISIBILITY_DISTANCE_NORMAL)
-    //                                {
-    //                                    readyCheckValue = 0;
-    //                                }
-    //                                else
-    //                                {
-    //                                    readyCheckValue = 1;
-    //                                }
-    //                                WorldPacket data(MSG_RAID_READY_CHECK, 8);
-    //                                data << readyCheckValue;
-    //                                if (WorldSession* myWS = me->GetSession())
-    //                                {
-    //                                    myWS->HandleRaidReadyCheckOpcode(data);
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //            if (staying)
-    //            {
-    //                return;
-    //            }
-    //            if (teleportAssembleDelay > 0)
-    //            {
-    //                teleportAssembleDelay -= pmDiff;
-    //                if (teleportAssembleDelay <= 0)
-    //                {
-    //                    teleportAssembleDelay = 0;
-    //                    Player* leaderPlayer = nullptr;
-    //                    bool canTeleport = true;
-    //                    for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //                    {
-    //                        if (Player* member = groupRef->GetSource())
-    //                        {
-    //                            if (member->GetGUID() == myGroup->GetLeaderGUID())
-    //                            {
-    //                                leaderPlayer = member;
-    //                            }
-    //                            if (member->IsBeingTeleported())
-    //                            {
-    //                                sNingerManager->WhisperTo(leaderPlayer, "Some one is teleporting. I will wait.", Language::LANG_UNIVERSAL, me);
-    //                                teleportAssembleDelay = 8000;
-    //                                canTeleport = false;
-    //                                break;
-    //                            }
-    //                        }
-    //                    }
-    //                    if (canTeleport)
-    //                    {
-    //                        if (leaderPlayer)
-    //                        {
-    //                            if (leaderPlayer->IsInWorld())
-    //                            {
-    //                                sNingerManager->TeleportPlayer(me, leaderPlayer->GetMapId(), leaderPlayer->GetPositionX(), leaderPlayer->GetPositionY(), leaderPlayer->GetPositionZ());
-    //                                if (me->IsAlive())
-    //                                {
-    //                                    sNingerManager->WhisperTo(leaderPlayer, "I am coming.", Language::LANG_UNIVERSAL, me);
-    //                                }
-    //                                else
-    //                                {
-    //                                    resurrectDelay = urand(10000, 15000);
-    //                                    sNingerManager->WhisperTo(leaderPlayer, "I am coming. And I will revive in a few seconds", Language::LANG_UNIVERSAL, me);
-    //                                }
-    //                            }
-    //                            else
-    //                            {
-    //                                sNingerManager->WhisperTo(leaderPlayer, "Leader is not in world", Language::LANG_UNIVERSAL, me);
-    //                            }
-    //                        }
-    //                        else
-    //                        {
-    //                            sNingerManager->WhisperTo(leaderPlayer, "Can not find leader", Language::LANG_UNIVERSAL, me);
-    //                        }
-    //                        return;
-    //                    }
-    //                }
-    //            }
-    //            if (!me->IsAlive())
-    //            {
-    //                deadTime += pmDiff;
-    //                return;
-    //            }
-    //            else
-    //            {
-    //                deadTime = 0;
-    //            }
-    //            if (engageDelay > 0)
-    //            {
-    //                engageDelay -= pmDiff;
-    //                if (engageDelay <= 0)
-    //                {
-    //                    ogEngageTarget.Clear();
-    //                    sb->rm->ResetMovement();
-    //                    sb->ClearTarget();
-    //                    return;
-    //                }
-    //                if (Unit* engageTarget = ObjectAccessor::GetUnit(*me, ogEngageTarget))
-    //                {
-    //                    switch (groupRole)
-    //                    {
-    //                    case GroupRole::GroupRole_DPS:
-    //                    {
-    //                        if (sb->DPS(engageTarget, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-    //                        {
-    //                            return;
-    //                        }
-    //                        else
-    //                        {
-    //                            ogEngageTarget.Clear();
-    //                            sb->rm->ResetMovement();
-    //                            sb->ClearTarget();
-    //                            engageDelay = 0;
-    //                        }
-    //                        break;
-    //                    }
-    //                    case GroupRole::GroupRole_Healer:
-    //                    {
-    //                        if (Heal())
-    //                        {
-    //                            return;
-    //                        }
-    //                        break;
-    //                    }
-    //                    case GroupRole::GroupRole_Tank:
-    //                    {
-    //                        if (sb->Tank(engageTarget, Chasing(), aoe))
-    //                        {
-    //                            return;
-    //                        }
-    //                        else
-    //                        {
-    //                            ogEngageTarget.Clear();
-    //                            sb->rm->ResetMovement();
-    //                            sb->ClearTarget();
-    //                            engageDelay = 0;
-    //                        }
-    //                        break;
-    //                    }
-    //                    default:
-    //                    {
-    //                        break;
-    //                    }
-    //                    }
-    //                }
-    //                return;
-    //            }
-    //            if (resurrectDelay > 0)
-    //            {
-    //                resurrectDelay -= pmDiff;
-    //                if (resurrectDelay < 0)
-    //                {
-    //                    resurrectDelay = 0;
-    //                    if (!me->IsAlive())
-    //                    {
-    //                        me->ResurrectPlayer(0.2f);
-    //                        me->SpawnCorpseBones();
-    //                    }
-    //                }
-    //            }
-    //            if (reviveDelay > 0)
-    //            {
-    //                reviveDelay -= pmDiff;
-    //                if (!sb->Revive(nullptr))
-    //                {
-    //                    reviveDelay = 0;
-    //                    sb->ogReviveTarget.Clear();
-    //                }
-    //                if (reviveDelay <= 0)
-    //                {
-    //                    sb->ogReviveTarget.Clear();
-    //                }
-    //                return;
-    //            }
-    //            if (assistDelay > 0)
-    //            {
-    //                assistDelay -= pmDiff;
-    //                if (sb->Assist(nullptr))
-    //                {
-    //                    return;
-    //                }
-    //                else
-    //                {
-    //                    assistDelay = 0;
-    //                }
-    //            }
-    //            if (moveDelay > 0)
-    //            {
-    //                moveDelay -= pmDiff;
-    //                if (moveDelay < 0)
-    //                {
-    //                    moveDelay = 0;
-    //                }
-    //                return;
-    //            }
-    //            if (GroupInCombat())
-    //            {
-    //                eatDelay = 0;
-    //                drinkDelay = 0;
-    //                combatTime += pmDiff;
-    //                if (sb->Assist(nullptr))
-    //                {
-    //                    return;
-    //                }
-    //                switch (groupRole)
-    //                {
-    //                case GroupRole::GroupRole_DPS:
-    //                {
-    //                    if (Cure())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (DPS())
-    //                    {
-    //                        return;
-    //                    }
-    //                    break;
-    //                }
-    //                case GroupRole::GroupRole_Healer:
-    //                {
-    //                    if (Heal())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Cure())
-    //                    {
-    //                        return;
-    //                    }
-    //                    break;
-    //                }
-    //                case GroupRole::GroupRole_Tank:
-    //                {
-    //                    if (Tank())
-    //                    {
-    //                        return;
-    //                    }
-    //                    break;
-    //                }
-    //                default:
-    //                {
-    //                    break;
-    //                }
-    //                }
-    //            }
-    //            else
-    //            {
-    //                combatTime = 0;
-    //                if (eatDelay > 0)
-    //                {
-    //                    eatDelay -= pmDiff;
-    //                    if (drinkDelay > 0)
-    //                    {
-    //                        drinkDelay -= pmDiff;
-    //                        if (drinkDelay <= 0)
-    //                        {
-    //                            sb->Drink();
-    //                        }
-    //                    }
-    //                    return;
-    //                }
-    //                switch (groupRole)
-    //                {
-    //                case GroupRole::GroupRole_DPS:
-    //                {
-    //                    if (Rest())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Buff())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Cure())
-    //                    {
-    //                        return;
-    //                    }
-    //                    break;
-    //                }
-    //                case GroupRole::GroupRole_Healer:
-    //                {
-    //                    if (Rest())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Heal())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Buff())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Cure())
-    //                    {
-    //                        return;
-    //                    }
-    //                    break;
-    //                }
-    //                case GroupRole::GroupRole_Tank:
-    //                {
-    //                    if (Rest())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Buff())
-    //                    {
-    //                        return;
-    //                    }
-    //                    if (Cure())
-    //                    {
-    //                        return;
-    //                    }
-    //                    break;
-    //                }
-    //                default:
-    //                {
-    //                    break;
-    //                }
-    //                }
-    //                if (Petting())
-    //                {
-    //                    return;
-    //                }
-    //            }
-    //            Follow();
-    //        }
-    //        else
-    //        {
-    //            if (!me->IsAlive())
-    //            {
-    //                deadTime += pmDiff;
-    //                if (deadTime > 60000)
-    //                {
-    //                    if (sNingerManager->RandomTeleport(me))
-    //                    {
-    //                        Reset();
-    //                        return;
-    //                    }
-    //                }
-    //                return;
-    //            }
-    //            else
-    //            {
-    //                deadTime = 0;
-    //            }
-    //            if (me->IsInCombat())
-    //            {
-    //                engageDelay = 0;
-    //                moveDelay = 0;
-    //                eatDelay = 0;
-    //                drinkDelay = 0;
-    //                combatTime += pmDiff;
-    //                if (Heal())
-    //                {
-    //                    return;
-    //                }
-    //                if (Cure())
-    //                {
-    //                    return;
-    //                }
-    //                if (DPS(false))
-    //                {
-    //                    return;
-    //                }
-    //            }
-    //            else
-    //            {            
-    //                combatTime = 0;
-    //                if (engageDelay > 0)
-    //                {
-    //                    engageDelay -= pmDiff;
-    //                    if (engageDelay <= 0)
-    //                    {
-    //                        ogEngageTarget.Clear();
-    //                        sb->rm->ResetMovement();
-    //                        sb->ClearTarget();
-    //                        return;
-    //                    }
-    //                    if (Unit* engageTarget = ObjectAccessor::GetUnit(*me, ogEngageTarget))
-    //                    {
-    //                        if (sb->DPS(engageTarget, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-    //                        {
-    //                            return;
-    //                        }
-    //                        else
-    //                        {
-    //                            ogEngageTarget.Clear();
-    //                            sb->rm->ResetMovement();
-    //                            sb->ClearTarget();
-    //                            engageDelay = 0;
-    //                        }
-    //                    }
-    //                    return;
-    //                }
-    //                if (randomTeleportDelay > 0)
-    //                {
-    //                    randomTeleportDelay -= pmDiff;
-    //                    if (randomTeleportDelay <= 0)
-    //                    {
-    //                        randomTeleportDelay = 5000;
-    //                        if (sNingerManager->RandomTeleport(me))
-    //                        {
-    //                            randomTeleportDelay = urand(20 * MINUTE * IN_MILLISECONDS, 30 * MINUTE * IN_MILLISECONDS);
-    //                            Reset();
-    //                            return;
-    //                        }
-    //                    }
-    //                }
-    //                // hostile pvp check
-    //                if (hostilePVPCheckDelay >= 0)
-    //                {
-    //                    hostilePVPCheckDelay -= pmDiff;
-    //                    if (hostilePVPCheckDelay < 0)
-    //                    {
-    //                        hostilePVPCheckDelay = 1000;
-    //                        if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me))
-    //                        {
-    //                            if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-    //                            {
-    //                                ogEngageTarget = enemyPlayer->GetGUID();
-    //                                engageDelay = 30 * IN_MILLISECONDS;
-    //                                return;
-    //                            }
-    //                        }
-    //                        if (me->GetAreaId() == 3628)
-    //                        {
-    //                            // attack any hostile unit
-    //                            if (Unit* enemyUnit = sNingerManager->GetNearbyHostileUnit(me))
-    //                            {
-    //                                if (sb->DPS(enemyUnit, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-    //                                {
-    //                                    ogEngageTarget = enemyUnit->GetGUID();
-    //                                    engageDelay = 30 * IN_MILLISECONDS;
-    //                                    return;
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //                if (moveDelay > 0)
-    //                {
-    //                    moveDelay -= pmDiff;
-    //                    if (moveDelay <= 0)
-    //                    {
-    //                        moveDelay = 0;
-    //                    }
-    //                    return;
-    //                }
-    //                if (eatDelay > 0)
-    //                {
-    //                    eatDelay -= pmDiff;
-    //                    if (drinkDelay > 0)
-    //                    {
-    //                        drinkDelay -= pmDiff;
-    //                        if (drinkDelay <= 0)
-    //                        {
-    //                            sb->Drink();
-    //                        }
-    //                    }
-    //                    return;
-    //                }
-    //                sb->ClearTarget();
-    //                if (Rest())
-    //                {
-    //                    return;
-    //                }
-    //                if (Buff())
-    //                {
-    //                    return;
-    //                }
-    //                if (Cure())
-    //                {
-    //                    return;
-    //                }
-    //                if (Petting())
-    //                {
-    //                    return;
-    //                }
-    //                if (Wander())
-    //                {
-    //                    return;
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
+    if (!me)
+    {
+        return;
+    }
+    if (!initialized)
+    {
+        return;
+    }    
+    me->ningerAction->rm->Update(pmDiff);
+    if (Group* myGroup = me->GetGroup())
+    {
+        if (assembleDelay > 0)
+        {
+            assembleDelay -= pmDiff;
+            if (assembleDelay <= 0)
+            {
+                if (me->IsAlive())
+                {
+                    if (me->IsBeingTeleported())
+                    {
+                        assembleDelay = 1000;
+                    }
+                    else
+                    {
+                        me->ClearInCombat();
+                        me->ningerAction->ClearTarget();
+                        if (NingerMovement* nm = me->ningerAction->rm)
+                        {
+                            nm->ResetMovement();
+                        }
+                        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                        {
+                            if (Player* member = groupRef->GetSource())
+                            {
+                                if (member->GetGUID() == myGroup->GetLeaderGUID())
+                                {
+                                    me->Whisper("I am coming.", Language::LANG_UNIVERSAL, member);
+                                    me->TeleportTo(member->GetWorldLocation());
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    assembleDelay = 0;
+                }
+            }
+        }
+        if (gatherDelay > 0)
+        {
+            gatherDelay -= pmDiff;
+            if (gatherDelay <= 0)
+            {
+                gatherDelay = 0;
+            }
+            return;
+        }
+        if (GroupInCombat())
+        {
+            restLimit = 0;
+            combatDuration += pmDiff;
+            switch (groupRole)
+            {
+            case GroupRole::GroupRole_DPS:
+            {
+                if (Cure())
+                {
+                    return;
+                }
+                if (DPS())
+                {
+                    return;
+                }
+                break;
+            }
+            case GroupRole::GroupRole_Healer:
+            {
+                if (Heal())
+                {
+                    return;
+                }
+                if (Cure())
+                {
+                    return;
+                }
+                break;
+            }
+            case GroupRole::GroupRole_Tank:
+            {
+                if (Tank())
+                {
+                    return;
+                }
+                break;
+            }
+            default:
+            {
+                break;
+            }
+            }
+        }
+        else
+        {
+            combatDuration = 0;
+            if (restLimit > 0)
+            {
+                restLimit -= pmDiff;
+                if (drinkDelay >= 0)
+                {
+                    drinkDelay -= pmDiff;
+                    if (drinkDelay < 0)
+                    {
+                        me->ningerAction->Drink();
+                    }
+                }
+                return;
+            }
+            if (Rest())
+            {
+                return;
+            }
+            if (Buff())
+            {
+                return;
+            }
+            if (Cure())
+            {
+                return;
+            }
+            if (Petting())
+            {
+                return;
+            }
+        }
+        Follow();
+    }
+    else
+    {
+        if (!me->IsAlive())
+        {
+            if (me->GetDeathTimer() > 60000)
+            {
+                me->ClearInCombat();
+                me->ningerAction->ClearTarget();
+                float nearX = 0.0f;
+                float nearY = 0.0f;
+                float nearZ = 0.0f;
+                float nearDistance = frand(40.0f, 50.0f);
+                float nearAngle = frand(0.0f, M_PI * 2);
+                me->GetNearPoint(me, nearX, nearY, nearZ, me->GetCombatReach(), nearDistance, nearAngle);
+                me->ResurrectPlayer(0.2f);
+                me->TeleportTo(me->GetMapId(), nearX, nearY, nearZ, 0);
+                me->SpawnCorpseBones();
+            }
+            return;
+        }
+        if (me->IsInCombat())
+        {
+            restLimit = 0;
+            wanderDuration = 0;
+            combatDuration += pmDiff;
+            if (Heal())
+            {
+                return;
+            }
+            if (Cure())
+            {
+                return;
+            }
+            if (DPS(false))
+            {
+                return;
+            }
+        }
+        else
+        {
+            combatDuration = 0;
+            if (randomTeleportDelay > 0)
+            {
+                randomTeleportDelay -= pmDiff;
+                if (randomTeleportDelay <= 0)
+                {
+                    randomTeleportDelay = urand(20 * MINUTE * IN_MILLISECONDS, 40 * MINUTE * IN_MILLISECONDS);
+                    me->ClearInCombat();
+                    me->ningerAction->ClearTarget();
+                    me->ningerAction->RandomTeleport();
+                }
+            }
+            if (wanderDuration > 0)
+            {
+                wanderDuration -= pmDiff;
+                if (wanderDuration <= 0)
+                {
+                    if (Wander())
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool NingerStrategy_Base::GroupInCombat()
@@ -754,14 +360,11 @@ bool NingerStrategy_Base::GroupInCombat()
                 }
                 else if (Pet* memberPet = member->GetPet())
                 {
-                    if (memberPet->IsAlive())
+                    if (memberPet->IsInCombat())
                     {
-                        if (memberPet->IsInCombat())
+                        if (me->GetDistance(memberPet) < VISIBILITY_DISTANCE_NORMAL)
                         {
-                            if (me->GetDistance(memberPet) < VISIBILITY_DISTANCE_NORMAL)
-                            {
-                                return true;
-                            }
+                            return true;
                         }
                     }
                 }
@@ -774,345 +377,399 @@ bool NingerStrategy_Base::GroupInCombat()
 
 bool NingerStrategy_Base::Engage(Unit* pmTarget)
 {
-    //if (!me)
-    //{
-    //    return false;
-    //}
-    //switch (groupRole)
-    //{
-    //case GroupRole::GroupRole_Tank:
-    //{
-    //    return sb->Tank(pmTarget, Chasing(), aoe);
-    //}
-    //case GroupRole::GroupRole_DPS:
-    //{
-    //    return sb->DPS(pmTarget, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax);
-    //}
-    //case GroupRole::GroupRole_Healer:
-    //{
-    //    return Heal();
-    //}
-    //default:
-    //{
-    //    break;
-    //}
-    //}
+    if (!me)
+    {
+        return false;
+    }
+    if (NingerAction_Base* nab = me->ningerAction)
+    {
+        switch (groupRole)
+        {
+        case GroupRole::GroupRole_Tank:
+        {
+            return me->ningerAction->Tank(pmTarget, chase, aoe);
+        }
+        case GroupRole::GroupRole_DPS:
+        {
+            if (combatDuration > dpsDelay)
+            {
+                return me->ningerAction->DPS(pmTarget, chase, aoe, chaseDistanceMin, chaseDistanceMax);
+            }
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
 
     return false;
 }
 
 bool NingerStrategy_Base::DPS(bool pmDelay)
 {
-    //if (pmDelay)
-    //{
-    //    if (combatTime < dpsDelay)
-    //    {
-    //        return false;
-    //    }
-    //}
+    if (pmDelay)
+    {
+        if (combatDuration < dpsDelay)
+        {
+            return false;
+        }
+    }
 
-    //return sb->DPS(nullptr, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax);
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
+    if (Group* myGroup = me->GetGroup())
+    {
+        if (ObjectGuid ogTankTarget = myGroup->GetGuidByTargetIcon(7))
+        {
+            if (Unit* tankTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
+            {
+                return me->ningerAction->DPS(tankTarget, chase, aoe, chaseDistanceMin, chaseDistanceMax);
+            }
+        }
+    }
 
     return false;
 }
 
 bool NingerStrategy_Base::Tank()
 {
-    //if (!me)
-    //{
-    //    return false;
-    //}
-    //if (!me->IsAlive())
-    //{
-    //    return false;
-    //}
-    //if (Group* myGroup = me->GetGroup())
-    //{
-    //    // icon ot 
-    //    if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetGuidByTargetIcon(7)))
-    //    {
-    //        if (!target->GetTarget().IsEmpty())
-    //        {
-    //            if (target->GetTarget() != me->GetGUID())
-    //            {
-    //                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //                {
-    //                    if (Player* member = groupRef->GetSource())
-    //                    {
-    //                        if (target->GetTarget() == member->GetGUID())
-    //                        {
-    //                            if (sb->Tank(target, Chasing(), aoe))
-    //                            {
-    //                                return true;
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //    // ot 
-    //    Unit* nearestAttacker = nullptr;
-    //    float nearestDistance = VISIBILITY_DISTANCE_NORMAL;
-    //    for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //    {
-    //        if (Player* member = groupRef->GetSource())
-    //        {
-    //            if (member->IsAlive())
-    //            {
-    //                std::unordered_set<Unit*> memberAttackers = member->getAttackers();
-    //                for (std::unordered_set<Unit*>::iterator ait = memberAttackers.begin(); ait != memberAttackers.end(); ++ait)
-    //                {
-    //                    if (Unit* eachAttacker = *ait)
-    //                    {
-    //                        if (eachAttacker->IsAlive())
-    //                        {
-    //                            if (me->IsValidAttackTarget(eachAttacker))
-    //                            {
-    //                                if (!eachAttacker->GetTarget().IsEmpty())
-    //                                {
-    //                                    if (eachAttacker->GetTarget() != me->GetGUID())
-    //                                    {
-    //                                        float eachDistance = me->GetDistance(eachAttacker);
-    //                                        if (eachDistance < nearestDistance)
-    //                                        {
-    //                                            if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
-    //                                            {
-    //                                                nearestDistance = eachDistance;
-    //                                                nearestAttacker = eachAttacker;
-    //                                            }
-    //                                        }
-    //                                    }
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //    if (nearestAttacker)
-    //    {
-    //        if (sb->Tank(nearestAttacker, Chasing(), aoe))
-    //        {
-    //            myGroup->SetTargetIcon(7, me->GetGUID(), nearestAttacker->GetGUID());
-    //            return true;
-    //        }
-    //    }
-    //    // icon 
-    //    if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetGuidByTargetIcon(7)))
-    //    {
-    //        if (sb->Tank(target, Chasing(), aoe))
-    //        {
-    //            return true;
-    //        }
-    //    }
-    //}
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
+    if (Group* myGroup = me->GetGroup())
+    {
+        Unit* nearestOTUnit = nullptr;
+        float nearestDistance = VISIBILITY_DISTANCE_NORMAL;
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            if (Player* member = groupRef->GetSource())
+            {
+                if (member->IsAlive())
+                {
+                    if (member->GetGUID() != me->GetGUID())
+                    {
+                        float memberDistance = me->GetDistance(member);
+                        if (memberDistance < VISIBILITY_DISTANCE_NORMAL)
+                        {
+                            std::unordered_set<Unit*> memberAttackers = member->getAttackers();
+                            for (std::unordered_set<Unit*>::iterator ait = memberAttackers.begin(); ait != memberAttackers.end(); ++ait)
+                            {
+                                if (Unit* eachAttacker = *ait)
+                                {
+                                    if (me->IsValidAttackTarget(eachAttacker))
+                                    {
+                                        if (!eachAttacker->GetTarget().IsEmpty())
+                                        {
+                                            if (eachAttacker->GetTarget() != me->GetGUID())
+                                            {
+                                                float eachDistance = me->GetDistance(eachAttacker);
+                                                if (eachDistance < nearestDistance)
+                                                {
+                                                    if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
+                                                    {
+                                                        nearestDistance = eachDistance;
+                                                        nearestOTUnit = eachAttacker;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (nearestOTUnit)
+        {
+            if (me->ningerAction->Tank(nearestOTUnit, chase, aoe))
+            {
+                myGroup->SetTargetIcon(7, me->GetGUID(), nearestOTUnit->GetGUID());
+                return true;
+            }
+        }
+
+        if (ObjectGuid ogTankTarget = myGroup->GetGuidByTargetIcon(7))
+        {
+            if (Unit* tankTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
+            {
+                return me->ningerAction->Tank(nearestOTUnit, chase, aoe);
+            }
+        }
+    }
 
     return false;
 }
 
-bool NingerStrategy_Base::Tank(Unit* pmTarget)
+bool NingerStrategy_Base::Rest(bool pmForce)
 {
-    //return sb->Tank(pmTarget, Chasing(), aoe);
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    bool doRest = false;
+    if (pmForce)
+    {
+        doRest = true;
+    }
+    else
+    {
+        if (me->GetHealthPct() < 60.0f)
+        {
+            doRest = true;
+        }
+        else
+        {
+            if (me->getPowerType() == Powers::POWER_MANA)
+            {
+                if (me->GetPowerPct(Powers::POWER_MANA) < 60.0f)
+                {
+                    doRest = true;
+                }
+            }
+        }
+    }
 
-    return false;
-}
-
-bool NingerStrategy_Base::Rest()
-{
-    //if (sb->Eat())
-    //{
-    //    eatDelay = DEFAULT_REST_DELAY;
-    //    drinkDelay = 1000;
-    //    return true;
-    //}
+    if (doRest)
+    {
+        if (me->ningerAction->Eat())
+        {
+            restLimit = 25 * IN_MILLISECONDS;
+            drinkDelay = 1 * IN_MILLISECONDS;
+            return true;
+        }
+    }
 
     return false;
 }
 
 bool NingerStrategy_Base::Heal()
 {
-    //if (sb->Heal(nullptr))
-    //{
-    //    return true;
-    //}
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
+    if (Group* myGroup = me->GetGroup())
+    {
+        Player* tank = nullptr;
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            if (Player* member = groupRef->GetSource())
+            {
+                if (member->groupRole == GroupRole::GroupRole_Tank)
+                {
+                    tank = member;
+                    break;
+                }
+            }
+        }
+        if (tank)
+        {
+            if (me->ningerAction->Heal(tank))
+            {
+                return true;
+            }
+        }
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            if (Player* member = groupRef->GetSource())
+            {
+                if (me->ningerAction->SimpleHeal(member))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    else
+    {
+        return me->ningerAction->Heal(me);
+    }
+
+    return false;
+}
+
+bool NingerStrategy_Base::Revive()
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (Group* myGroup = me->GetGroup())
+    {
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            if (Player* member = groupRef->GetSource())
+            {
+                if (!member->IsAlive())
+                {
+                    if (me->ningerAction->Revive(member))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
 
     return false;
 }
 
 bool NingerStrategy_Base::Buff()
 {
-    //if (sb->Buff(nullptr))
-    //{
-    //    return true;
-    //}
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
+    if (Group* myGroup = me->GetGroup())
+    {
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            if (Player* member = groupRef->GetSource())
+            {
+                if (me->ningerAction->Buff(member))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    else
+    {
+        return me->ningerAction->Buff(me);
+    }
 
     return false;
 }
 
 bool NingerStrategy_Base::Petting()
 {
-    //if (sb->Petting(petting))
-    //{
-    //    return true;
-    //}
-
-    return false;
-}
-
-bool NingerStrategy_Base::Cure()
-{
-    //if (cure)
-    //{
-    //    if (sb->Cure(nullptr))
-    //    {
-    //        return true;
-    //    }
-    //}
-
-    return false;
-}
-
-bool NingerStrategy_Base::Follow()
-{
-    //if (holding)
-    //{
-    //    return false;
-    //}
-    //if (!following)
-    //{
-    //    return false;
-    //}
-    //if (Group* myGroup = me->GetGroup())
-    //{
-    //    if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
-    //    {
-    //        if (sb->Follow(leader, followDistance))
-    //        {
-    //            return true;
-    //        }
-    //    }
-    //}
-
-    return false;
-}
-
-bool NingerStrategy_Base::Wander()
-{
-    //if (me->isMoving())
-    //{
-    //    return true;
-    //}
-
-    //uint32 wanderRate = urand(0, 100);
-    //if (wanderRate < 50)
-    //{
-    //    if (Player* enemyPlayer = sNingerManager->GetNearbyHostilePlayer(me, VISIBILITY_DISTANCE_NORMAL))
-    //    {
-    //        if (sb->DPS(enemyPlayer, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-    //        {
-    //            ogEngageTarget = enemyPlayer->GetGUID();
-    //            engageDelay = 30 * IN_MILLISECONDS;
-    //            return true;
-    //        }
-    //    }
-    //}
-    //else
-    //{
-    //    float angle = frand(0, 2 * M_PI);
-    //    float distance = frand(10.0f, 30.0f);
-    //    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-    //    me->GetNearPoint(me, destX, destY, destZ, me->GetCombatReach(), distance, angle);
-    //    moveDelay = 5 * IN_MILLISECONDS;        
-    //    sb->rm->MovePoint(destX, destY, destZ, moveDelay);
-    //}
-
-    return true;
-}
-
-bool NingerStrategy_Base::Stay(std::string pmTargetGroupRole)
-{
-    //bool todo = true;
-    //if (pmTargetGroupRole == "dps")
-    //{
-    //    if (groupRole != GroupRole::GroupRole_DPS)
-    //    {
-    //        todo = false;
-    //    }
-    //}
-    //else if (pmTargetGroupRole == "healer")
-    //{
-    //    if (groupRole != GroupRole::GroupRole_Healer)
-    //    {
-    //        todo = false;
-    //    }
-    //}
-    //else if (pmTargetGroupRole == "tank")
-    //{
-    //    if (groupRole != GroupRole::GroupRole_Tank)
-    //    {
-    //        todo = false;
-    //    }
-    //}
-
-    //if (todo)
-    //{
-    //    staying = true;
-    //    if (me)
-    //    {
-    //        if (me->IsAlive())
-    //        {
-    //            me->StopMoving();
-    //            me->GetMotionMaster()->Clear();
-    //            me->AttackStop();
-    //            me->InterruptSpell(CURRENT_AUTOREPEAT_SPELL);
-    //            sb->PetStop();
-    //            sb->rm->ResetMovement();
-    //        }
-    //    }
-    //    return true;
-    //}
-
-    return false;
-}
-
-bool NingerStrategy_Base::Hold(std::string pmTargetGroupRole)
-{
-    bool todo = true;
-    if (pmTargetGroupRole == "dps")
+    if (me->ningerAction->Petting())
     {
-        if (groupRole != GroupRole::GroupRole_DPS)
-        {
-            todo = false;
-        }
-    }
-    else if (pmTargetGroupRole == "healer")
-    {
-        if (groupRole != GroupRole::GroupRole_Healer)
-        {
-            todo = false;
-        }
-    }
-    else if (pmTargetGroupRole == "tank")
-    {
-        if (groupRole != GroupRole::GroupRole_Tank)
-        {
-            todo = false;
-        }
-    }
-
-    if (todo)
-    {
-        holding = true;
-        staying = false;
         return true;
     }
 
     return false;
 }
 
-std::string NingerStrategy_Base::GetGroupRoleName()
+bool NingerStrategy_Base::Cure()
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
+    if (Group* myGroup = me->GetGroup())
+    {
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            if (Player* member = groupRef->GetSource())
+            {
+                if (me->ningerAction->Cure(member))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    else
+    {
+        return me->ningerAction->Cure(me);
+    }
+
+    return false;
+}
+
+bool NingerStrategy_Base::Follow()
+{
+    if (!follow)
+    {
+        return false;
+    }
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (Group* myGroup = me->GetGroup())
+    {
+        if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+        {
+            if (me->ningerAction->Follow(leader, followDistanceMin, followDistanceMax))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool NingerStrategy_Base::Wander()
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    else if (me->isMoving())
+    {
+        return true;
+    }
+
+    float angle = frand(0, 2 * M_PI);
+    float distance = frand(10.0f, 30.0f);
+    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+    me->GetNearPoint(me, destX, destY, destZ, me->GetCombatReach(), distance, angle);
+    wanderDuration = urand(20 * IN_MILLISECONDS, 40 * IN_MILLISECONDS);
+    me->ningerAction->rm->MovePoint(destX, destY, destZ, wanderDuration);
+    return true;
+}
+
+std::string NingerStrategy_Base::GetGroupRole()
 {
     if (!me)
     {

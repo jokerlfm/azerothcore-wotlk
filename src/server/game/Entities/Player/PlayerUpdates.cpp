@@ -434,6 +434,18 @@ void Player::Update(uint32 p_time)
             fishingDelay = 0;
         }
     }
+
+    // lfm ninger
+    if (m_session->isNinger)
+    {
+        if (strategyMap.size() > 0)
+        {
+            if (strategyMap[activeStrategyIndex]->initialized)
+            {
+                strategyMap[activeStrategyIndex]->Update(p_time);
+            }
+        }
+    }
 }
 
 void Player::UpdateMirrorTimers()

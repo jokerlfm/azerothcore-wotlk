@@ -6,6 +6,6 @@
 class NingerAction_Warrior :public NingerAction_Base
 {
 public:
-	NingerAction_Warrior(Player* pmMe);
+	NingerAction_Warrior();
 };
 #endif

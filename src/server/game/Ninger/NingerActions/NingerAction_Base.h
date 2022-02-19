@@ -43,53 +43,41 @@ public:
 class NingerAction_Base
 {
 public:
-    NingerAction_Base(Player* pmMe);
+    NingerAction_Base();
     virtual void Reset();
+    virtual void Prepare();
     virtual void Update(uint32 pmDiff);
-    virtual bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    virtual bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax);
     virtual bool Tank(Unit* pmTarget, bool pmChase, bool pmAOE);
     virtual bool Heal(Unit* pmTarget);
+    virtual bool SimpleHeal(Unit* pmTarget);
     virtual bool Cure(Unit* pmTarget);
     virtual bool Buff(Unit* pmTarget);
     virtual bool Assist(Unit* pmTarget);
     virtual bool Revive(Player* pmTarget);
     virtual bool Petting(bool pmSummon = true);
-    virtual void Prepare();
-    virtual void LearnTalents(uint32 pmTabIndex);
+    virtual void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
+    virtual void InitializeEquipments(bool pmReset = false);
 
     void PetAttack(Unit* pmTarget);
     void PetStop();
-
-    Item* GetItemInInventory(uint32 pmEntry);
     bool UseItem(Item* pmItem, Unit* pmTarget);
-    bool UseItem(Item* pmItem, Item* pmTarget);
-    bool UseHealingPotion();
-    bool UseManaPotion();
-    bool SpellValid(uint32 pmSpellID);
-    uint32 GetMaxRankSpellId(uint32 pmBaseSpellID, uint32 pmPlayerLevel);
     bool CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheckAura = false, bool pmOnlyMyAura = false, bool pmClearShapeShift = false);
     void ClearShapeshift();
-    void CancelAura(uint32 pmSpellID);    
-    bool Eat(bool pmForce = false);
+    void CancelAura(uint32 pmSpellID);
+    bool Eat();
     bool Drink();
     bool Chase(Unit* pmTarget, float pmMinDistance, float pmMaxDistance);
-    bool Follow(Unit* pmTarget, float pmDistance);
+    bool Follow(Unit* pmTarget, float pmMinDistance, float pmMaxDistance);    
+    bool RandomTeleport();
+
     void ChooseTarget(Unit* pmTarget);
     void ClearTarget();
-
-    void InitializeCharacter(uint32 pmTargetLevel,uint32 pmSpecialtyTabIndex);
-    void InitializeEquipments(bool pmReset = false);
-    bool RandomTeleport();
-    void TeleportTo(uint32 pmMapID, float pmDestX, float pmDestY, float pmDestZ);
-
-    uint32 HasAura(uint32 pmSpellId, Unit* pmCaster = NULL);
-    uint32 GetAuraDuration(uint32 pmSpellId, Unit* pmCaster = NULL);
-    uint32 GetAuraStack(uint32 pmSpellId, Unit* pmCaster = NULL);
-
-    Player* GetNearbyHostilePlayer(float pmRange = RANGE_HEAL_DISTANCE);
-    Unit* GetNearbyHostileUnit(float pmRange = RANGE_HEAL_DISTANCE);
+    bool SpellValid(uint32 pmSpellID);
+    Item* GetItemInInventory(uint32 pmEntry);
+    Player* GetNearbyHostilePlayer(float pmRange = RANGE_MAX_DISTANCE);
+    Unit* GetNearbyHostileUnit(float pmRange = RANGE_MAX_DISTANCE);
     Unit* GetAnyUnitInRange(float pmMinRange = 0.0f, float pmMaxRange = VISIBILITY_DISTANCE_NORMAL);
-
 
     Player* me;
     NingerMovement* rm;    
@@ -98,12 +86,5 @@ public:
     float chaseDistanceMin;
     float chaseDistanceMax;
     int rti;    
-
-private:
-    void InitializeSpells();
-    void InitializeTalents();
-    bool EquipNewItem(uint32 pmItemEntry, uint8 pmEquipSlot);
-    uint32 GetUsableArmorSubClass(Player* pmTargetPlayer);
-    void TryEquip(Player* pmTargetPlayer, std::unordered_set<uint32> pmClassSet, std::unordered_set<uint32> pmSubClassSet, uint32 pmTargetSlot);
 };
 #endif

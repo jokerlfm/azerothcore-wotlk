@@ -14,8 +14,7 @@ enum HunterAspectType :uint32
 class NingerAction_Hunter :public NingerAction_Base
 {
 public:
-    NingerAction_Hunter(Player* pmMe);
-    void Prepare();
+    NingerAction_Hunter();
 
     uint32 aspectType;
 };

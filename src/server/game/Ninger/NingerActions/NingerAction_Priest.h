@@ -6,30 +6,26 @@
 class NingerAction_Priest :public NingerAction_Base
 {
 public:
-    NingerAction_Priest(Player* pmMe);
-    void Update(uint32 pmDiff);
-    void Reset();
-    //bool Cure(Unit* pmTarget);
-    //bool Buff(Unit* pmTarget);
-    //bool Revive(Player* pmTarget);
-    //bool Heal(Unit* pmTarget);
-    //bool Heal_Discipline(Unit* pmTarget);
-    //bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    NingerAction_Priest();
+    void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
+    void InitializeEquipments(bool pmReset);
+    bool Heal(Unit* pmTarget);
+    bool SimpleHeal(Unit* pmTarget);
+    bool Cure(Unit* pmTarget);
+    bool Buff(Unit* pmTarget);
+    bool Assist(Unit* pmTarget);
+    bool Revive(Player* pmTarget);
 
-    void LearnTalents(uint32 pmTabIndex);
-
-    int manaCheckDelay;
-    int powerWordShieldDelay;
-    int powerWordBarrierDelay;
-    int fearWardDelay;
-    int painSuppressionDelay;
-    int penanceDelay;
-    int innerFocusDelay;
-    int powerInfusionDelay;
-    int hymnOfHopeDelay;
-    int prayerOfMendingDelay;
-    int shadowfiendDelay;
-
-    int mindBlastDelay;
+private:
+    uint32 spell_Renew;
+    uint32 spell_LesserHeal;
+    uint32 spell_Heal;
+    uint32 spell_GreaterHeal;
+    uint32 spell_FlashHeal;
+    uint32 spell_Resurrection;
+    uint32 spell_CureDisease;
+    uint32 spell_DispelMagic;
+    uint32 spell_DivineSpirit;
+    uint32 spell_PowerWord_Fortitude;
 };
 #endif

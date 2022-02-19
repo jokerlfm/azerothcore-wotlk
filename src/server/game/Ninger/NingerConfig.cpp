@@ -461,21 +461,22 @@ bool NingerConfig::StartNinger()
     Configure(configFile, args, moduleList);
     if (!LoadAppConfigs())
     {
-        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_ERROR, "Error in ninger config file : %s.", NINGER_CONFIG_FILE_NAME);
+        sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_ERROR, "Error in ninger config file : %s.", NINGER_CONFIG_FILE_NAME);
         return false;
     }
 
     Enable = GetIntDefault("Enable", 0);
+    Reset = GetIntDefault("Reset", 0);
     DPSDelay = GetIntDefault("DPSDelay", 2000);
     ManagerCheckDelay = GetIntDefault("ManagerCheckDelay", 60000);
     NingerCountEachLevel = GetIntDefault("NingerCountEachLevel", 20);
 
     if (Enable == 0)
     {
-        sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "ninger is disabled.");
+        sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "ninger is disabled.");
         return false;
     }
-    sLog->outMessage("ninger", LogLevel::LOG_LEVEL_INFO, "ninger started.");
+    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "ninger started.");
     return true;
 }
 

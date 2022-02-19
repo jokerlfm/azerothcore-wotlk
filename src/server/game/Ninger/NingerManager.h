@@ -3,10 +3,6 @@
 
 #define enum_to_string(x) #x
 
-#ifndef NINGER_PASSWORD
-# define NINGER_PASSWORD "ninger"
-#endif
-
 #include "NingerEntity.h"
 #include "Player.h"
 
@@ -35,9 +31,8 @@ public:
     std::unordered_map<uint32, Position> flagPointMap;
 };
 
-enum BaseSpell :uint32
+enum ShapeshiftSpell :uint32
 {
-    SunderArmor = 7386,
     CatForm = 768,
     DireBearForm = 9634,
     BearForm = 5487,
@@ -54,6 +49,7 @@ class NingerManager
 public:
     void InitializeManager();
     void UpdateNingerManager(uint32 pmDiff);
+    void UpdateNingerEntities(uint32 pmDiff);
     void DeleteNingers();
     bool LoginNinger(uint32 pmLevel);
     void HandlePlayerSay(Player* pmPlayer, std::string pmContent);    
@@ -63,8 +59,7 @@ public:
     std::string TrimString(std::string srcStr);
     static NingerManager* instance();    
 
-    void HandleChatCommand(Player* pmSender, std::string pmCMD, Player* pmReceiver = NULL);
-    void HandlePacket(WorldSession* pmSession, WorldPacket pmPacket);
+    void HandleChatCommand(Player* pmSender, std::string pmCMD, Player* pmReceiver = NULL);    
 
 public:
     std::unordered_map<uint32, std::unordered_map<uint32, uint32>> allianceRaces;
@@ -75,6 +70,7 @@ public:
     std::unordered_map<uint32, std::unordered_map<uint32, std::string>> characterTalentTabNameMap;   
 
 private:
+    void CreateNinger(uint32 pmLevel, bool pmAlliance);
     int checkDelay;
 };
 

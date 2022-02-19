@@ -311,6 +311,7 @@ public:
 
     // lfm ninger
     bool isNinger;
+    void HandlePacket(WorldPacket pmPacket);
 
     bool PlayerLoading() const { return m_playerLoading; }
     bool PlayerLogout() const { return m_playerLogout; }

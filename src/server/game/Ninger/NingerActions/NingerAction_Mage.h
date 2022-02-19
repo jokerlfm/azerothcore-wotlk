@@ -6,6 +6,6 @@
 class NingerAction_Mage :public NingerAction_Base
 {
 public:    
-    NingerAction_Mage(Player* pmMe);
+    NingerAction_Mage();
 };
 #endif

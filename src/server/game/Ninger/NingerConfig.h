@@ -3,6 +3,10 @@
 
 #define NINGER_CONFIG_FILE_NAME "ninger.conf"
 
+#ifndef NINGER_MARK
+# define NINGER_MARK "ninger"
+#endif
+
 #ifndef AOE_TARGETS_RANGE
 # define AOE_TARGETS_RANGE 4.0f
 #endif
@@ -36,7 +40,7 @@
 #endif
 
 #ifndef MELEE_MIN_DISTANCE
-# define MELEE_MIN_DISTANCE 0.0f
+# define MELEE_MIN_DISTANCE 0.5f
 #endif
 
 #ifndef MELEE_MAX_DISTANCE
@@ -47,40 +51,16 @@
 # define RANGE_MIN_DISTANCE 9.0f
 #endif
 
-#ifndef RANGE_DPS_DISTANCE
-# define RANGE_DPS_DISTANCE 38.0f
+#ifndef RANGE_NORMAL_DISTANCE
+# define RANGE_NORMAL_DISTANCE 25.0f
 #endif
 
-#ifndef RANGE_HEAL_DISTANCE
-# define RANGE_HEAL_DISTANCE 38.0f
+#ifndef RANGE_MAX_DISTANCE
+# define RANGE_MAX_DISTANCE 38.0f
 #endif
 
 #ifndef DEFAULT_CHECK_DELAY
 # define DEFAULT_CHECK_DELAY 500
-#endif
-
-#ifndef DEFAULT_ENGAGE_DELAY
-# define DEFAULT_ENGAGE_DELAY 2000
-#endif
-
-#ifndef DEFAULT_REST_DELAY
-# define DEFAULT_REST_DELAY 20000
-#endif
-
-#ifndef DEFAULT_ASSEMBLE_DELAY_MIN
-# define DEFAULT_ASSEMBLE_DELAY_MIN 30000
-#endif
-
-#ifndef DEFAULT_ASSEMBLE_DELAY_MAX
-# define DEFAULT_ASSEMBLE_DELAY_MAX 60000
-#endif
-
-#ifndef DEFAULT_CORPSE_RUN_DELAY_MIN
-# define DEFAULT_CORPSE_RUN_DELAY_MIN 60000
-#endif
-
-#ifndef DEFAULT_CORPSE_RUN_DELAY_MAX
-# define DEFAULT_CORPSE_RUN_DELAY_MAX 90000
 #endif
 
 #include "Define.h"
@@ -113,6 +93,7 @@ public:
 public:
     bool StartNinger();
     uint32 Enable;
+    uint32 Reset;
     uint32 DPSDelay;
     uint32 ManagerCheckDelay;
     uint32 NingerCountEachLevel;

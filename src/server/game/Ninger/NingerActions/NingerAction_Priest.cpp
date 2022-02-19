@@ -4,96 +4,403 @@
 #include "SpellAuraEffects.h"
 #include "GridNotifiers.h"
 
-NingerAction_Priest::NingerAction_Priest(Player* pmMe) :NingerAction_Base(pmMe)
+NingerAction_Priest::NingerAction_Priest() :NingerAction_Base()
 {
-    manaCheckDelay = 0;
-    powerWordShieldDelay = 0;
-    powerWordBarrierDelay = 0;
-    fearWardDelay = 0;
-    painSuppressionDelay = 0;
-    penanceDelay = 0;
-    innerFocusDelay = 0;
-    powerInfusionDelay = 0;
-    hymnOfHopeDelay = 0;
-    prayerOfMendingDelay = 0;
-    shadowfiendDelay = 0;
-    mindBlastDelay = 0;
+    spell_Renew = 0;
+    spell_LesserHeal = 0;
+    spell_Heal = 0;
+    spell_GreaterHeal = 0;
+    spell_FlashHeal = 0;
+    spell_Resurrection = 0;
+    spell_CureDisease = 0;
+    spell_DispelMagic = 0;
+    spell_DivineSpirit = 0;
+    spell_PowerWord_Fortitude = 0;
 }
 
-void NingerAction_Priest::LearnTalents(uint32 pmTabIndex)
+void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex)
 {
-    uint32 freePoints = me->GetFreeTalentPoints();
-    if (freePoints > 0)
+    if (!me)
     {
-        me->LearnTalent(1, freePoints >= 5 ? 5 : freePoints);
+        return;
     }
-    freePoints = me->GetFreeTalentPoints();
-    if (freePoints > 0)
+    me->ClearInCombat();
+    if (me->getLevel() != pmTargetLevel)
     {
-        me->LearnTalent(1, freePoints >= 5 ? 5 : freePoints);
+        me->GiveLevel(pmTargetLevel);
+        me->LearnDefaultSkills();
+        me->LearnCustomSpells();
+
+        // todo : learn talents
+
+        // priest trainer Astarii Starseeker
+        TrainerSpellData const* trainer_spells = sObjectMgr->GetNpcTrainerSpells(4090);
+        bool hasNew = false;
+        while (true)
+        {
+            hasNew = false;
+            for (TrainerSpellMap::const_iterator itr = trainer_spells->spellList.begin(); itr != trainer_spells->spellList.end(); ++itr)
+            {
+                TrainerSpell const* tSpell = &itr->second;
+                if (me->HasSpell(tSpell->spell))
+                {
+                    continue;
+                }
+                if (tSpell->reqSpell && !me->HasSpell(tSpell->reqSpell))
+                {
+                    continue;
+                }
+                TrainerSpellState state = me->GetTrainerSpellState(tSpell);
+                if (state == TrainerSpellState::TRAINER_SPELL_GREEN)
+                {
+                    me->learnSpell(tSpell->spell);
+                    hasNew = true;
+                }
+            }
+            if (!hasNew)
+            {
+                break;
+            }
+        }
+        uint32 myLevel = me->getLevel();
+        if (myLevel >= 80)
+        {
+            spell_Renew = 48068;
+        }
+        else if (myLevel >= 75)
+        {
+            spell_Renew = 48067;
+        }
+        else if (myLevel >= 70)
+        {
+            spell_Renew = 25222;
+        }
+        else if (myLevel >= 65)
+        {
+            spell_Renew = 25221;
+        }
+        else if (myLevel >= 60)
+        {
+            spell_Renew = 25315;
+        }
+        else if (myLevel >= 56)
+        {
+            spell_Renew = 10929;
+        }
+        else if (myLevel >= 50)
+        {
+            spell_Renew = 10928;
+        }
+        else if (myLevel >= 44)
+        {
+            spell_Renew = 10927;
+        }
+        else if (myLevel >= 38)
+        {
+            spell_Renew = 6078;
+        }
+        else if (myLevel >= 32)
+        {
+            spell_Renew = 6077;
+        }
+        else if (myLevel >= 26)
+        {
+            spell_Renew = 6076;
+        }
+        else if (myLevel >= 20)
+        {
+            spell_Renew = 6075;
+        }
+        else if (myLevel >= 14)
+        {
+            spell_Renew = 6074;
+        }
+        else if (myLevel >= 8)
+        {
+            spell_Renew = 139;
+        }
+        if (myLevel >= 10)
+        {
+            spell_LesserHeal = 2053;
+        }
+        else if (myLevel >= 4)
+        {
+            spell_LesserHeal = 2052;
+        }
+        else if (myLevel >= 1)
+        {
+            spell_LesserHeal = 2050;
+        }
+        if (myLevel >= 34)
+        {
+            spell_Heal = 6064;
+        }
+        else if (myLevel >= 28)
+        {
+            spell_Heal = 6063;
+        }
+        else if (myLevel >= 22)
+        {
+            spell_Heal = 2055;
+        }
+        else if (myLevel >= 16)
+        {
+            spell_Heal = 2054;
+        }
+        if (myLevel >= 78)
+        {
+            spell_GreaterHeal = 48063;
+        }
+        else if (myLevel >= 73)
+        {
+            spell_GreaterHeal = 48062;
+        }
+        else if (myLevel >= 68)
+        {
+            spell_GreaterHeal = 25213;
+        }
+        else if (myLevel >= 63)
+        {
+            spell_GreaterHeal = 25210;
+        }
+        else if (myLevel >= 60)
+        {
+            spell_GreaterHeal = 25314;
+        }
+        else if (myLevel >= 58)
+        {
+            spell_GreaterHeal = 10965;
+        }
+        else if (myLevel >= 52)
+        {
+            spell_GreaterHeal = 10964;
+        }
+        else if (myLevel >= 46)
+        {
+            spell_GreaterHeal = 10963;
+        }
+        else if (myLevel >= 40)
+        {
+            spell_GreaterHeal = 2060;
+        }
+        if (myLevel >= 79)
+        {
+            spell_FlashHeal = 48071;
+        }
+        else if (myLevel >= 73)
+        {
+            spell_FlashHeal = 48070;
+        }
+        else if (myLevel >= 67)
+        {
+            spell_FlashHeal = 25235;
+        }
+        else if (myLevel >= 61)
+        {
+            spell_FlashHeal = 25233;
+        }
+        else if (myLevel >= 56)
+        {
+            spell_FlashHeal = 10917;
+        }
+        else if (myLevel >= 50)
+        {
+            spell_FlashHeal = 10916;
+        }
+        else if (myLevel >= 44)
+        {
+            spell_FlashHeal = 10915;
+        }
+        else if (myLevel >= 38)
+        {
+            spell_FlashHeal = 9474;
+        }
+        else if (myLevel >= 32)
+        {
+            spell_FlashHeal = 9473;
+        }
+        else if (myLevel >= 26)
+        {
+            spell_FlashHeal = 9472;
+        }
+        else if (myLevel >= 20)
+        {
+            spell_FlashHeal = 2061;
+        }
+        if (myLevel >= 78)
+        {
+            spell_Resurrection = 48171;
+        }
+        else if (myLevel >= 68)
+        {
+            spell_Resurrection = 25435;
+        }
+        else if (myLevel >= 58)
+        {
+            spell_Resurrection = 20770;
+        }
+        else if (myLevel >= 46)
+        {
+            spell_Resurrection = 10881;
+        }
+        else if (myLevel >= 34)
+        {
+            spell_Resurrection = 10880;
+        }
+        else if (myLevel >= 22)
+        {
+            spell_Resurrection = 2010;
+        }
+        else if (myLevel >= 10)
+        {
+            spell_Resurrection = 2006;
+        }
+        if (myLevel >= 14)
+        {
+            spell_CureDisease = 528;
+        }
+        if (myLevel >= 18)
+        {
+            spell_DispelMagic = 527;
+        }
+        if (myLevel >= 80)
+        {
+            spell_DivineSpirit = 48073;
+        }
+        else if (myLevel >= 70)
+        {
+            spell_DivineSpirit = 25312;
+        }
+        else if (myLevel >= 60)
+        {
+            spell_DivineSpirit = 27841;
+        }
+        else if (myLevel >= 50)
+        {
+            spell_DivineSpirit = 14819;
+        }
+        else if (myLevel >= 40)
+        {
+            spell_DivineSpirit = 14818;
+        }
+        else if (myLevel >= 30)
+        {
+            spell_DivineSpirit = 14752;
+        }
+        if (myLevel >= 80)
+        {
+            spell_PowerWord_Fortitude = 48161;
+        }
+        else if (myLevel >= 70)
+        {
+            spell_PowerWord_Fortitude = 25389;
+        }
+        else if (myLevel >= 60)
+        {
+            spell_PowerWord_Fortitude = 10938;
+        }
+        else if (myLevel >= 48)
+        {
+            spell_PowerWord_Fortitude = 10937;
+        }
+        else if (myLevel >= 36)
+        {
+            spell_PowerWord_Fortitude = 2791;
+        }
+        else if (myLevel >= 24)
+        {
+            spell_PowerWord_Fortitude = 1245;
+        }
+        else if (myLevel >= 12)
+        {
+            spell_PowerWord_Fortitude = 1244;
+        }
+        else if (myLevel >= 1)
+        {
+            spell_PowerWord_Fortitude = 1243;
+        }
+        // todo : initial equipments
+
+        InitializeEquipments(true);
+    }
+    std::ostringstream msgStream;
+    msgStream << me->GetName() << " initialized";
+    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+}
+
+void NingerAction_Priest::InitializeEquipments(bool pmReset)
+{
+    if (pmReset)
+    {
+        for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+        {
+            if (Item* inventoryItem = me->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+            {
+                me->DestroyItem(INVENTORY_SLOT_BAG_0, slot, true);
+            }
+        }
+        for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
+        {
+            if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+            {
+                me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+            }
+        }
+    }
+    uint32 minQuality = ItemQualities::ITEM_QUALITY_UNCOMMON;
+    if (me->getLevel() < 20)
+    {
+        minQuality = ItemQualities::ITEM_QUALITY_POOR;
+    }
+    for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
+    {
+        if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
+        {
+            if (me->getLevel() < 30)
+            {
+                continue;
+            }
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS)
+        {
+            if (me->getLevel() < 30)
+            {
+                continue;
+            }
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_NECK)
+        {
+            if (me->getLevel() < 30)
+            {
+                continue;
+            }
+        }
+        else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER1 || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER2)
+        {
+            if (me->getLevel() < 30)
+            {
+                continue;
+            }
+        }
+        if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
+        {
+            if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+            {
+                if (checkIT->Quality >= minQuality)
+                {
+                    continue;
+                }
+                else
+                {
+                    me->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
+                }
+            }
+        }
+        // todo : random pick and equip 
     }
 }
 
-void NingerAction_Priest::Update(uint32 pmDiff)
-{
-    NingerAction_Base::Update(pmDiff);
-    if (manaCheckDelay >= 0)
-    {
-        manaCheckDelay -= pmDiff;
-    }
-    if (powerWordShieldDelay >= 0)
-    {
-        powerWordShieldDelay -= pmDiff;
-    }
-    if (powerWordBarrierDelay >= 0)
-    {
-        powerWordBarrierDelay -= pmDiff;
-    }
-    if (fearWardDelay >= 0)
-    {
-        fearWardDelay -= pmDiff;
-    }
-    if (painSuppressionDelay >= 0)
-    {
-        painSuppressionDelay -= pmDiff;
-    }
-    if (penanceDelay >= 0)
-    {
-        penanceDelay -= pmDiff;
-    }
-    if (innerFocusDelay >= 0)
-    {
-        innerFocusDelay -= pmDiff;
-    }
-    if (powerInfusionDelay >= 0)
-    {
-        powerInfusionDelay -= pmDiff;
-    }
-    if (hymnOfHopeDelay >= 0)
-    {
-        hymnOfHopeDelay -= pmDiff;
-    }
-    if (prayerOfMendingDelay >= 0)
-    {
-        prayerOfMendingDelay -= pmDiff;
-    }
-    if (shadowfiendDelay >= 0)
-    {
-        shadowfiendDelay -= pmDiff;
-    }
-    if (mindBlastDelay >= 0)
-    {
-        mindBlastDelay -= pmDiff;
-    }
-}
-
-void NingerAction_Priest::Reset()
-{
-    NingerAction_Base::Reset();
-}
-
-/*
-bool NingerAction_Priest::Revive(Player* pmTarget)
+bool NingerAction_Priest::Heal(Unit* pmTarget)
 {
     if (!me)
     {
@@ -103,56 +410,118 @@ bool NingerAction_Priest::Revive(Player* pmTarget)
     {
         return false;
     }
-    if (me->IsNonMeleeSpellCast(false))
+    if (!pmTarget)
     {
-        return true;
+        return false;
     }
-    if (pmTarget)
+    else if (!pmTarget->IsAlive())
     {
-        if (!pmTarget->IsAlive())
+        return false;
+    }
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance > RANGE_MAX_DISTANCE)
+    {
+        return false;
+    }
+    float targetHealthPct = pmTarget->GetHealthPct();
+    if (targetHealthPct < 30.0f)
+    {
+        if (spell_FlashHeal > 0)
         {
-            if (!pmTarget->IsResurrectRequested())
+            if (CastSpell(pmTarget, spell_FlashHeal))
             {
-                float targetDistance = me->GetDistance(pmTarget);
-                if (targetDistance < RANGE_HEAL_DISTANCE)
-                {
-                    if (CastSpell(pmTarget, "Resurrection"))
-                    {
-                        return true;
-                    }
-                }
+                return true;
             }
         }
     }
-    else
+    if (targetHealthPct < 70.0f)
     {
-        if (ogReviveTarget.IsEmpty())
+        if (spell_GreaterHeal > 0)
         {
-            if (Group* myGroup = me->GetGroup())
+            if (CastSpell(pmTarget, spell_GreaterHeal))
             {
-                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                {
-                    if (Player* member = groupRef->GetSource())
-                    {
-                        if (Revive(member))
-                        {
-                            return true;
-                        }
-                    }
-                }
+                return true;
             }
         }
-        else
+        if (spell_Heal > 0)
         {
-            Player* targetPlayer = ObjectAccessor::FindPlayer(ogReviveTarget);
-            if (Revive(targetPlayer))
+            if (CastSpell(pmTarget, spell_Heal))
+            {
+                return true;
+            }
+        }
+        if (spell_LesserHeal > 0)
+        {
+            if (CastSpell(pmTarget, spell_LesserHeal))
+            {
+                return true;
+            }
+        }
+    }
+    if (targetHealthPct < 90.0f)
+    {
+        if (spell_Renew > 0)
+        {
+            if (CastSpell(pmTarget, spell_Renew, true, true))
             {
                 return true;
             }
         }
     }
 
-    return true;
+    return false;
+}
+
+bool NingerAction_Priest::SimpleHeal(Unit* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        return false;
+    }
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance > RANGE_MAX_DISTANCE)
+    {
+        return false;
+    }
+    float targetHealthPct = pmTarget->GetHealthPct();
+    if (targetHealthPct < 50.0f)
+    {
+        if (spell_GreaterHeal > 0)
+        {
+            if (CastSpell(pmTarget, spell_GreaterHeal))
+            {
+                return true;
+            }
+        }
+        if (spell_Heal > 0)
+        {
+            if (CastSpell(pmTarget, spell_Heal))
+            {
+                return true;
+            }
+        }
+        if (spell_LesserHeal > 0)
+        {
+            if (CastSpell(pmTarget, spell_LesserHeal))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 bool NingerAction_Priest::Cure(Unit* pmTarget)
@@ -165,532 +534,58 @@ bool NingerAction_Priest::Cure(Unit* pmTarget)
     {
         return false;
     }
-    if (pmTarget)
+    if (!pmTarget)
     {
-        if (pmTarget->IsAlive())
-        {
-            float targetDistance = me->GetDistance(pmTarget);
-            if (targetDistance < RANGE_HEAL_DISTANCE)
-            {
-                for (uint32 type = SPELL_AURA_NONE; type < TOTAL_AURAS; ++type)
-                {
-                    std::list<AuraEffect*> auraList = pmTarget->GetAuraEffectsByType((AuraType)type);
-                    for (auto auraIT = auraList.begin(), end = auraList.end(); auraIT != end; ++auraIT)
-                    {
-                        const SpellInfo* pST = (*auraIT)->GetSpellInfo();
-                        if (!pST->IsPassive())
-                        {
-                            if (!pST->IsPositive())
-                            {
-                                if (pST->Dispel == DispelType::DISPEL_MAGIC)
-                                {
-                                    if (CastSpell(pmTarget, "Dispel Magic"))
-                                    {
-                                        return true;
-                                    }
-                                }
-                                else if (pST->Dispel == DispelType::DISPEL_DISEASE)
-                                {
-                                    if (CastSpell(pmTarget, "Cure Disease"))
-                                    {
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        return false;
     }
-    else
+    else if (!pmTarget->IsAlive())
     {
-        if (cureDelay < 0)
+        return false;
+    }
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance > RANGE_MAX_DISTANCE)
+    {
+        return false;
+    }
+
+    Unit::VisibleAuraMap const* visibleAuras = pmTarget->GetVisibleAuras();
+    for (Unit::VisibleAuraMap::const_iterator itr = visibleAuras->begin(); itr != visibleAuras->end(); ++itr)
+    {
+        if (Aura* aura = itr->second->GetBase())
         {
-            cureDelay = 1000;
-            if (Group* myGroup = me->GetGroup())
+            if (aura->IsPassive())
             {
-                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                continue;
+            }
+            if (aura->GetDuration() < 10 * IN_MILLISECONDS)
+            {
+                continue;
+            }
+            if (const SpellInfo* pST = aura->GetSpellInfo())
+            {
+                if (pST->IsPositive())
                 {
-                    if (Player* member = groupRef->GetSource())
+                    continue;
+                }
+                if (spell_DispelMagic > 0)
+                {
+                    if (pST->GetDispelMask() & DISPEL_MAGIC)
                     {
-                        if (Cure(member))
+                        if (CastSpell(pmTarget, spell_DispelMagic))
                         {
                             return true;
                         }
                     }
                 }
-            }
-        }
-    }
-
-    return false;
-}
-
-bool NingerAction_Priest::Heal(Unit* pmTarget)
-{
-    if (!me)
-    {
-        return false;
-    }
-    if (!me->IsAlive())
-    {
-        return false;
-    }
-    bool healResult = false;
-
-    if (manaCheckDelay < 0)
-    {
-        manaCheckDelay = 1000;
-        int manaPCT = me->GetPower(Powers::POWER_MANA) * 100 / me->GetMaxPower(Powers::POWER_MANA);
-        if (manaPCT < 20)
-        {
-            if (hymnOfHopeDelay < 0)
-            {
-                hymnOfHopeDelay = 1000;
-                if (CastSpell(me, "Hymn of Hope"))
+                if (spell_CureDisease > 0)
                 {
-                    hymnOfHopeDelay = 361000;
-                    return true;
-                }
-            }
-            if (shadowfiendDelay < 0)
-            {
-                shadowfiendDelay = 1000;
-                if (Group* myGroup = me->GetGroup())
-                {
-                    for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                    if (pST->GetDispelMask() & DispelType::DISPEL_DISEASE)
                     {
-                        if (Player* member = groupRef->GetSource())
+                        if (CastSpell(pmTarget, spell_CureDisease))
                         {
-                            if (Awareness_Base* ab = member->awarenessMap[member->activeAwarenessIndex])
-                            {
-                                if (ab->groupRole == GroupRole::GroupRole_Tank)
-                                {
-                                    if (Unit* tankTarget = member->GetSelectedUnit())
-                                    {
-                                        if (me->IsValidAttackTarget(tankTarget))
-                                        {
-                                            if (CastSpell(tankTarget, "Shadowfiend"))
-                                            {
-                                                shadowfiendDelay = 301000;
-                                                return true;
-                                            }
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
+                            return true;
                         }
                     }
-                }
-            }
-        }
-    }
-
-    switch (maxTalentTab)
-    {
-    case 0:
-    {
-        healResult = Heal_Discipline(pmTarget);
-        break;
-    }
-    case 1:
-    {
-        break;
-    }
-    case 2:
-    {
-        break;
-    }
-    default:
-    {
-        break;
-    }
-    }
-
-    return healResult;
-}
-
-bool NingerAction_Priest::Heal_Discipline(Unit* pmTarget)
-{
-    if (!me)
-    {
-        return false;
-    }
-    else if (!me->IsAlive())
-    {
-        return false;
-    }
-    if (pmTarget)
-    {
-        if (pmTarget->IsAlive())
-        {
-            float healthPCT = pmTarget->GetHealthPct();
-
-            if (pmTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
-            {
-                if (Player* targetPlayer = pmTarget->ToPlayer())
-                {
-                    if (Awareness_Base* ab = targetPlayer->awarenessMap[targetPlayer->activeAwarenessIndex])
-                    {
-                        if (ab->groupRole == GroupRole::GroupRole_Tank)
-                        {
-                            if (pmTarget->IsInCombat())
-                            {
-                                if (powerWordShieldDelay < 0)
-                                {
-                                    powerWordShieldDelay = 1000;
-                                    if (!sNingerManager->HasAura(pmTarget, "Weakened Soul"))
-                                    {
-                                        if (CastSpell(pmTarget, "Power Word: Shield"))
-                                        {
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                            if (prayerOfMendingDelay < 0)
-                            {
-                                prayerOfMendingDelay = 1000;
-                                if (CastSpell(pmTarget, "Prayer of Mending", true))
-                                {
-                                    prayerOfMendingDelay = 11000;
-                                    return true;
-                                }
-                            }
-                            if (healthPCT < 95.0f)
-                            {
-                                if (CastSpell(pmTarget, "Renew", true, true))
-                                {
-                                    return true;
-                                }
-                            }
-                            if (healthPCT > 70.0f && healthPCT < 90.0f)
-                            {
-                                if (CastSpell(pmTarget, "Heal"))
-                                {
-                                    return true;
-                                }
-                            }
-                            if (healthPCT < 70.0f)
-                            {
-                                if (penanceDelay < 0)
-                                {
-                                    penanceDelay = 1000;
-                                    if (CastSpell(pmTarget, "Penance"))
-                                    {
-                                        penanceDelay = 13000;
-                                        return true;
-                                    }
-                                }
-                            }
-                            if (pmTarget->IsInCombat())
-                            {
-                                if (healthPCT > 40.0f && healthPCT < 70.0f)
-                                {
-                                    if (powerInfusionDelay < 0)
-                                    {
-                                        powerInfusionDelay = 1000;
-                                        if (!sNingerManager->HasAura(me, "Inner Focus"))
-                                        {
-                                            if (CastSpell(me, "Power Infusion"))
-                                            {
-                                                powerInfusionDelay = 121000;
-                                            }
-                                        }
-                                    }
-                                    else if (innerFocusDelay < 0)
-                                    {
-                                        innerFocusDelay = 1000;
-                                        if (!sNingerManager->HasAura(me, "Power Infusion"))
-                                        {
-                                            if (CastSpell(me, "Inner Focus"))
-                                            {
-                                                innerFocusDelay = 46000;
-                                            }
-                                        }
-                                    }
-                                    if (CastSpell(pmTarget, "Greater Heal"))
-                                    {
-                                        return true;
-                                    }
-                                }
-                                if (healthPCT < 40.0f)
-                                {
-                                    if (powerWordBarrierDelay < 0)
-                                    {
-                                        powerWordBarrierDelay = 1000;
-                                        if (!sNingerManager->HasAura(pmTarget, "Pain Suppression"))
-                                        {
-                                            if (CastSpell(pmTarget, "Power Word: Barrier"))
-                                            {
-                                                powerWordBarrierDelay = 181000;
-                                                return true;
-                                            }
-                                        }
-                                    }
-                                    else if (painSuppressionDelay < 0)
-                                    {
-                                        painSuppressionDelay = 1000;
-                                        if (!sNingerManager->HasAura(pmTarget, "Power Word: Barrier"))
-                                        {
-                                            if (CastSpell(pmTarget, "Pain Suppression"))
-                                            {
-                                                painSuppressionDelay = 181000;
-                                                return true;
-                                            }
-                                        }
-                                    }
-                                }
-                                if (CastSpell(pmTarget, "Flash Heal"))
-                                {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (healthPCT < 80.0f)
-            {
-                if (CastSpell(pmTarget, "Renew", true, true))
-                {
-                    return true;
-                }
-                if (CastSpell(pmTarget, "Heal"))
-                {
-                    return true;
-                }
-            }
-        }
-    }
-    else
-    {
-        if (Group* myGroup = me->GetGroup())
-        {
-            Player* mainTank = NULL;
-            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                if (Player* member = groupRef->GetSource())
-                {
-                    if (Awareness_Base* ab = member->awarenessMap[member->activeAwarenessIndex])
-                    {
-                        if (ab->groupRole == GroupRole::GroupRole_Tank)
-                        {
-                            mainTank = member;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (mainTank)
-            {
-                if (mainTank->IsAlive())
-                {
-                    if (Heal_Discipline(mainTank))
-                    {
-                        return true;
-                    }
-                }
-            }
-            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                if (Player* member = groupRef->GetSource())
-                {
-                    if (Awareness_Base* ab = member->awarenessMap[member->activeAwarenessIndex])
-                    {
-                        if (ab->groupRole != GroupRole::GroupRole_Tank)
-                        {
-                            float healthPCT = member->GetHealthPct();
-                            if (healthPCT < 50.0f)
-                            {
-                                if (Heal_Discipline(member))
-                                {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return false;
-}
-
-bool NingerAction_Priest::DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax)
-{
-    if (!me)
-    {
-        return false;
-    }
-    else if (!me->IsAlive())
-    {
-        return false;
-    }
-
-    if (pmTarget)
-    {
-        if (pmTarget->IsAlive())
-        {
-            if (me->IsValidAttackTarget(pmTarget))
-            {
-                float targetDistance = me->GetDistance(pmTarget);
-                if (targetDistance < VISIBILITY_DISTANCE_NORMAL)
-                {
-                    if (pmChase)
-                    {
-                        if (!Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax))
-                        {
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        if (!me->isInFront(pmTarget, M_PI / 4))
-                        {
-                            me->SetFacingToObject(pmTarget);
-                        }
-                    }
-                    me->Attack(pmTarget, true);
-
-                    if (targetDistance < RANGE_DPS_DISTANCE)
-                    {
-                        if (pmAOE)
-                        {
-                            if (aoeCheckDelay < 0)
-                            {
-                                aoeCheckDelay = 1000;
-                                uint32 targetsCount = 0;
-                                std::list<Unit*> unitList;
-                                Trinity::AnyUnitInObjectRangeCheck go_check(me, AOE_TARGETS_RANGE);
-                                Trinity::CreatureListSearcher<Trinity::AnyUnitInObjectRangeCheck> go_search(me, unitList, go_check);
-                                Cell::VisitGridObjects(me, go_search, AOE_TARGETS_RANGE);
-                                if (!unitList.empty())
-                                {
-                                    for (std::list<Unit*>::iterator uIT = unitList.begin(); uIT != unitList.end(); uIT++)
-                                    {
-                                        if (Unit* eachUnit = *uIT)
-                                        {
-                                            if (me->IsValidAttackTarget(eachUnit))
-                                            {
-                                                targetsCount++;
-                                            }
-                                        }
-                                    }
-                                }
-                                if (targetsCount > 2)
-                                {
-
-                                }
-                            }
-                        }
-                        if (mindBlastDelay < 0)
-                        {
-                            mindBlastDelay = 1000;
-                            if (CastSpell(pmTarget, "Mind Blast"))
-                            {
-                                mindBlastDelay = 8000;
-                                return true;
-                            }
-                        }
-                    }
-                    return true;
-                }
-            }
-        }
-    }
-    else
-    {
-        if (Group* myGroup = me->GetGroup())
-        {
-            if (pmMark)
-            {
-                // icon  
-                if (Unit* target = ObjectAccessor::GetUnit(*me, myGroup->GetGuidByTargetIcon(7)))
-                {
-                    if (DPS(target, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
-                    {
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                // tank target
-                Player* mainTank = NULL;
-                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                {
-                    if (Player* member = groupRef->GetSource())
-                    {
-                        if (Awareness_Base* ab = member->awarenessMap[member->activeAwarenessIndex])
-                        {
-                            if (ab->groupRole == GroupRole::GroupRole_Tank)
-                            {
-                                mainTank = member;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (mainTank)
-                {
-                    if (Unit* tankTarget = mainTank->GetSelectedUnit())
-                    {
-                        if (tankTarget->IsInCombat())
-                        {
-                            if (DPS(tankTarget, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                    if (mainTank->IsAlive())
-                    {
-                        std::set<Unit*> const& tankAttackers = mainTank->getAttackers();
-                        for (Unit* eachAttacker : tankAttackers)
-                        {
-                            if (DPS(eachAttacker, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                }
-                if (Unit* myTarget = me->GetSelectedUnit())
-                {
-                    if (DPS(myTarget, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
-                    {
-                        return true;
-                    }
-                }
-                std::set<Unit*> const& myAttackers = me->getAttackers();
-                for (Unit* eachAttacker : myAttackers)
-                {
-                    if (DPS(eachAttacker, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (Unit* myTarget = me->GetSelectedUnit())
-            {
-                if (DPS(myTarget, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
-                {
-                    return true;
-                }
-            }
-            std::set<Unit*> const& myAttackers = me->getAttackers();
-            for (Unit* eachAttacker : myAttackers)
-            {
-                if (DPS(eachAttacker, pmChase, pmAOE, pmMark, pmChaseDistanceMin, pmChaseDistanceMax))
-                {
-                    return true;
                 }
             }
         }
@@ -709,48 +604,74 @@ bool NingerAction_Priest::Buff(Unit* pmTarget)
     {
         return false;
     }
-    if (pmTarget)
+    if (!pmTarget)
     {
-        if (pmTarget->GetGUID() == me->GetGUID())
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        return false;
+    }
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance > RANGE_MAX_DISTANCE)
+    {
+        return false;
+    }
+
+    if (spell_DivineSpirit > 0)
+    {
+        if (CastSpell(pmTarget, spell_DivineSpirit, true))
         {
-            if (CastSpell(me, "Inner Fire", true))
-            {
-                return true;
-            }
-        }
-        if (pmTarget->IsAlive())
-        {
-            float targetDistance = me->GetDistance(pmTarget);
-            if (targetDistance < RANGE_DPS_DISTANCE)
-            {
-                if (CastSpell(pmTarget, "Power Word: Fortitude", true))
-                {
-                    return true;
-                }
-            }
+            return true;
         }
     }
-    else
+    if (spell_PowerWord_Fortitude > 0)
     {
-        if (buffDelay < 0)
+        if (CastSpell(pmTarget, spell_PowerWord_Fortitude, true))
         {
-            buffDelay = 2000;
-            if (Group* myGroup = me->GetGroup())
-            {
-                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                {
-                    if (Player* member = groupRef->GetSource())
-                    {
-                        if (Buff(member))
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
+            return true;
         }
     }
 
     return false;
 }
-*/
+
+bool NingerAction_Priest::Assist(Unit* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Priest::Revive(Player* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        return false;
+    }
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance > RANGE_MAX_DISTANCE)
+    {
+        return false;
+    }
+
+    if (spell_Resurrection > 0)
+    {
+        if (CastSpell(pmTarget, spell_Resurrection))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}

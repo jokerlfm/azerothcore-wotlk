@@ -1,6 +1,6 @@
 #include "NingerAction_Shaman.h"
 
-NingerAction_Shaman::NingerAction_Shaman(Player* pmMe) :NingerAction_Base(pmMe)
+NingerAction_Shaman::NingerAction_Shaman() :NingerAction_Base()
 {
     earthTotemType = ShamanEarthTotemType::ShamanEarthTotemType_StoneskinTotem;
 }

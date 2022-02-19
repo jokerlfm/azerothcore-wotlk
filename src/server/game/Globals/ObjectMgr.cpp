@@ -665,6 +665,10 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     {
         creatureTemplate.faction = 14;
     }
+    else if (creatureTemplate.Entry == 706 || creatureTemplate.Entry == 808 || creatureTemplate.Entry == 946)
+    {
+        creatureTemplate.faction = 37;
+    }
 }
 
 void ObjectMgr::LoadCreatureTemplateResistances()
@@ -2568,11 +2572,11 @@ void ObjectMgr::LoadGameobjects()
         if (gameEvent == 0 && PoolId == 0)                      // if not this is to be managed by GameEvent System or Pool system
         {
             // lfm vein will only spawn pools
-            //AddGameobjectToGrid(guid, &data);
-            if (veinEntrySet.find(data.id) == veinEntrySet.end())
-            {
-                AddGameobjectToGrid(guid, &data);
-            }
+            AddGameobjectToGrid(guid, &data);
+            //if (veinEntrySet.find(data.id) == veinEntrySet.end())
+            //{
+            //    AddGameobjectToGrid(guid, &data);
+            //}
         }            
         ++count;
     } while (result->NextRow());
@@ -8550,6 +8554,20 @@ void ObjectMgr::LoadMailLevelRewards()
             continue;
         }
 
+        // lfm mail level rewards
+        if (level == 20)
+        {
+            level = 30;
+        }
+        else if (level == 40)
+        {
+            level = 55;
+        }
+        else if (level == 60)
+        {
+            level = 69;
+        }
+
         _mailLevelRewardStore[level].push_back(MailLevelReward(raceMask, mailTemplateId, senderEntry));
 
         ++count;
@@ -8681,6 +8699,35 @@ void ObjectMgr::LoadTrainerSpell()
         {
             continue;
         }
+        else if (spell == 33388)
+        {
+            reqLevel = 30;
+            spellCost = 500000;
+        }
+        else if (spell == 33391)
+        {
+            reqLevel = 55;
+            spellCost = 5000000;
+        }
+        else if (spell == 34090)
+        {
+            reqLevel = 69;
+            spellCost = 10000000;
+        }
+        else if (spell == 34091)
+        {
+            reqLevel = 70;
+            spellCost = 50000000;
+        }
+        else if (spell == 54197)
+        {
+            reqLevel = 80;
+            spellCost = 50000000;
+        }
+        else if (spell == 54083 || spell == 18249)
+        {
+            continue;
+        }
 
         AddSpellToTrainer(entry, spell, spellCost, reqSkill, reqSkillValue, reqLevel, reqSpell);
 
@@ -8755,16 +8802,16 @@ void ObjectMgr::LoadVendors()
     {
         Field* fields = result->Fetch();
 
-        uint32 entry        = fields[0].Get<uint32>();
-        int32 item_id      = fields[1].Get<int32>();
+        uint32 entry = fields[0].Get<uint32>();
+        int32 item_id = fields[1].Get<int32>();
 
         // if item is a negative, its a reference
         if (item_id < 0)
             count += LoadReferenceVendor(entry, -item_id, &skip_vendors);
         else
         {
-            uint32 maxcount     = fields[2].Get<uint8>();
-            uint32 incrtime     = fields[3].Get<uint32>();
+            uint32 maxcount = fields[2].Get<uint8>();
+            uint32 incrtime = fields[3].Get<uint32>();
             uint32 ExtendedCost = fields[4].Get<uint32>();
 
             if (!IsVendorItemValid(entry, item_id, maxcount, incrtime, ExtendedCost, nullptr, &skip_vendors))
@@ -8785,7 +8832,7 @@ void ObjectMgr::LoadVendors()
         if ((*i)->item == 16083)
         {
             has16083 = true;
-        }        
+        }
     }
     if (!has16083)
     {
@@ -8804,6 +8851,40 @@ void ObjectMgr::LoadVendors()
     if (!has16072)
     {
         vi16072.AddItem(16072, 0, 0, 0);
+        ++count;
+    }
+    VendorItemData& vi16113_16112_16084 = _cacheVendorItemStore[2805];
+    bool has16113 = false;
+    bool has16112 = false;
+    bool has16084 = false;
+    for (VendorItemList::const_iterator i = vi16113_16112_16084.m_items.begin(); i != vi16113_16112_16084.m_items.end(); ++i)
+    {
+        if ((*i)->item == 16113)
+        {
+            has16113 = true;
+        }
+        if ((*i)->item == 16112)
+        {
+            has16112 = true;
+        }
+        if ((*i)->item == 16084)
+        {
+            has16084 = true;
+        }
+    }
+    if (!has16113)
+    {
+        vi16113_16112_16084.AddItem(16113, 0, 0, 0);
+        ++count;
+    }
+    if (!has16112)
+    {
+        vi16113_16112_16084.AddItem(16112, 0, 0, 0);
+        ++count;
+    }
+    if (!has16084)
+    {
+        vi16113_16112_16084.AddItem(16084, 0, 0, 0);
         ++count;
     }
 

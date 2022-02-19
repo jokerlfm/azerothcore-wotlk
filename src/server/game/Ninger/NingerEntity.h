@@ -12,6 +12,8 @@ enum NingerEntityState :uint32
     NingerEntityState_CreateCharacter,
     NingerEntityState_CheckLogin,
     NingerEntityState_DoLogin,
+    NingerEntityState_DoEnum,
+    NingerEntityState_CheckEnum,
     NingerEntityState_Initialize,
     NingerEntityState_Online,
     NingerEntityState_Exit,
@@ -37,8 +39,7 @@ public:
     uint32 target_class;
     uint32 target_specialty;
     int checkDelay;
-    uint32 entityState;
-    int onlineDelay;
+    uint32 entityState;    
     int offlineDelay;
 };
 #endif

@@ -2479,6 +2479,7 @@ void World::Update(uint32 diff)
 
     // lfm ninger
     sNingerManager->UpdateNingerManager(diff);
+    sNingerManager->UpdateNingerEntities(diff);
 }
 
 void World::ForceGameEventUpdate()

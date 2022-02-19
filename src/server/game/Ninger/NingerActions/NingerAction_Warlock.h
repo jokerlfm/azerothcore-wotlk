@@ -14,12 +14,7 @@ enum WarlockCurseType :uint32
 class NingerAction_Warlock :public NingerAction_Base
 {
 public:
-    NingerAction_Warlock(Player* pmMe);
-    void Update(uint32 pmDiff);
-    void Reset();
-    //bool DPS(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
-    //bool DPS_Destruction(Unit* pmTarget, bool pmChase, bool pmAOE, bool pmMark, float pmChaseDistanceMin, float pmChaseDistanceMax);
-    //bool Buff(Unit* pmTarget);
+    NingerAction_Warlock();
 
     uint32 curseType;
     int curseDelay;
