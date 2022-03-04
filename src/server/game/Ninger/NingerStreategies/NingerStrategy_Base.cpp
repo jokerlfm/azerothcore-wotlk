@@ -12,7 +12,7 @@ NingerStrategy_Base::NingerStrategy_Base()
     groupRole = GroupRole::GroupRole_DPS;
     initialized = false;
 
-    updateDelay = DEFAULT_CHECK_DELAY;
+    updateDelay = sNingerConfig->UpdateDelay;
     dpsDelay = sNingerConfig->DPSDelay;
     randomTeleportDelay = 0;
 
@@ -31,6 +31,9 @@ NingerStrategy_Base::NingerStrategy_Base()
     cure = true;
     aoe = true;
     petting = true;
+
+    engageLimit = 0;
+
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
     followDistanceMin = MELEE_MIN_DISTANCE;
@@ -68,6 +71,9 @@ void NingerStrategy_Base::Reset()
     cure = true;
     aoe = true;
     petting = true;
+
+    engageLimit = 0;
+
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
     followDistanceMin = 0;

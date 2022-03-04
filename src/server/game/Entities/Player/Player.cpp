@@ -413,11 +413,12 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     _wasOutdoor = true;
     // lfm auto fish
     fishingDelay = 0;
-
     // lfm ninger
     groupRole = 0;
     strategyMap.clear();
     activeStrategyIndex = 0;
+    joinMemberGuid = 0;
+    joinDelay = 0;
 
     sScriptMgr->OnConstructPlayer(this);
 }

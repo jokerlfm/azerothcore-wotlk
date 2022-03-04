@@ -372,7 +372,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 // lfm ninger 
                 if (!GetPlayer()->GetSession()->isNinger)
                 {
-                    sNingerManager->HandlePlayerSay(GetPlayer(), msg);
+                    sNingerManager->HandlePlayerCommand(GetPlayer(), msg);
                 }
             }
             break;

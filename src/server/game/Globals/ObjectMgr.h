@@ -696,6 +696,26 @@ typedef std::unordered_map<uint32, QuestMoneyRewardArray> QuestMoneyRewardStore;
 
 class PlayerDumpReader;
 
+// lfm veins
+class Vein
+{
+public:
+    Vein()
+    {
+        guid = 0;
+        type = 0;
+        spawnMask = 0;
+        wl = new WorldLocation(0, 0.0f, 0.0f, 0.0f, 0.0f);
+    }
+
+public:
+    uint32 guid;
+    // 0 copper, 1 tin, 2 silver
+    uint32 type;
+    uint8 spawnMask;
+    WorldLocation* wl;
+};
+
 class ObjectMgr
 {
     friend class PlayerDumpReader;
@@ -706,6 +726,11 @@ private:
 
 public:
     static ObjectMgr* instance();
+
+    // lfm gameobjects 
+    // 0 copper, 1 tin, 2 silver
+    std::unordered_map<uint32, std::unordered_set<uint32>> veinEntryMap;
+    std::unordered_map<uint32, std::unordered_set<Vein*>> veinGroupMap;
 
     typedef std::unordered_map<uint32, Item*> ItemMap;
 

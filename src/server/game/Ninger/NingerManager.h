@@ -50,16 +50,15 @@ public:
     void InitializeManager();
     void UpdateNingerManager(uint32 pmDiff);
     void UpdateNingerEntities(uint32 pmDiff);
+    void LogoutNingers();
     void DeleteNingers();
-    bool LoginNinger(uint32 pmLevel);
-    void HandlePlayerSay(Player* pmPlayer, std::string pmContent);    
+    bool LoginNinger(uint32 pmLevel, uint32 pmCount);
+    void HandleChatCommand(Player* pmPlayer, std::string pmContent, Player* pmTargetPlayer = nullptr, Group* pmTargetGroup = nullptr);
     bool StringEndWith(const std::string& str, const std::string& tail);
     bool StringStartWith(const std::string& str, const std::string& head);
     std::vector<std::string> SplitString(std::string srcStr, std::string delimStr, bool repeatedCharIgnored);
     std::string TrimString(std::string srcStr);
     static NingerManager* instance();    
-
-    void HandleChatCommand(Player* pmSender, std::string pmCMD, Player* pmReceiver = NULL);    
 
 public:
     std::unordered_map<uint32, std::unordered_map<uint32, uint32>> allianceRaces;

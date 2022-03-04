@@ -379,7 +379,8 @@ void NingerEntity::Update(uint32 pmDiff)
                             nsb->me = me;
                             nsb->initialized = true;
                         }
-                    }
+                    }                    
+                    sCharacterCache->LoadCharacterCacheStorage();
                     offlineDelay = urand(2 * HOUR * IN_MILLISECONDS, 4 * HOUR * IN_MILLISECONDS);
                     std::ostringstream replyStream;
                     replyStream << "ninger initialized : account - " << account_id << " character - " << character_id << " " << me->GetName();

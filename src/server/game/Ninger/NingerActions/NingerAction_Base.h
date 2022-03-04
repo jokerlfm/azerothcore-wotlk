@@ -2,7 +2,11 @@
 #define NINGER_ACTION_BASE_H
 
 #ifndef DEFAULT_MOVEMENT_LIMIT_DELAY
-# define DEFAULT_MOVEMENT_LIMIT_DELAY 5000
+#define DEFAULT_MOVEMENT_LIMIT_DELAY 5000
+#endif
+
+#ifndef DEFAULT_ENGAGE_LIMIT_DELAY
+#define DEFAULT_ENGAGE_LIMIT_DELAY 5000
 #endif
 
 #include "Unit.h"
@@ -59,6 +63,7 @@ public:
     virtual void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
     virtual void InitializeEquipments(bool pmReset = false);
 
+    void EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, uint32 pmMaxRequiredLevel, uint32 pmModType);
     void PetAttack(Unit* pmTarget);
     void PetStop();
     bool UseItem(Item* pmItem, Unit* pmTarget);
@@ -68,7 +73,7 @@ public:
     bool Eat();
     bool Drink();
     bool Chase(Unit* pmTarget, float pmMinDistance, float pmMaxDistance);
-    bool Follow(Unit* pmTarget, float pmMinDistance, float pmMaxDistance);    
+    bool Follow(Unit* pmTarget, float pmMinDistance, float pmMaxDistance);
     bool RandomTeleport();
 
     void ChooseTarget(Unit* pmTarget);
@@ -80,11 +85,11 @@ public:
     Unit* GetAnyUnitInRange(float pmMinRange = 0.0f, float pmMaxRange = VISIBILITY_DISTANCE_NORMAL);
 
     Player* me;
-    NingerMovement* rm;    
+    NingerMovement* rm;
 
     uint32 maxTalentTab;
     float chaseDistanceMin;
     float chaseDistanceMax;
-    int rti;    
+    int rti;
 };
 #endif

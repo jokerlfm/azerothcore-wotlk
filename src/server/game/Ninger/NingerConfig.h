@@ -59,10 +59,6 @@
 # define RANGE_MAX_DISTANCE 38.0f
 #endif
 
-#ifndef DEFAULT_CHECK_DELAY
-# define DEFAULT_CHECK_DELAY 500
-#endif
-
 #include "Define.h"
 #include <stdexcept>
 #include <string_view>
@@ -74,8 +70,12 @@ class NingerConfig
     {
         Enable = 0;
         DPSDelay = 0;
+        UpdateDelay = 0;
         ManagerCheckDelay = 0;
         NingerCountEachLevel = 0;
+        AssembleDelay = 0;
+        CorpseRunDelay = 0;
+        JoinDelay = 0;
     }
     NingerConfig(NingerConfig const&) = delete;
     NingerConfig& operator=(NingerConfig const&) = delete;
@@ -94,7 +94,11 @@ public:
     bool StartNinger();
     uint32 Enable;
     uint32 Reset;
+    uint32 UpdateDelay;
     uint32 DPSDelay;
+    uint32 AssembleDelay;
+    uint32 CorpseRunDelay;
+    uint32 JoinDelay;
     uint32 ManagerCheckDelay;
     uint32 NingerCountEachLevel;
 

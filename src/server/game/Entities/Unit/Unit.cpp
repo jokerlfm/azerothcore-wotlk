@@ -636,7 +636,7 @@ bool Unit::IsWithinMeleeRange(Unit const* obj, float dist) const
 }
 
 float Unit::GetMeleeRange(Unit const* target) const
-{
+{    
     float range = GetCombatReach() + target->GetCombatReach() + 4.0f / 3.0f;
     return std::max(range, NOMINAL_MELEE_RANGE);
 }
@@ -669,14 +669,8 @@ bool Unit::GetRandomContactPoint(Unit const* obj, float& x, float& y, float& z, 
     if (c)
         if (c->isWorldBoss() || c->IsDungeonBoss() || (obj->IsPet() && const_cast<Unit*>(obj)->ToPet()->isControlled()))
             attacker_number = 0; // pussywizard: pets and bosses just come to target from their angle
-
-    // lfm combat reach
-    float contactDistance = isMoving() ? (obj->GetCombatReach() > 7.75f ? obj->GetCombatReach() - 7.5f : 0.25f) : obj->GetCombatReach();
-    if (contactDistance > 2.5f)
-    {
-        contactDistance = contactDistance - frand(2.1f, 2.4f);
-    }
-    if(contactDistance)
+    
+    float contactDistance = isMoving() ? (obj->GetCombatReach() > 7.75f ? obj->GetCombatReach() - 7.5f : 0.25f) : obj->GetCombatReach();        
     GetNearPoint(obj, x, y, z, contactDistance, 0.0f, GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI / 2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / combat_reach * 0.3f : 0));
 
     // pussywizard

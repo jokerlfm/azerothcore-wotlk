@@ -65,6 +65,8 @@ public:
     bool aoe;
     bool petting;
 
+    int engageLimit;
+
 private:
     bool GroupInCombat();
 

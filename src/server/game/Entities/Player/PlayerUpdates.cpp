@@ -248,7 +248,7 @@ void Player::Update(uint32 p_time)
 
                 float bubble = 0.125f * sWorld->getRate(RATE_REST_INGAME);
                 float extraPerSec =
-                    ((float) GetUInt32Value(PLAYER_NEXT_LEVEL_XP) / 72000.0f) *
+                    ((float)GetUInt32Value(PLAYER_NEXT_LEVEL_XP) / 72000.0f) *
                     bubble;
 
                 // speed collect rest bonus (section/in hour)
@@ -374,7 +374,7 @@ void Player::Update(uint32 p_time)
     if (!_instanceResetTimes.empty())
     {
         for (InstanceTimeMap::iterator itr = _instanceResetTimes.begin();
-             itr != _instanceResetTimes.end();)
+            itr != _instanceResetTimes.end();)
         {
             if (itr->second < now)
                 _instanceResetTimes.erase(itr++);
@@ -444,6 +444,33 @@ void Player::Update(uint32 p_time)
             {
                 strategyMap[activeStrategyIndex]->Update(p_time);
             }
+        }
+    }
+
+    if (joinDelay > 0)
+    {
+        joinDelay -= p_time;
+        if (joinDelay <= 0)
+        {
+            joinDelay = 0;
+            std::ostringstream replyStream;
+            if (Player* member = ObjectAccessor::FindPlayerByLowGUID(joinMemberGuid))
+            {
+                if (member->IsInWorld())
+                {
+                    replyStream << "Joining " << member->GetName();
+                    TeleportTo(member->GetMapId(), member->GetPositionX(), member->GetPositionY(), member->GetPositionZ(), member->GetOrientation());
+                }
+                else
+                {
+                    replyStream << member->GetName() << " is not in world";
+                }
+            }
+            else
+            {
+                replyStream << member->GetName() << " not exists";
+            }
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), this);
         }
     }
 }

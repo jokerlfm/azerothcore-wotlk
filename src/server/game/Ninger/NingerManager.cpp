@@ -3,7 +3,6 @@
 #include "NingerStrategy_Base.h"
 #include "NingerConfig.h"
 #include "Group.h"
-#include "NingerAction_Base.h"
 #include "Chat.h"
 #include "SpellMgr.h"
 #include "SpellAuras.h"
@@ -11,6 +10,16 @@
 #include "Map.h"
 #include "Pet.h"
 #include "GridNotifiers.h"
+#include "NingerAction_Base.h"
+#include "NingerAction_Druid.h"
+#include "NingerAction_Hunter.h"
+#include "NingerAction_Mage.h"
+#include "NingerAction_Paladin.h"
+#include "NingerAction_Priest.h"
+#include "NingerAction_Rogue.h"
+#include "NingerAction_Shaman.h"
+#include "NingerAction_Warlock.h"
+#include "NingerAction_Warrior.h"
 
 // lfm ninger 
 #include <boost/chrono/duration.hpp>
@@ -202,7 +211,7 @@ void NingerManager::UpdateNingerManager(uint32 pmDiff)
         for (std::unordered_set<uint32>::iterator levelIT = onlinePlayerLevelSet.begin(); levelIT != onlinePlayerLevelSet.end(); levelIT++)
         {
             uint32 eachLevel = *levelIT;
-            LoginNinger(eachLevel);
+            LoginNinger(eachLevel, sNingerConfig->NingerCountEachLevel);
         }
     }
 }
@@ -212,6 +221,24 @@ void NingerManager::UpdateNingerEntities(uint32 pmDiff)
     for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
     {
         (*reIT)->Update(pmDiff);
+    }
+}
+
+void NingerManager::LogoutNingers()
+{
+    for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
+    {
+        if (Player* eachNinger = ObjectAccessor::FindPlayerByLowGUID((*reIT)->character_id))
+        {
+            if (eachNinger->IsInWorld())
+            {
+                if (WorldSession* ws = eachNinger->GetSession())
+                {
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Logout ninger %s", eachNinger->GetName().c_str());
+                    ws->LogoutPlayer(true);
+                }
+            }
+        }
     }
 }
 
@@ -250,7 +277,7 @@ void NingerManager::DeleteNingers()
     }
 }
 
-bool NingerManager::LoginNinger(uint32 pmLevel)
+bool NingerManager::LoginNinger(uint32 pmLevel, uint32 pmCount)
 {
     if (pmLevel >= 20)
     {
@@ -261,9 +288,9 @@ bool NingerManager::LoginNinger(uint32 pmLevel)
             Field* fields = levelNingerQR->Fetch();
             currentCount = fields[0].Get<uint32>();
         }
-        if (currentCount < sNingerConfig->NingerCountEachLevel)
+        if (currentCount < pmCount)
         {
-            uint32 addCount = sNingerConfig->NingerCountEachLevel - currentCount;
+            uint32 addCount = pmCount - currentCount;
             uint32 allianceCount = addCount / 2;
             uint32 hordeCount = addCount - allianceCount;
             int checkCount = allianceCount;
@@ -294,9 +321,9 @@ bool NingerManager::LoginNinger(uint32 pmLevel)
             }
         }
         int toOnline = 0;
-        if (sNingerConfig->NingerCountEachLevel > onlineCount)
+        if (pmCount > onlineCount)
         {
-            toOnline = sNingerConfig->NingerCountEachLevel - onlineCount;
+            toOnline = pmCount - onlineCount;
         }
         if (toOnline > 0)
         {
@@ -378,1683 +405,460 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
     }
 }
 
-void NingerManager::HandlePlayerSay(Player* pmPlayer, std::string pmContent)
+void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, Player* pmTargetPlayer, Group* pmTargetGroup)
 {
-    //if (!pmPlayer)
-    //{
-    //    return;
-    //}
-    //std::vector<std::string> commandVector = SplitString(pmContent, " ", true);
-    //std::string commandName = commandVector.at(0);
-    //if (commandName == "role")
-    //{
-    //    if (Awareness_Base* playerAI = pmPlayer->awarenessMap[pmPlayer->activeAwarenessIndex])
-    //    {
-    //        if (commandVector.size() > 1)
-    //        {
-    //            std::string newRole = commandVector.at(1);
-    //            playerAI->SetGroupRole(newRole);
-    //        }
-    //        std::ostringstream replyStream;
-    //        replyStream << "Your group role is ";
-    //        replyStream << playerAI->GetGroupRoleName();
-    //        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-    //    }
-    //}
-    //else if (commandName == "arrangement")
-    //{
-    //    std::ostringstream replyStream;
-    //    if (Group* myGroup = pmPlayer->GetGroup())
-    //    {
-    //        if (myGroup->GetLeaderGUID() == pmPlayer->GetGUID())
-    //        {
-    //            bool paladinAura_concentration = false;
-    //            bool paladinAura_devotion = false;
-    //            bool paladinAura_retribution = false;
-    //            bool paladinAura_fire = false;
-    //            bool paladinAura_frost = false;
-    //            bool paladinAura_shadow = false;
+    if (!pmPlayer)
+    {
+        return;
+    }
+    std::vector<std::string> commandVector = SplitString(pmContent, " ", true);
+    std::string commandName = commandVector.at(0);
+    if (commandName == "role")
+    {
+        if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+        else
+        {
+            Player* targetPlayer = pmTargetPlayer;
+            if (!targetPlayer)
+            {
+                targetPlayer = pmPlayer;
+            }
+            std::ostringstream replyStream;
+            if (commandVector.size() > 1)
+            {
+                std::string newRole = commandVector.at(1);
+                if (newRole == "tank")
+                {
+                    targetPlayer->groupRole = GroupRole::GroupRole_Tank;
+                }
+                else if (newRole == "healer")
+                {
+                    targetPlayer->groupRole = GroupRole::GroupRole_Healer;
+                }
+                else if (newRole == "dps")
+                {
+                    targetPlayer->groupRole = GroupRole::GroupRole_DPS;
+                }
+            }
+            if (targetPlayer->groupRole == GroupRole::GroupRole_Tank)
+            {
+                replyStream << "Group role is tank";
+            }
+            else if (targetPlayer->groupRole == GroupRole::GroupRole_Healer)
+            {
+                replyStream << "Group role is healer";
+            }
+            else if (targetPlayer->groupRole == GroupRole::GroupRole_DPS)
+            {
+                replyStream << "Group role is dps";
+            }
+            if (pmTargetPlayer)
+            {
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+            else
+            {
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+            }            
+        }
+    }
+    else if (commandName == "arrangement")
+    {
+        std::ostringstream replyStream;
+        if (pmTargetGroup)
+        {
+            if (pmTargetGroup->GetLeaderGUID() == pmPlayer->GetGUID())
+            {
+                bool paladinAura_concentration = false;
+                bool paladinAura_devotion = false;
+                bool paladinAura_retribution = false;
+                bool paladinAura_fire = false;
+                bool paladinAura_frost = false;
+                bool paladinAura_shadow = false;
 
-    //            bool paladinBlessing_kings = false;
-    //            bool paladinBlessing_might = false;
-    //            bool paladinBlessing_wisdom = false;
-    //            bool paladinBlessing_salvation = false;
+                bool paladinBlessing_kings = false;
+                bool paladinBlessing_might = false;
+                bool paladinBlessing_wisdom = false;
+                bool paladinBlessing_salvation = false;
 
-    //            bool paladinSeal_Justice = false;
+                bool paladinSeal_Justice = false;
 
-    //            bool warlockCurse_Weakness = false;
-    //            bool warlockCurse_Tongues = false;
-    //            bool warlockCurse_Element = false;
+                bool warlockCurse_Weakness = false;
+                bool warlockCurse_Tongues = false;
+                bool warlockCurse_Element = false;
 
-    //            int rtiIndex = 0;
+                int rtiIndex = 0;
 
-    //            bool hunterAspect_wild = false;
+                bool hunterAspect_wild = false;
 
-    //            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //            {
-    //                Player* member = groupRef->GetSource();
-    //                if (member)
-    //                {
-    //                    if (member->GetMapId() == 619)
-    //                    {
-    //                        member->activeAwarenessIndex = 619;
-    //                    }
-    //                    else if (member->GetMapId() == 555)
-    //                    {
-    //                        member->activeAwarenessIndex = 555;
-    //                    }
-    //                    else if (member->GetMapId() == 585)
-    //                    {
-    //                        member->activeAwarenessIndex = 585;
-    //                    }
-    //                    else
-    //                    {
-    //                        member->activeAwarenessIndex = 0;
-    //                    }
-    //                    if (Awareness_Base* memberAwareness = member->awarenessMap[member->activeAwarenessIndex])
-    //                    {
-    //                        memberAwareness->Reset();
-    //                        if (Script_Base* sb = memberAwareness->sb)
-    //                        {
-    //                            switch (member->getClass())
-    //                            {
-    //                            case Classes::CLASS_WARRIOR:
-    //                            {
-    //                                memberAwareness->groupRole = GroupRole::GroupRole_Tank;
-    //                                break;
-    //                            }
-    //                            case Classes::CLASS_SHAMAN:
-    //                            {
-    //                                memberAwareness->groupRole = GroupRole::GroupRole_Healer;
-    //                                break;
-    //                            }
-    //                            case Classes::CLASS_PALADIN:
-    //                            {
-    //                                memberAwareness->groupRole = GroupRole::GroupRole_Healer;
-    //                                break;
-    //                            }
-    //                            case Classes::CLASS_PRIEST:
-    //                            {
-    //                                memberAwareness->groupRole = GroupRole::GroupRole_Healer;
-    //                                break;
-    //                            }
-    //                            case Classes::CLASS_DRUID:
-    //                            {
-    //                                memberAwareness->groupRole = GroupRole::GroupRole_Tank;
-    //                                break;
-    //                            }
-    //                            default:
-    //                            {
-    //                                break;
-    //                            }
-    //                            }
-    //                            if (member->getClass() == Classes::CLASS_PALADIN)
-    //                            {
-    //                                if (Script_Paladin* sp = (Script_Paladin*)sb)
-    //                                {
-    //                                    if (memberAwareness->groupRole != GroupRole::GroupRole_Healer)
-    //                                    {
-    //                                        if (!paladinSeal_Justice)
-    //                                        {
-    //                                            sp->sealType = PaladinSealType::PaladinSealType_Justice;
-    //                                            paladinSeal_Justice = true;
-    //                                        }
-    //                                        else
-    //                                        {
-    //                                            sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
-    //                                        }
-    //                                    }
-    //                                    if (!paladinBlessing_salvation)
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Salvation;
-    //                                        paladinBlessing_salvation = true;
-    //                                    }
-    //                                    else if (!paladinBlessing_might)
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-    //                                        paladinBlessing_might = true;
-    //                                    }
-    //                                    else if (!paladinBlessing_wisdom)
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
-    //                                        paladinBlessing_wisdom = true;
-    //                                    }
-    //                                    else if (!paladinBlessing_kings)
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-    //                                        paladinBlessing_kings = true;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-    //                                        paladinBlessing_might = true;
-    //                                    }
+                for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    Player* member = groupRef->GetSource();
+                    if (member)
+                    {
+                        //if (member->GetMapId() == 619)
+                        //{
+                        //    member->activeStrategyIndex = 619;
+                        //}
+                        //else if (member->GetMapId() == 555)
+                        //{
+                        //    member->activeStrategyIndex = 555;
+                        //}
+                        //else if (member->GetMapId() == 585)
+                        //{
+                        //    member->activeStrategyIndex = 585;
+                        //}
+                        //else
+                        //{
+                        //    member->activeStrategyIndex = 0;
+                        //}
+                        if (NingerStrategy_Base* ns = member->strategyMap[member->activeStrategyIndex])
+                        {
+                            ns->Reset();
+                        }
+                        if (NingerAction_Base* na = member->ningerAction)
+                        {
+                            switch (member->getClass())
+                            {
+                            case Classes::CLASS_WARRIOR:
+                            {
+                                member->groupRole = GroupRole::GroupRole_Tank;
+                                break;
+                            }
+                            case Classes::CLASS_SHAMAN:
+                            {
+                                member->groupRole = GroupRole::GroupRole_DPS;
+                                break;
+                            }
+                            case Classes::CLASS_PALADIN:
+                            {
+                                member->groupRole = GroupRole::GroupRole_DPS;
+                                break;
+                            }
+                            case Classes::CLASS_PRIEST:
+                            {
+                                member->groupRole = GroupRole::GroupRole_Healer;
+                                break;
+                            }
+                            case Classes::CLASS_DRUID:
+                            {
+                                member->groupRole = GroupRole::GroupRole_DPS;
+                                break;
+                            }
+                            default:
+                            {
+                                member->groupRole = GroupRole::GroupRole_DPS;
+                                break;
+                            }
+                            }
+                            if (member->getClass() == Classes::CLASS_PALADIN)
+                            {
+                                if (NingerAction_Paladin* nap = (NingerAction_Paladin*)na)
+                                {
+                                    if (!paladinBlessing_salvation)
+                                    {
+                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Salvation;
+                                        paladinBlessing_salvation = true;
+                                    }
+                                    else if (!paladinBlessing_might)
+                                    {
+                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
+                                        paladinBlessing_might = true;
+                                    }
+                                    else if (!paladinBlessing_wisdom)
+                                    {
+                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
+                                        paladinBlessing_wisdom = true;
+                                    }
+                                    else if (!paladinBlessing_kings)
+                                    {
+                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
+                                        paladinBlessing_kings = true;
+                                    }
+                                    else
+                                    {
+                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
+                                        paladinBlessing_might = true;
+                                    }
 
-    //                                    if (!paladinAura_devotion)
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-    //                                        paladinAura_devotion = true;
-    //                                    }
-    //                                    else if (!paladinAura_retribution)
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-    //                                        paladinAura_retribution = true;
-    //                                    }
-    //                                    else if (!paladinAura_concentration)
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-    //                                        paladinAura_concentration = true;
-    //                                    }
-    //                                    else if (!paladinAura_fire)
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-    //                                        paladinAura_fire = true;
-    //                                    }
-    //                                    else if (!paladinAura_frost)
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-    //                                        paladinAura_frost = true;
-    //                                    }
-    //                                    else if (!paladinAura_shadow)
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-    //                                        paladinAura_shadow = true;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-    //                                        paladinAura_devotion = true;
-    //                                    }
-    //                                }
-    //                            }
-    //                            if (member->getClass() == Classes::CLASS_MAGE)
-    //                            {
-    //                                if (rtiIndex >= 0 && rtiIndex < TARGETICONCOUNT)
-    //                                {
-    //                                    sb->rti = rtiIndex;
-    //                                    rtiIndex++;
-    //                                }
-    //                            }
-    //                            if (member->getClass() == Classes::CLASS_HUNTER)
-    //                            {
-    //                                if (Script_Hunter* sh = (Script_Hunter*)sb)
-    //                                {
-    //                                    if (hunterAspect_wild)
-    //                                    {
-    //                                        sh->aspectType = HunterAspectType::HunterAspectType_Hawk;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        sh->aspectType = HunterAspectType::HunterAspectType_Wild;
-    //                                        hunterAspect_wild = true;
-    //                                    }
-    //                                }
-    //                            }
-    //                            if (member->getClass() == Classes::CLASS_WARLOCK)
-    //                            {
-    //                                if (Script_Warlock* swl = (Script_Warlock*)sb)
-    //                                {
-    //                                    if (!warlockCurse_Weakness)
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
-    //                                        warlockCurse_Weakness = true;
-    //                                    }
-    //                                    else if (!warlockCurse_Tongues)
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_Tongues;
-    //                                        warlockCurse_Tongues = true;
-    //                                    }
-    //                                    else if (!warlockCurse_Element)
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_Element;
-    //                                        warlockCurse_Element = true;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
-    //                                    }
-    //                                }
-    //                            }
-    //                        }
-    //                        memberAwareness->Report();
-    //                    }
-    //                }
-    //            }
-    //            replyStream << "Arranged";
-    //        }
-    //        else
-    //        {
-    //            replyStream << "You are not leader";
-    //        }
-    //    }
-    //    else
-    //    {
-    //        replyStream << "Not in a group";
-    //    }
-    //    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-    //}
-    //else if (commandName == "join")
-    //{
-    //    std::ostringstream replyStream;
-    //    Group* myGroup = pmPlayer->GetGroup();
-    //    if (myGroup)
-    //    {
-    //        ObjectGuid targetGUID = pmPlayer->GetTarget();
-    //        if (!targetGUID.IsEmpty())
-    //        {
-    //            bool validTarget = false;
-    //            for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //            {
-    //                Player* member = groupRef->GetSource();
-    //                if (member)
-    //                {
-    //                    if (member->GetGUID() != pmPlayer->GetGUID())
-    //                    {
-    //                        if (member->GetGUID() == targetGUID)
-    //                        {
-    //                            validTarget = true;
-    //                            replyStream << "Joining " << member->GetName();
-    //                            pmPlayer->TeleportTo(member->GetMapId(), member->GetPositionX(), member->GetPositionY(), member->GetPositionZ(), member->GetOrientation());
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //            if (!validTarget)
-    //            {
-    //                replyStream << "Target is no group member";
-    //            }
-    //        }
-    //        else
-    //        {
-    //            replyStream << "You have no target";
-    //        }
-    //    }
-    //    else
-    //    {
-    //        replyStream << "You are not in a group";
-    //    }
-    //    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-    //}
-    //else if (commandName == "leader")
-    //{
-    //    if (Group* myGroup = pmPlayer->GetGroup())
-    //    {
-    //        if (myGroup->GetLeaderGUID() != pmPlayer->GetGUID())
-    //        {
-    //            bool change = true;
-    //            if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
-    //            {
-    //                if (WorldSession* leaderSession = leader->GetSession())
-    //                {
-    //                    if (!leaderSession->isNinger)
-    //                    {
-    //                        change = false;
-    //                    }
-    //                }
-    //            }
-    //            if (change)
-    //            {
-    //                myGroup->ChangeLeader(pmPlayer->GetGUID());
-    //            }
-    //            else
-    //            {
-    //                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Leader is valid", pmPlayer);
-    //            }
-    //        }
-    //        else
-    //        {
-    //            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are the leader", pmPlayer);
-    //        }
-    //    }
-    //    else
-    //    {
-    //        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are not in a group", pmPlayer);
-    //    }
-    //}
-    //else if (commandName == "ninger")
-    //{
-    //    if (commandVector.size() > 1)
-    //    {
-    //        std::string ningerAction = commandVector.at(1);
-    //        if (ningerAction == "delete")
-    //        {
-    //            std::ostringstream replyStream;
-    //            bool allOffline = true;
-    //            for (std::unordered_map<std::string, NingerEntity*>::iterator reIT = ningerEntityMap.begin(); reIT != ningerEntityMap.end(); reIT++)
-    //            {
-    //                NingerEntity* eachRE = reIT->second;
-    //                if (eachRE->entityState != NingerEntityState::NingerEntityState_None && eachRE->entityState != NingerEntityState::NingerEntityState_OffLine)
-    //                {
-    //                    allOffline = false;
-    //                    replyStream << "Not all ningers are offline. Going offline first";
-    //                    LogoutNingers();
-    //                    break;
-    //                }
-    //            }
-    //            if (allOffline)
-    //            {
-    //                replyStream << "All ningers are offline. Ready to delete";
-    //                Deleteningers();
-    //            }
-    //            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-    //        }
-    //        else if (ningerAction == "offline")
-    //        {
-    //            std::ostringstream replyStream;
-    //            replyStream << "All ningers are going offline";
-    //            LogoutNingers();
-    //            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-    //        }
-    //        else if (ningerAction == "online")
-    //        {
-    //            uint32 playerLevel = pmPlayer->getLevel();
-    //            if (playerLevel < 10)
-    //            {
-    //                std::ostringstream replyStream;
-    //                replyStream << "You level is too low";
-    //                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-    //            }
-    //            else
-    //            {
-    //                uint32 ningerCount = sNingerConfig->NingerCountEachLevel;
-    //                if (commandVector.size() > 2)
-    //                {
-    //                    ningerCount = atoi(commandVector.at(2).c_str());
-    //                }
-    //                if (ningerCount > 0)
-    //                {
-    //                    std::ostringstream replyTitleStream;
-    //                    replyTitleStream << "ninger count to go online : " << ningerCount;
-    //                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
-    //                    LoginNingers(playerLevel, ningerCount);
-    //                }
-    //            }
-    //        }
-    //        else if (ningerAction == "relocate")
-    //        {
-    //            std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
-    //            for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
-    //            {
-    //                if (WorldSession* eachWS = wsIT->second)
-    //                {
-    //                    if (eachWS->isNinger)
-    //                    {
-    //                        if (Player* eachNinger = eachWS->GetPlayer())
-    //                        {
-    //                            if (eachNinger->IsInWorld())
-    //                            {
-    //                                eachNinger->TeleportTo(eachNinger->m_homebindMapId, eachNinger->m_homebindX, eachNinger->m_homebindY, eachNinger->m_homebindZ, 0.0f);
+                                    if (!paladinAura_devotion)
+                                    {
+                                        nap->auraType = PaladinAuraType::PaladinAuraType_Devotion;
+                                        paladinAura_devotion = true;
+                                    }
+                                    else if (!paladinAura_retribution)
+                                    {
+                                        nap->auraType = PaladinAuraType::PaladinAuraType_Retribution;
+                                        paladinAura_retribution = true;
+                                    }
+                                    else if (!paladinAura_concentration)
+                                    {
+                                        nap->auraType = PaladinAuraType::PaladinAuraType_Concentration;
+                                        paladinAura_concentration = true;
+                                    }
+                                    else if (!paladinAura_fire)
+                                    {
+                                        nap->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
+                                        paladinAura_fire = true;
+                                    }
+                                    else if (!paladinAura_frost)
+                                    {
+                                        nap->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
+                                        paladinAura_frost = true;
+                                    }
+                                    else if (!paladinAura_shadow)
+                                    {
+                                        nap->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
+                                        paladinAura_shadow = true;
+                                    }
+                                    else
+                                    {
+                                        nap->auraType = PaladinAuraType::PaladinAuraType_Devotion;
+                                        paladinAura_devotion = true;
+                                    }
+                                }
+                            }
+                            if (member->getClass() == Classes::CLASS_MAGE)
+                            {
+                                if (rtiIndex >= 0 && rtiIndex < TARGETICONCOUNT)
+                                {
+                                    na->rti = rtiIndex;
+                                    rtiIndex++;
+                                }
+                            }
+                            if (member->getClass() == Classes::CLASS_HUNTER)
+                            {
+                                if (NingerAction_Hunter* nah = (NingerAction_Hunter*)na)
+                                {
+                                    if (hunterAspect_wild)
+                                    {
+                                        nah->aspectType = HunterAspectType::HunterAspectType_Hawk;
+                                    }
+                                    else
+                                    {
+                                        nah->aspectType = HunterAspectType::HunterAspectType_Wild;
+                                        hunterAspect_wild = true;
+                                    }
+                                }
+                            }
+                            if (member->getClass() == Classes::CLASS_WARLOCK)
+                            {
+                                if (NingerAction_Warlock* naWarlock = (NingerAction_Warlock*)na)
+                                {
+                                    if (!warlockCurse_Weakness)
+                                    {
+                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Weakness;
+                                        warlockCurse_Weakness = true;
+                                    }
+                                    else if (!warlockCurse_Tongues)
+                                    {
+                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Tongues;
+                                        warlockCurse_Tongues = true;
+                                    }
+                                    else if (!warlockCurse_Element)
+                                    {
+                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Element;
+                                        warlockCurse_Element = true;
+                                    }
+                                    else
+                                    {
+                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Weakness;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                replyStream << "Arranged";
+            }
+            else
+            {
+                replyStream << "You are not leader";
+            }
+        }
+        else
+        {
+            replyStream << "Not in a group";
+        }
+        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+    }
+    else if (commandName == "join")
+    {
+        std::ostringstream replyStream;
+        if (!pmTargetPlayer)
+        {
+            replyStream << "No target";
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+            return;
+        }
+        if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmTargetPlayer->GetGUID())
+                    {
+                        member->joinDelay = sNingerConfig->JoinDelay;
+                        member->joinMemberGuid = member->GetGUID().GetCounter();
+                        replyStream << "Prepare to join " << member->GetName();
+                        if (member->GetGUID() != pmPlayer->GetGUID())
+                        {
+                            member->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        }
+                        else
+                        {
+                            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            pmPlayer->joinDelay = sNingerConfig->JoinDelay;
+            pmPlayer->joinMemberGuid = pmTargetPlayer->GetGUID().GetCounter();
+            replyStream << "Prepare to join " << pmTargetPlayer->GetName();
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+        }
+    }
+    else if (commandName == "leader")
+    {
+        if (pmTargetGroup)
+        {
+            if (pmTargetGroup->GetLeaderGUID() != pmPlayer->GetGUID())
+            {
+                bool change = true;
+                if (Player* leader = ObjectAccessor::FindPlayer(pmTargetGroup->GetLeaderGUID()))
+                {
+                    if (WorldSession* leaderSession = leader->GetSession())
+                    {
+                        if (!leaderSession->isNinger)
+                        {
+                            change = false;
+                        }
+                    }
+                }
+                if (change)
+                {
+                    pmTargetGroup->ChangeLeader(pmPlayer->GetGUID());
+                }
+                else
+                {
+                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Leader is valid", pmPlayer);
+                }
+            }
+            else
+            {
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are the leader", pmPlayer);
+            }
+        }
+        else
+        {
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are not in a group", pmPlayer);
+        }
+    }
+    else if (commandName == "ninger")
+    {
+        if (commandVector.size() > 1)
+        {
+            std::string ningerAction = commandVector.at(1);
+            if (ningerAction == "reset")
+            {
+                std::ostringstream replyStream;
+                bool allOffline = true;
+                for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
+                {
+                    if (NingerEntity* eachRE = *reIT)
+                    {
+                        if (eachRE->entityState != NingerEntityState::NingerEntityState_None && eachRE->entityState != NingerEntityState::NingerEntityState_OffLine)
+                        {
+                            allOffline = false;
+                            replyStream << "Not all ningers are offline. Going offline first";
+                            LogoutNingers();
+                            break;
+                        }
+                    }
+                }
+                if (allOffline)
+                {
+                    replyStream << "All ningers are offline. Ready to delete";
+                    DeleteNingers();
+                }
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+            }
+            else if (ningerAction == "offline")
+            {
+                std::ostringstream replyStream;
+                replyStream << "All ningers are going offline";
+                LogoutNingers();
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+            }
+            else if (ningerAction == "online")
+            {
+                uint32 playerLevel = pmPlayer->getLevel();
+                if (playerLevel < 10)
+                {
+                    std::ostringstream replyStream;
+                    replyStream << "You level is too low";
+                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+                }
+                else
+                {
+                    uint32 ningerCount = sNingerConfig->NingerCountEachLevel;
+                    if (commandVector.size() > 2)
+                    {
+                        ningerCount = atoi(commandVector.at(2).c_str());
+                    }
+                    if (ningerCount > 0)
+                    {
+                        std::ostringstream replyTitleStream;
+                        replyTitleStream << "ninger count to go online : " << ningerCount;
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
+                        LoginNinger(playerLevel, ningerCount);
+                    }
+                }
+            }
+            else if (ningerAction == "relocate")
+            {
+                std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
+                for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
+                {
+                    if (WorldSession* eachWS = wsIT->second)
+                    {
+                        if (eachWS->isNinger)
+                        {
+                            if (Player* eachNinger = eachWS->GetPlayer())
+                            {
+                                if (eachNinger->IsInWorld())
+                                {
+                                    eachNinger->TeleportTo(eachNinger->m_homebindMapId, eachNinger->m_homebindX, eachNinger->m_homebindY, eachNinger->m_homebindZ, 0.0f);
 
-    //                                std::ostringstream replyTitleStream;
-    //                                replyTitleStream << "Teleport ninger to homebind : " << eachNinger->GetName();
-    //                                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //        }
-    //        else if (ningerAction == "equip")
-    //        {
-    //            std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
-    //            for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
-    //            {
-    //                if (WorldSession* eachWS = wsIT->second)
-    //                {
-    //                    if (eachWS->isNinger)
-    //                    {
-    //                        if (Player* eachNinger = eachWS->GetPlayer())
-    //                        {
-    //                            if (eachNinger->IsInWorld())
-    //                            {
-    //                                InitializeEquipments(eachNinger, true);
-    //                                std::ostringstream replyTitleStream;
-    //                                replyTitleStream << "Reset equipments for ninger : " << eachNinger->GetName();
-    //                                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-    //else if (commandName == "train")
-    //{
-    //    LearnPlayerSpells(pmPlayer);
-    //}
-    //else if (commandName == "talent")
-    //{
-    //    if (LearnPlayerTalents(pmPlayer))
-    //    {
-    //        if (WorldSession* ws = pmPlayer->GetSession())
-    //        {
-    //            ws->LogoutPlayer(true);
-    //        }
-    //    }
-    //}
-    //else if (commandName == "equip")
-    //{
-    //    InitializeEquipments(pmPlayer, true);
-    //}
-    //else if (commandName == "tcast")
-    //{
-    //    if (commandVector.size() > 1)
-    //    {
-    //        if (Unit* myTarget = pmPlayer->GetSelectedUnit())
-    //        {
-    //            std::string spellIDStr = commandVector.at(1);
-    //            int32 spellID = atoi(spellIDStr.c_str());
-    //            Unit* castTarget = nullptr;
-    //            myTarget->CastSpell(castTarget, spellID, true);
-    //        }
-    //    }
-    //}
-    //else if (commandName == "poison")
-    //{
-    //    if (Awareness_Base* ab = pmPlayer->awarenessMap[pmPlayer->activeAwarenessIndex])
-    //    {
-    //        if (Script_Base* sb = ab->sb)
-    //        {
-    //            uint32 maxInstancePoisonLevel = 0;
-    //            for (std::unordered_map<uint32, uint32>::iterator ipIT = sNingerManager->instantPoisonEntryMap.begin(); ipIT != sNingerManager->instantPoisonEntryMap.end(); ipIT++)
-    //            {
-    //                if (ipIT->first <= pmPlayer->getLevel())
-    //                {
-    //                    if (ipIT->first > maxInstancePoisonLevel)
-    //                    {
-    //                        maxInstancePoisonLevel = ipIT->first;
-    //                    }
-    //                }
-    //            }
-    //            if (maxInstancePoisonLevel > 0)
-    //            {
-    //                uint32 instancePoisonEntry = sNingerManager->instantPoisonEntryMap[maxInstancePoisonLevel];
-    //                if (!pmPlayer->HasItemCount(instancePoisonEntry, 1))
-    //                {
-    //                    pmPlayer->StoreNewItemInBestSlots(instancePoisonEntry, 20);
-    //                }
-    //                Item* instancePoison = sb->GetItemInInventory(instancePoisonEntry);
-    //                if (instancePoison && !instancePoison->IsInTrade())
-    //                {
-    //                    if (Item* weapon_mh = pmPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
-    //                    {
-    //                        if (sb->UseItem(instancePoison, weapon_mh))
-    //                        {
-    //                            if (Item* weapon_oh = pmPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND))
-    //                            {
-    //                                if (sb->UseItem(instancePoison, weapon_oh))
-    //                                {
-    //                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Added instance poison to weapons", pmPlayer);
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-    //else if (commandName == "aura")
-    //{
-    //    Unit* checkTarget = pmPlayer->GetSelectedUnit();
-    //    if (commandVector.size() > 1)
-    //    {
-    //        std::string checkType = commandVector.at(1);
-    //        if (checkType == "has")
-    //        {
-    //            if (commandVector.size() > 2)
-    //            {
-    //                std::string spellIDStr = commandVector.at(2);
-    //                uint32 spellID = atoi(spellIDStr.c_str());
-    //                if (!checkTarget)
-    //                {
-    //                    checkTarget = pmPlayer;
-    //                }
-    //                std::ostringstream replyStream;
-    //                if (checkTarget->HasAura(spellID))
-    //                {
-    //                    replyStream << "has aura " << spellID;
-    //                }
-    //                else
-    //                {
-    //                    replyStream << "no aura " << spellID;
-    //                }
-    //                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-    //            }
-    //        }
-    //    }
-    //}
-}
-
-void NingerManager::HandleChatCommand(Player* pmSender, std::string pmCMD, Player* pmReceiver)
-{
-    //    if (!pmSender)
-    //    {
-    //        return;
-    //    }
-    //    std::vector<std::string> commandVector = SplitString(pmCMD, " ", true);
-    //    std::string commandName = commandVector.at(0);
-    //    if (pmReceiver)
-    //    {
-    //        if (WorldSession* receiverSession = pmReceiver->GetSession())
-    //        {
-    //            if (receiverSession->isNinger)
-    //            {
-    //                if (Awareness_Base* receiverAI = pmReceiver->awarenessMap[pmReceiver->activeAwarenessIndex])
-    //                {
-    //#pragma region command handling
-    //                    if (commandName == "role")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string newRole = commandVector.at(1);
-    //                            receiverAI->SetGroupRole(newRole);
-    //                        }
-    //                        replyStream << "My group role is ";
-    //                        replyStream << receiverAI->GetGroupRoleName();
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "engage")
-    //                    {
-    //                        receiverAI->staying = false;
-    //                        if (Unit* target = pmSender->GetSelectedUnit())
-    //                        {
-    //                            if (receiverAI->Engage(target))
-    //                            {
-    //                                if (Group* myGroup = pmReceiver->GetGroup())
-    //                                {
-    //                                    if (myGroup->GetTargetIconByGuid(target->GetGUID()) == -1)
-    //                                    {
-    //                                        myGroup->SetTargetIcon(7, pmSender->GetGUID(), target->GetGUID());
-    //                                    }
-    //                                }
-    //                                receiverAI->ogEngageTarget = target->GetGUID();
-    //                                int engageDelay = 5000;
-    //                                if (commandVector.size() > 1)
-    //                                {
-    //                                    std::string checkStr = commandVector.at(1);
-    //                                    engageDelay = atoi(checkStr.c_str());
-    //                                }
-    //                                receiverAI->engageDelay = engageDelay;
-    //                                std::ostringstream replyStream;
-    //                                replyStream << "Try to engage " << target->GetName();
-    //                                WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                            }
-    //                        }
-    //                    }
-    //                    else if (commandName == "tank")
-    //                    {
-    //                        if (Unit* target = pmSender->GetSelectedUnit())
-    //                        {
-    //                            if (receiverAI->groupRole == GroupRole::GroupRole_Tank)
-    //                            {
-    //                                if (receiverAI->Tank(target))
-    //                                {
-    //                                    if (Group* myGroup = pmReceiver->GetGroup())
-    //                                    {
-    //                                        if (myGroup->GetTargetIconByGuid(target->GetGUID()) == -1)
-    //                                        {
-    //                                            myGroup->SetTargetIcon(7, pmSender->GetGUID(), target->GetGUID());
-    //                                        }
-    //                                    }
-    //                                    receiverAI->staying = false;
-    //                                    receiverAI->ogEngageTarget = target->GetGUID();
-    //                                    int engageDelay = 5000;
-    //                                    if (commandVector.size() > 1)
-    //                                    {
-    //                                        std::string checkStr = commandVector.at(1);
-    //                                        engageDelay = atoi(checkStr.c_str());
-    //                                    }
-    //                                    receiverAI->engageDelay = engageDelay;
-    //                                    std::ostringstream replyStream;
-    //                                    replyStream << "Try to tank " << target->GetName();
-    //                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                                }
-    //                            }
-    //                            else
-    //                            {
-    //                                receiverAI->staying = false;
-    //                            }
-    //                        }
-    //                    }
-    //                    else if (commandName == "revive")
-    //                    {
-    //                        if (pmReceiver->IsAlive())
-    //                        {
-    //                            receiverAI->reviveDelay = 2000;
-    //                            if (Script_Base* sb = receiverAI->sb)
-    //                            {
-    //                                if (NingerMovement* rm = sb->rm)
-    //                                {
-    //                                    rm->ResetMovement();
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                    else if (commandName == "follow")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        bool takeAction = true;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string cmdDistanceStr = commandVector.at(1);
-    //                            float cmdDistance = atof(cmdDistanceStr.c_str());
-    //                            if (cmdDistance == 0.0f)
-    //                            {
-    //                                receiverAI->following = false;
-    //                                replyStream << "Stop following. ";
-    //                                takeAction = false;
-    //                            }
-    //                            else if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE)
-    //                            {
-    //                                receiverAI->followDistance = cmdDistance;
-    //                                replyStream << "Distance updated. ";
-    //                            }
-    //                            else
-    //                            {
-    //                                replyStream << "Distance is not valid. ";
-    //                                takeAction = false;
-    //                            }
-    //                        }
-    //                        if (takeAction)
-    //                        {
-    //                            receiverAI->eatDelay = 0;
-    //                            receiverAI->drinkDelay = 0;
-    //                            receiverAI->staying = false;
-    //                            receiverAI->holding = false;
-    //                            receiverAI->following = true;
-    //                            if (receiverAI->Follow())
-    //                            {
-    //                                replyStream << "Following " << receiverAI->followDistance;
-    //                            }
-    //                            else
-    //                            {
-    //                                replyStream << "can not follow";
-    //                            }
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "chase")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        bool takeAction = true;
-    //                        if (commandVector.size() > 2)
-    //                        {
-    //                            std::string cmdMinDistanceStr = commandVector.at(1);
-    //                            float cmdMinDistance = atof(cmdMinDistanceStr.c_str());
-    //                            if (cmdMinDistance < MELEE_MIN_DISTANCE)
-    //                            {
-    //                                cmdMinDistance = MELEE_MIN_DISTANCE;
-    //                            }
-    //                            std::string cmdMaxDistanceStr = commandVector.at(2);
-    //                            float cmdMaxDistance = atof(cmdMaxDistanceStr.c_str());
-    //                            if (cmdMaxDistance > RANGE_HEAL_DISTANCE)
-    //                            {
-    //                                cmdMaxDistance = RANGE_HEAL_DISTANCE;
-    //                            }
-    //                            else if (cmdMaxDistance < MELEE_MAX_DISTANCE)
-    //                            {
-    //                                cmdMaxDistance = MELEE_MAX_DISTANCE;
-    //                            }
-    //                            if (cmdMinDistance > cmdMaxDistance)
-    //                            {
-    //                                cmdMinDistance = cmdMaxDistance - MELEE_MIN_DISTANCE;
-    //                            }
-    //                            receiverAI->chaseDistanceMin = cmdMinDistance;
-    //                            receiverAI->chaseDistanceMax = cmdMaxDistance;
-    //                            replyStream << "Chase distance range updated. " << receiverAI->chaseDistanceMin << " " << receiverAI->chaseDistanceMax;
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "Chase distance range is " << receiverAI->chaseDistanceMin << " " << receiverAI->chaseDistanceMax;
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "stay")
-    //                    {
-    //                        std::string targetGroupRole = "";
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            targetGroupRole = commandVector.at(1);
-    //                        }
-    //                        if (receiverAI->Stay(targetGroupRole))
-    //                        {
-    //                            WhisperTo(pmSender, "Staying", Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //                    else if (commandName == "hold")
-    //                    {
-    //                        std::string targetGroupRole = "";
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            targetGroupRole = commandVector.at(1);
-    //                        }
-    //                        if (receiverAI->Hold(targetGroupRole))
-    //                        {
-    //                            WhisperTo(pmReceiver, "Holding", Language::LANG_UNIVERSAL, pmSender);
-    //                        }
-    //                    }
-    //                    else if (commandName == "rest")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (receiverAI->sb->Eat(true))
-    //                        {
-    //                            receiverAI->eatDelay = DEFAULT_REST_DELAY;
-    //                            receiverAI->drinkDelay = 1000;
-    //                            replyStream << "Resting";
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "Can not rest";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "who")
-    //                    {
-    //                        if (Awareness_Base* ningerAI = pmReceiver->awarenessMap[pmReceiver->activeAwarenessIndex])
-    //                        {
-    //                            if (Script_Base* sb = ningerAI->sb)
-    //                            {
-    //                                WhisperTo(pmSender, characterTalentTabNameMap[pmReceiver->getClass()][sb->maxTalentTab], Language::LANG_UNIVERSAL, pmReceiver);
-    //                            }
-    //                        }
-    //                    }
-    //                    else if (commandName == "assemble")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (receiverAI->teleportAssembleDelay > 0)
-    //                        {
-    //                            replyStream << "I am on the way";
-    //                        }
-    //                        else
-    //                        {
-    //                            if (pmReceiver->IsAlive())
-    //                            {
-    //                                if (pmReceiver->GetDistance(pmSender) < VISIBILITY_DISTANCE_TINY)
-    //                                {
-    //                                    receiverAI->teleportAssembleDelay = urand(10 * IN_MILLISECONDS, 15 * IN_MILLISECONDS);
-    //                                    replyStream << "We are close, I will teleport to you in " << receiverAI->teleportAssembleDelay / 1000 << " seconds";
-    //                                }
-    //                                else
-    //                                {
-    //                                    receiverAI->teleportAssembleDelay = urand(30 * IN_MILLISECONDS, 1 * MINUTE * IN_MILLISECONDS);
-    //                                    replyStream << "I will teleport to you in " << receiverAI->teleportAssembleDelay / 1000 << " seconds";
-    //                                }
-    //                            }
-    //                            else
-    //                            {
-    //                                receiverAI->teleportAssembleDelay = urand(1 * MINUTE * IN_MILLISECONDS, 2 * MINUTE * IN_MILLISECONDS);
-    //                                replyStream << "I will teleport to you and revive in " << receiverAI->teleportAssembleDelay / 1000 << " seconds";
-    //                            }
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "gather")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (receiverAI->moveDelay > 0)
-    //                        {
-    //                            replyStream << "I am on the way";
-    //                        }
-    //                        else
-    //                        {
-    //                            if (pmReceiver->IsAlive())
-    //                            {
-    //                                if (pmReceiver->GetDistance(pmSender) < RANGE_HEAL_DISTANCE)
-    //                                {
-    //                                    if (pmReceiver->IsNonMeleeSpellCast(false))
-    //                                    {
-    //                                        pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-    //                                        pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-    //                                    }
-    //                                    pmReceiver->GetMotionMaster()->Initialize();
-    //                                    pmReceiver->StopMoving();
-    //                                    receiverAI->eatDelay = 0;
-    //                                    receiverAI->drinkDelay = 0;
-    //                                    int moveDelay = 1000;
-    //                                    if (commandVector.size() > 1)
-    //                                    {
-    //                                        std::string moveDelayStr = commandVector.at(1);
-    //                                        moveDelay = atoi(moveDelayStr.c_str());
-    //                                        if (moveDelay < 1000 || moveDelay > 6000)
-    //                                        {
-    //                                            moveDelay = 1000;
-    //                                        }
-    //                                    }
-    //                                    receiverAI->moveDelay = moveDelay;
-    //                                    receiverAI->sb->rm->MovePoint(pmSender->GetPosition(), moveDelay);
-    //                                    replyStream << "I will move to you";
-    //                                }
-    //                                else
-    //                                {
-    //                                    replyStream << "too far away";
-    //                                }
-    //                            }
-    //                            else
-    //                            {
-    //                                replyStream << "I am dead ";
-    //                            }
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "cast")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (pmReceiver->IsAlive())
-    //                        {
-    //                            if (commandVector.size() > 1)
-    //                            {
-    //                                std::ostringstream targetStream;
-    //                                uint8 arrayCount = 0;
-    //                                for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
-    //                                {
-    //                                    if (arrayCount > 0)
-    //                                    {
-    //                                        targetStream << (*it) << " ";
-    //                                    }
-    //                                    arrayCount++;
-    //                                }
-    //                                std::string spellName = TrimString(targetStream.str());
-    //                                Unit* senderTarget = pmSender->GetSelectedUnit();
-    //                                if (!senderTarget)
-    //                                {
-    //                                    senderTarget = pmReceiver;
-    //                                }
-    //                                if (receiverAI->sb->CastSpell(senderTarget, spellName, VISIBILITY_DISTANCE_NORMAL))
-    //                                {
-    //                                    replyStream << "Cast spell " << spellName << " on " << senderTarget->GetName();
-    //                                }
-    //                                else
-    //                                {
-    //                                    replyStream << "Can not cast spell " << spellName << " on " << senderTarget->GetName();
-    //                                }
-    //                            }
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "I am dead";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "cancel")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (pmReceiver->IsAlive())
-    //                        {
-    //                            if (commandVector.size() > 1)
-    //                            {
-    //                                std::ostringstream targetStream;
-    //                                uint8 arrayCount = 0;
-    //                                for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
-    //                                {
-    //                                    if (arrayCount > 0)
-    //                                    {
-    //                                        targetStream << (*it) << " ";
-    //                                    }
-    //                                    arrayCount++;
-    //                                }
-    //                                std::string spellName = TrimString(targetStream.str());
-    //                                if (receiverAI->sb->CancelAura(spellName))
-    //                                {
-    //                                    replyStream << "Aura canceled " << spellName;
-    //                                }
-    //                                else
-    //                                {
-    //                                    replyStream << "Can not cancel aura " << spellName;
-    //                                }
-    //                            }
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "I am dead";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "use")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (pmReceiver->IsAlive())
-    //                        {
-    //                            if (commandVector.size() > 1)
-    //                            {
-    //                                std::string useType = commandVector.at(1);
-    //                                if (useType == "go")
-    //                                {
-    //                                    if (commandVector.size() > 2)
-    //                                    {
-    //                                        std::ostringstream goNameStream;
-    //                                        uint32 checkPos = 2;
-    //                                        while (checkPos < commandVector.size())
-    //                                        {
-    //                                            goNameStream << commandVector.at(checkPos) << " ";
-    //                                            checkPos++;
-    //                                        }
-    //                                        std::string goName = TrimString(goNameStream.str());
-    //                                        bool validToUse = false;
-    //                                        std::list<GameObject*> nearGOList;
-    //                                        pmReceiver->GetGameObjectListWithEntryInGrid(nearGOList, 0, MELEE_MAX_DISTANCE);
-    //                                        for (std::list<GameObject*>::iterator it = nearGOList.begin(); it != nearGOList.end(); it++)
-    //                                        {
-    //                                            if ((*it)->GetName() == goName)
-    //                                            {
-    //                                                pmReceiver->SetFacingToObject((*it));
-    //                                                pmReceiver->StopMoving();
-    //                                                pmReceiver->GetMotionMaster()->Initialize();
-    //                                                (*it)->Use(pmReceiver);
-    //                                                replyStream << "Use game object : " << goName;
-    //                                                validToUse = true;
-    //                                                break;
-    //                                            }
-    //                                        }
-    //                                        if (!validToUse)
-    //                                        {
-    //                                            replyStream << "No go with name " << goName << " nearby";
-    //                                        }
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        replyStream << "No go name";
-    //                                    }
-    //                                }
-    //                                else if (useType == "item")
-    //                                {
-    //
-    //                                }
-    //                                else
-    //                                {
-    //                                    replyStream << "Unknown type";
-    //                                }
-    //                            }
-    //                            else
-    //                            {
-    //                                replyStream << "Use what?";
-    //                            }
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "I am dead";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "stop")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (pmReceiver->IsAlive())
-    //                        {
-    //                            pmReceiver->StopMoving();
-    //                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
-    //                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-    //                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-    //                            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
-    //                            pmReceiver->AttackStop();
-    //                            if (Script_Base* sb = receiverAI->sb)
-    //                            {
-    //                                sb->PetStop();
-    //                                sb->ClearTarget();
-    //                            }
-    //                            receiverAI->moveDelay = 2000;
-    //                            replyStream << "Stopped";
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "I am dead";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "delay")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            int delayMS = std::stoi(commandVector.at(1));
-    //                            receiverAI->dpsDelay = delayMS;
-    //                            replyStream << "DPS delay set to : " << delayMS;
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "DPS delay is : " << receiverAI->dpsDelay;
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "attackers")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (pmReceiver->IsAlive())
-    //                        {
-    //                            replyStream << "attackers list : ";
-    //                            std::unordered_set<Unit*> attackers = pmReceiver->getAttackers();
-    //                            for (std::unordered_set<Unit*>::iterator aIT = attackers.begin(); aIT != attackers.end(); aIT++)
-    //                            {
-    //                                if (Unit* eachAttacker = *aIT)
-    //                                {
-    //                                    replyStream << eachAttacker->GetName() << ", ";
-    //                                }
-    //                            }
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "I am dead";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "cure")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string cureCMD = commandVector.at(1);
-    //                            if (cureCMD == "on")
-    //                            {
-    //                                receiverAI->cure = true;
-    //                            }
-    //                            else if (cureCMD == "off")
-    //                            {
-    //                                receiverAI->cure = false;
-    //                            }
-    //                            else
-    //                            {
-    //                                replyStream << "Unknown state";
-    //                            }
-    //                        }
-    //                        if (receiverAI->cure)
-    //                        {
-    //                            replyStream << "auto cure is on";
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "auto cure is off";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "petting")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string cureCMD = commandVector.at(1);
-    //                            if (cureCMD == "on")
-    //                            {
-    //                                receiverAI->petting = true;
-    //                            }
-    //                            else if (cureCMD == "off")
-    //                            {
-    //                                receiverAI->petting = false;
-    //                            }
-    //                            else
-    //                            {
-    //                                replyStream << "Unknown state";
-    //                            }
-    //                        }
-    //                        if (receiverAI->petting)
-    //                        {
-    //                            replyStream << "petting is on";
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "petting is off";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "aoe")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string on = commandVector.at(1);
-    //                            if (on == "on")
-    //                            {
-    //                                receiverAI->aoe = true;
-    //                            }
-    //                            else if (on == "off")
-    //                            {
-    //                                receiverAI->aoe = false;
-    //                            }
-    //                        }
-    //                        if (receiverAI->aoe)
-    //                        {
-    //                            replyStream << "AOE is on";
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "AOE is off";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "mark")
-    //                    {
-    //                        std::ostringstream replyStream;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string markCMD = commandVector.at(1);
-    //                            if (markCMD == "on")
-    //                            {
-    //                                receiverAI->mark = true;
-    //                            }
-    //                            else if (markCMD == "off")
-    //                            {
-    //                                receiverAI->mark = false;
-    //                            }
-    //                            else
-    //                            {
-    //                                replyStream << "Unknown state";
-    //                            }
-    //                        }
-    //                        if (receiverAI->mark)
-    //                        {
-    //                            replyStream << "Mark is on";
-    //                        }
-    //                        else
-    //                        {
-    //                            replyStream << "Mark is off";
-    //                        }
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "emote")
-    //                    {
-    //                        if (pmReceiver->IsAlive())
-    //                        {
-    //                            if (commandVector.size() > 1)
-    //                            {
-    //                                int emoteCMD = std::stoi(commandVector.at(1));
-    //                                pmReceiver->HandleEmoteCommand((Emote)emoteCMD);
-    //                            }
-    //                            else
-    //                            {
-    //                                pmReceiver->AttackStop();
-    //                                pmReceiver->CombatStop();
-    //                            }
-    //                        }
-    //                        else
-    //                        {
-    //                            WhisperTo(pmSender, "I am dead", Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //                    else if (commandName == "pa")
-    //                    {
-    //                        if (pmReceiver->getClass() == Classes::CLASS_PALADIN)
-    //                        {
-    //                            std::ostringstream replyStream;
-    //                            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
-    //                            {
-    //                                if (commandVector.size() > 1)
-    //                                {
-    //                                    std::string auratypeName = commandVector.at(1);
-    //                                    if (auratypeName == "concentration")
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-    //                                    }
-    //                                    else if (auratypeName == "devotion")
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-    //                                    }
-    //                                    else if (auratypeName == "retribution")
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-    //                                    }
-    //                                    else if (auratypeName == "fire")
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-    //                                    }
-    //                                    else if (auratypeName == "frost")
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-    //                                    }
-    //                                    else if (auratypeName == "shadow")
-    //                                    {
-    //                                        sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        replyStream << "Unknown type";
-    //                                    }
-    //                                }
-    //                                switch (sp->auraType)
-    //                                {
-    //                                case PaladinAuraType::PaladinAuraType_Concentration:
-    //                                {
-    //                                    replyStream << "concentration";
-    //                                    break;
-    //                                }
-    //                                case PaladinAuraType::PaladinAuraType_Devotion:
-    //                                {
-    //                                    replyStream << "devotion";
-    //                                    break;
-    //                                }
-    //                                case PaladinAuraType::PaladinAuraType_Retribution:
-    //                                {
-    //                                    replyStream << "retribution";
-    //                                    break;
-    //                                }
-    //                                case PaladinAuraType::PaladinAuraType_FireResistant:
-    //                                {
-    //                                    replyStream << "fire";
-    //                                    break;
-    //                                }
-    //                                case PaladinAuraType::PaladinAuraType_FrostResistant:
-    //                                {
-    //                                    replyStream << "frost";
-    //                                    break;
-    //                                }
-    //                                case PaladinAuraType::PaladinAuraType_ShadowResistant:
-    //                                {
-    //                                    replyStream << "shadow";
-    //                                    break;
-    //                                }
-    //                                default:
-    //                                {
-    //                                    break;
-    //                                }
-    //                                }
-    //                            }
-    //                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //                    else if (commandName == "pb")
-    //                    {
-    //                        if (pmReceiver->getClass() == Classes::CLASS_PALADIN)
-    //                        {
-    //                            std::ostringstream replyStream;
-    //                            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
-    //                            {
-    //                                if (commandVector.size() > 1)
-    //                                {
-    //                                    std::string blessingTypeName = commandVector.at(1);
-    //                                    if (blessingTypeName == "kings")
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-    //                                    }
-    //                                    else if (blessingTypeName == "might")
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-    //                                    }
-    //                                    else if (blessingTypeName == "wisdom")
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
-    //                                    }
-    //                                    else if (blessingTypeName == "salvation")
-    //                                    {
-    //                                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Salvation;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        replyStream << "Unknown type";
-    //                                    }
-    //                                }
-    //                                switch (sp->blessingType)
-    //                                {
-    //                                case PaladinBlessingType::PaladinBlessingType_Kings:
-    //                                {
-    //                                    replyStream << "kings";
-    //                                    break;
-    //                                }
-    //                                case PaladinBlessingType::PaladinBlessingType_Might:
-    //                                {
-    //                                    replyStream << "might";
-    //                                    break;
-    //                                }
-    //                                case PaladinBlessingType::PaladinBlessingType_Wisdom:
-    //                                {
-    //                                    replyStream << "wisdom";
-    //                                    break;
-    //                                }
-    //                                case PaladinBlessingType::PaladinBlessingType_Salvation:
-    //                                {
-    //                                    replyStream << "salvation";
-    //                                    break;
-    //                                }
-    //                                default:
-    //                                {
-    //                                    break;
-    //                                }
-    //                                }
-    //                            }
-    //                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //                    else if (commandName == "ps")
-    //                    {
-    //                        if (pmReceiver->getClass() == Classes::CLASS_PALADIN)
-    //                        {
-    //                            std::ostringstream replyStream;
-    //                            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
-    //                            {
-    //                                if (commandVector.size() > 1)
-    //                                {
-    //                                    std::string sealTypeName = commandVector.at(1);
-    //                                    if (sealTypeName == "righteousness")
-    //                                    {
-    //                                        sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
-    //                                    }
-    //                                    else if (sealTypeName == "justice")
-    //                                    {
-    //                                        sp->sealType = PaladinSealType::PaladinSealType_Justice;
-    //                                    }
-    //                                    else if (sealTypeName == "command")
-    //                                    {
-    //                                        sp->sealType = PaladinSealType::PaladinSealType_Command;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        replyStream << "Unknown type";
-    //                                    }
-    //                                }
-    //                                switch (sp->sealType)
-    //                                {
-    //                                case PaladinSealType::PaladinSealType_Righteousness:
-    //                                {
-    //                                    replyStream << "righteousness";
-    //                                    break;
-    //                                }
-    //                                case PaladinSealType::PaladinSealType_Justice:
-    //                                {
-    //                                    replyStream << "justice";
-    //                                    break;
-    //                                }
-    //                                case PaladinSealType::PaladinSealType_Command:
-    //                                {
-    //                                    replyStream << "command";
-    //                                    break;
-    //                                }
-    //                                default:
-    //                                {
-    //                                    break;
-    //                                }
-    //                                }
-    //                            }
-    //                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //                    else if (commandName == "ha")
-    //                    {
-    //                        if (pmReceiver->getClass() == Classes::CLASS_HUNTER)
-    //                        {
-    //                            std::ostringstream replyStream;
-    //                            if (Script_Hunter* sh = (Script_Hunter*)receiverAI->sb)
-    //                            {
-    //                                if (commandVector.size() > 1)
-    //                                {
-    //                                    std::string aspectName = commandVector.at(1);
-    //                                    if (aspectName == "hawk")
-    //                                    {
-    //                                        sh->aspectType = HunterAspectType::HunterAspectType_Hawk;
-    //                                    }
-    //                                    else if (aspectName == "monkey")
-    //                                    {
-    //                                        sh->aspectType = HunterAspectType::HunterAspectType_Monkey;
-    //                                    }
-    //                                    else if (aspectName == "wild")
-    //                                    {
-    //                                        sh->aspectType = HunterAspectType::HunterAspectType_Wild;
-    //                                    }
-    //                                    else if (aspectName == "pack")
-    //                                    {
-    //                                        sh->aspectType = HunterAspectType::HunterAspectType_Pack;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        replyStream << "Unknown type";
-    //                                    }
-    //                                }
-    //                                switch (sh->aspectType)
-    //                                {
-    //                                case HunterAspectType::HunterAspectType_Hawk:
-    //                                {
-    //                                    replyStream << "hawk";
-    //                                    break;
-    //                                }
-    //                                case HunterAspectType::HunterAspectType_Monkey:
-    //                                {
-    //                                    replyStream << "monkey";
-    //                                    break;
-    //                                }
-    //                                case HunterAspectType::HunterAspectType_Wild:
-    //                                {
-    //                                    replyStream << "wild";
-    //                                    break;
-    //                                }
-    //                                case HunterAspectType::HunterAspectType_Pack:
-    //                                {
-    //                                    replyStream << "pack";
-    //                                    break;
-    //                                }
-    //                                default:
-    //                                {
-    //                                    break;
-    //                                }
-    //                                }
-    //                            }
-    //                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //                    else if (commandName == "equip")
-    //                    {
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string equipType = commandVector.at(1);
-    //                            if (equipType == "molten core")
-    //                            {
-    //                                if (pmReceiver->getClass() == Classes::CLASS_DRUID)
-    //                                {
-    //                                    for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
-    //                                    {
-    //                                        if (Item* currentEquip = pmReceiver->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-    //                                        {
-    //                                            pmReceiver->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-    //                                        }
-    //                                    }
-    //                                    EquipNewItem(pmReceiver, 16983, EquipmentSlots::EQUIPMENT_SLOT_HEAD);
-    //                                    EquipNewItem(pmReceiver, 19139, EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS);
-    //                                    EquipNewItem(pmReceiver, 16833, EquipmentSlots::EQUIPMENT_SLOT_CHEST);
-    //                                    EquipNewItem(pmReceiver, 11764, EquipmentSlots::EQUIPMENT_SLOT_WRISTS);
-    //                                    EquipNewItem(pmReceiver, 16831, EquipmentSlots::EQUIPMENT_SLOT_HANDS);
-    //                                    EquipNewItem(pmReceiver, 19149, EquipmentSlots::EQUIPMENT_SLOT_WAIST);
-    //                                    EquipNewItem(pmReceiver, 15054, EquipmentSlots::EQUIPMENT_SLOT_LEGS);
-    //                                    EquipNewItem(pmReceiver, 16982, EquipmentSlots::EQUIPMENT_SLOT_FEET);
-    //                                    EquipNewItem(pmReceiver, 18803, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND);
-    //                                    EquipNewItem(pmReceiver, 2802, EquipmentSlots::EQUIPMENT_SLOT_TRINKET1);
-    //                                    EquipNewItem(pmReceiver, 18406, EquipmentSlots::EQUIPMENT_SLOT_TRINKET2);
-    //                                    EquipNewItem(pmReceiver, 18398, EquipmentSlots::EQUIPMENT_SLOT_FINGER1);
-    //                                    EquipNewItem(pmReceiver, 18813, EquipmentSlots::EQUIPMENT_SLOT_FINGER2);
-    //                                    EquipNewItem(pmReceiver, 18811, EquipmentSlots::EQUIPMENT_SLOT_BACK);
-    //                                    EquipNewItem(pmReceiver, 16309, EquipmentSlots::EQUIPMENT_SLOT_NECK);
-    //                                    std::ostringstream replyStream;
-    //                                    replyStream << "Equip all fire resistance gears.";
-    //                                    WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                                }
-    //                            }
-    //                            else if (equipType == "reset")
-    //                            {
-    //                                InitializeEquipments(pmReceiver, true);
-    //                                std::ostringstream replyStream;
-    //                                replyStream << "All my equipments are reset.";
-    //                                WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                            }
-    //                        }
-    //                    }
-    //                    else if (commandName == "rti")
-    //                    {
-    //                        int targetIcon = -1;
-    //                        if (commandVector.size() > 1)
-    //                        {
-    //                            std::string iconIndex = commandVector.at(1);
-    //                            targetIcon = atoi(iconIndex.c_str());
-    //                        }
-    //                        if (targetIcon >= 0 && targetIcon < TARGETICONCOUNT)
-    //                        {
-    //                            receiverAI->sb->rti = targetIcon;
-    //                        }
-    //                        std::ostringstream replyStream;
-    //                        replyStream << "RTI is " << receiverAI->sb->rti;
-    //                        WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                    }
-    //                    else if (commandName == "assist")
-    //                    {
-    //                        if (receiverAI->sb->Assist(nullptr))
-    //                        {
-    //                            receiverAI->assistDelay = 5000;
-    //                            std::ostringstream replyStream;
-    //                            replyStream << "Try to pin down my RTI : " << receiverAI->sb->rti;
-    //                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //                    else if (commandName == "prepare")
-    //                    {
-    //                        sNingerManager->PrepareNinger(pmReceiver);
-    //                    }
-    //                    else if (commandName == "wlc")
-    //                    {
-    //                        if (pmReceiver->getClass() == Classes::CLASS_WARLOCK)
-    //                        {
-    //                            std::ostringstream replyStream;
-    //                            if (Script_Warlock* swl = (Script_Warlock*)receiverAI->sb)
-    //                            {
-    //                                if (commandVector.size() > 1)
-    //                                {
-    //                                    std::string curseName = commandVector.at(1);
-    //                                    if (curseName == "none")
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_None;
-    //                                    }
-    //                                    else if (curseName == "element")
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_Element;
-    //                                    }
-    //                                    else if (curseName == "weakness")
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
-    //                                    }
-    //                                    else if (curseName == "tongues")
-    //                                    {
-    //                                        swl->curseType = WarlockCurseType::WarlockCurseType_Tongues;
-    //                                    }
-    //                                    else
-    //                                    {
-    //                                        replyStream << "Unknown type";
-    //                                    }
-    //                                }
-    //                                switch (swl->curseType)
-    //                                {
-    //                                case WarlockCurseType::WarlockCurseType_None:
-    //                                {
-    //                                    replyStream << "none";
-    //                                    break;
-    //                                }
-    //                                case WarlockCurseType::WarlockCurseType_Element:
-    //                                {
-    //                                    replyStream << "element";
-    //                                    break;
-    //                                }
-    //                                case WarlockCurseType::WarlockCurseType_Weakness:
-    //                                {
-    //                                    replyStream << "weakness";
-    //                                    break;
-    //                                }
-    //                                case WarlockCurseType::WarlockCurseType_Tongues:
-    //                                {
-    //                                    replyStream << "tongues";
-    //                                    break;
-    //                                }
-    //                                default:
-    //                                {
-    //                                    break;
-    //                                }
-    //                                }
-    //                            }
-    //                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, pmReceiver);
-    //                        }
-    //                    }
-    //#pragma endregion
-    //                }
-    //            }
-    //        }
-    //    }
-    //    else
-    //    {
-    //        if (Group* myGroup = pmSender->GetGroup())
-    //        {
-    //            if (commandName == "revive")
-    //            {
-    //                std::unordered_set<ObjectGuid> deadOGSet;
-    //                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //                {
-    //                    if (Player* member = groupRef->GetSource())
-    //                    {
-    //                        if (!member->IsAlive())
-    //                        {
-    //                            deadOGSet.insert(member->GetGUID());
-    //                        }
-    //                    }
-    //                }
-    //                std::unordered_set<ObjectGuid> revivingOGSet;
-    //                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //                {
-    //                    if (Player* member = groupRef->GetSource())
-    //                    {
-    //                        if (member->IsAlive())
-    //                        {
-    //                            if (!member->IsInCombat())
-    //                            {
-    //                                if (member->getClass() == Classes::CLASS_DRUID || member->getClass() == Classes::CLASS_PRIEST || member->getClass() == Classes::CLASS_PALADIN || member->getClass() == Classes::CLASS_SHAMAN)
-    //                                {
-    //                                    if (WorldSession* memberSession = member->GetSession())
-    //                                    {
-    //                                        if (memberSession->isNinger)
-    //                                        {
-    //                                            float manaRate = member->GetPower(Powers::POWER_MANA) * 100 / member->GetMaxPower(Powers::POWER_MANA);
-    //                                            if (manaRate > 40)
-    //                                            {
-    //                                                for (std::unordered_set<ObjectGuid>::iterator dIT = deadOGSet.begin(); dIT != deadOGSet.end(); dIT++)
-    //                                                {
-    //                                                    if (ObjectGuid ogEachDead = *dIT)
-    //                                                    {
-    //                                                        if (revivingOGSet.find(ogEachDead) == revivingOGSet.end())
-    //                                                        {
-    //                                                            if (Player* eachDead = ObjectAccessor::FindPlayer(ogEachDead))
-    //                                                            {
-    //                                                                if (member->GetDistance(eachDead) < RANGE_HEAL_DISTANCE)
-    //                                                                {
-    //                                                                    if (Awareness_Base* memberAwareness = member->awarenessMap[member->activeAwarenessIndex])
-    //                                                                    {
-    //                                                                        if (Script_Base* sb = memberAwareness->sb)
-    //                                                                        {
-    //                                                                            sb->ogReviveTarget = eachDead->GetGUID();
-    //                                                                            HandleChatCommand(pmSender, pmCMD, member);
-    //                                                                            revivingOGSet.insert(eachDead->GetGUID());
-    //                                                                            std::ostringstream replyStream;
-    //                                                                            replyStream << "Try to revive ";
-    //                                                                            replyStream << eachDead->GetName();
-    //                                                                            WhisperTo(pmSender, replyStream.str(), Language::LANG_UNIVERSAL, member);
-    //                                                                            break;
-    //                                                                        }
-    //                                                                    }
-    //                                                                }
-    //                                                            }
-    //                                                        }
-    //                                                    }
-    //                                                }
-    //                                            }
-    //                                        }
-    //                                    }
-    //                                }
-    //                            }
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //            else
-    //            {
-    //                for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-    //                {
-    //                    if (Player* member = groupRef->GetSource())
-    //                    {
-    //                        HandleChatCommand(pmSender, pmCMD, member);
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
+                                    std::ostringstream replyTitleStream;
+                                    replyTitleStream << "Teleport ninger to homebind : " << eachNinger->GetName();
+                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool NingerManager::StringEndWith(const std::string& str, const std::string& tail)

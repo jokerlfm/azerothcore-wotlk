@@ -79,20 +79,22 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
 
     bool const mutualChase = IsMutualChase(owner, target);
     // lfm should be closer 
-    //float const hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
-    //float const maxRange = _range ? _range->MaxRange + hitboxSum : owner->GetMeleeRange(target); // melee range already includes hitboxes
-    //float const maxTarget = _range ? _range->MaxTolerance + hitboxSum : CONTACT_DISTANCE + hitboxSum;
-    float meleeRange = owner->GetMeleeRange(target);
-    float minRange = meleeRange / 2;
-    if (meleeRange > 2.5f)
+    float hitboxSum = owner->GetCombatReach() + target->GetCombatReach() + CONTACT_DISTANCE;
+    float maxRange = hitboxSum;
+    if (_range)
     {
-        minRange = 0.2f;
-        meleeRange = meleeRange - 2.0f;
+        maxRange += _range->MaxRange;
     }
-    float const minTarget = (_range ? _range->MinTolerance : 0.0f) + minRange;
-    float const maxRange = _range ? _range->MaxRange + minRange : meleeRange;
-    float const maxTarget = _range ? _range->MaxTolerance + minRange : meleeRange;
-
+    float maxTarget = hitboxSum;
+    if (_range)
+    {
+        maxTarget += _range->MaxTolerance;
+    }
+    float minTarget = CONTACT_DISTANCE;
+    if (_range)
+    {
+        minTarget += _range->MinTolerance;
+    }
     Optional<ChaseAngle> angle = mutualChase ? Optional<ChaseAngle>() : _angle;
 
     i_recheckDistance.Update(time_diff);
@@ -176,7 +178,7 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
         // otherwise, we fall back to nearpoint finding
         // lfm move toward should be the same
         //target->GetNearPoint(owner, x, y, z, (moveToward ? maxTarget : minTarget) - hitboxSum, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));
-        target->GetNearPoint(owner, x, y, z, meleeRange, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));
+        target->GetNearPoint(owner, x, y, z, minTarget, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));
         shortenPath = false;
     }
 
@@ -194,7 +196,7 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     }
 
     if (shortenPath)
-        i_path->ShortenPathUntilDist(G3D::Vector3(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ()), maxTarget);
+        i_path->ShortenPathUntilDist(G3D::Vector3(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ()), minTarget);
 
     if (cOwner)
         cOwner->SetCannotReachTarget(false);
