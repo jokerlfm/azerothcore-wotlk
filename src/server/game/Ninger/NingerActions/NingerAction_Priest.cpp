@@ -16,6 +16,9 @@ NingerAction_Priest::NingerAction_Priest() :NingerAction_Base()
     spell_DispelMagic = 0;
     spell_DivineSpirit = 0;
     spell_PowerWord_Fortitude = 0;
+    spell_PowerWord_Shield = 0;
+    spell_Penance = 0;
+    spell_Weakened_Soul = 6788;
 }
 
 void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex)
@@ -24,6 +27,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     {
         return;
     }
+    specialty = pmSpecialtyTabIndex;
     me->ClearInCombat();
     if (me->getLevel() != pmTargetLevel)
     {
@@ -31,331 +35,272 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         me->LearnDefaultSkills();
         me->LearnCustomSpells();
 
-        // talent tab : 201 - discipline, 202 - holy, 203 - shadow
-        me->LearnTalent(1898, 4);
-        me->LearnTalent(344, 1);
-        me->LearnTalent(352, 2);
-        me->LearnTalent(343, 2);
-        me->LearnTalent(347, 2);
-        me->LearnTalent(348, 0);
-        me->LearnTalent(341, 2);
-        me->LearnTalent(1769, 2);
-        me->LearnTalent(351, 0);
-        me->LearnTalent(1201, 4);
-        me->LearnTalent(1772, 2);
-        me->LearnTalent(1771, 1);
-        me->LearnTalent(1773, 2);
-        me->LearnTalent(322, 0);
-        me->LearnTalent(2235, 1);
-        me->LearnTalent(1896, 2);
-        me->LearnTalent(1774, 0);
-        me->LearnTalent(1901, 1);
-        me->LearnTalent(1895, 2);
-        me->LearnTalent(1202, 4);
-        me->LearnTalent(1897, 0);
-        me->LearnTalent(1894, 1);
-        me->LearnTalent(1858, 2);        
-
-        me->LearnTalent(406, 2);
-        me->LearnTalent(401, 2);
-        me->LearnTalent(1181, 4);
-
-        // priest trainer Astarii Starseeker
-        TrainerSpellData const* trainer_spells = sObjectMgr->GetNpcTrainerSpells(4090);
-        bool hasNew = false;
-        while (true)
-        {
-            hasNew = false;
-            for (TrainerSpellMap::const_iterator itr = trainer_spells->spellList.begin(); itr != trainer_spells->spellList.end(); ++itr)
-            {
-                TrainerSpell const* tSpell = &itr->second;
-                if (me->HasSpell(tSpell->spell))
-                {
-                    continue;
-                }
-                if (tSpell->reqSpell && !me->HasSpell(tSpell->reqSpell))
-                {
-                    continue;
-                }
-                TrainerSpellState state = me->GetTrainerSpellState(tSpell);
-                if (state == TrainerSpellState::TRAINER_SPELL_GREEN)
-                {
-                    me->learnSpell(tSpell->spell);
-                    hasNew = true;
-                }
-            }
-            if (!hasNew)
-            {
-                break;
-            }
-        }
+        ResetTalent();
         InitializeEquipments(true);
     }
     uint32 myLevel = me->getLevel();
-    if (myLevel >= 80)
+    if (myLevel >= 1)
     {
-        spell_Renew = 48068;
+        spell_LesserHeal = 2050;
+        spell_PowerWord_Fortitude = 1243;
     }
-    else if (myLevel >= 75)
+    if (myLevel >= 4)
     {
-        spell_Renew = 48067;
+        spell_LesserHeal = 2052;
     }
-    else if (myLevel >= 70)
+    if (myLevel >= 6)
     {
-        spell_Renew = 25222;
+        spell_PowerWord_Shield = 17;
     }
-    else if (myLevel >= 65)
-    {
-        spell_Renew = 25221;
-    }
-    else if (myLevel >= 60)
-    {
-        spell_Renew = 25315;
-    }
-    else if (myLevel >= 56)
-    {
-        spell_Renew = 10929;
-    }
-    else if (myLevel >= 50)
-    {
-        spell_Renew = 10928;
-    }
-    else if (myLevel >= 44)
-    {
-        spell_Renew = 10927;
-    }
-    else if (myLevel >= 38)
-    {
-        spell_Renew = 6078;
-    }
-    else if (myLevel >= 32)
-    {
-        spell_Renew = 6077;
-    }
-    else if (myLevel >= 26)
-    {
-        spell_Renew = 6076;
-    }
-    else if (myLevel >= 20)
-    {
-        spell_Renew = 6075;
-    }
-    else if (myLevel >= 14)
-    {
-        spell_Renew = 6074;
-    }
-    else if (myLevel >= 8)
+    if (myLevel >= 8)
     {
         spell_Renew = 139;
     }
     if (myLevel >= 10)
     {
         spell_LesserHeal = 2053;
+        spell_Resurrection = 2006;
     }
-    else if (myLevel >= 4)
+    if (myLevel >= 12)
     {
-        spell_LesserHeal = 2052;
+        spell_PowerWord_Fortitude = 1244;
+        spell_PowerWord_Shield = 592;
     }
-    else if (myLevel >= 1)
+    if (myLevel >= 14)
     {
-        spell_LesserHeal = 2050;
+        spell_Renew = 6074;
+        spell_CureDisease = 528;
+    }
+    if (myLevel >= 16)
+    {
+        spell_Heal = 2054;
+    }
+    if (myLevel >= 18)
+    {
+        spell_DispelMagic = 527;
+        spell_PowerWord_Shield = 600;
+    }
+    if (myLevel >= 20)
+    {
+        spell_Renew = 6075;
+        spell_FlashHeal = 2061;
+    }
+    if (myLevel >= 22)
+    {
+        spell_Heal = 2055;
+        spell_Resurrection = 2010;
+    }
+    if (myLevel >= 24)
+    {
+        spell_PowerWord_Fortitude = 1245;
+        spell_PowerWord_Shield = 3747;
+    }
+    if (myLevel >= 26)
+    {
+        spell_Renew = 6076;
+        spell_FlashHeal = 9472;
+    }
+    if (myLevel >= 28)
+    {
+        spell_Heal = 6063;
+    }
+    if (myLevel >= 30)
+    {
+        spell_DivineSpirit = 14752;
+        spell_PowerWord_Shield = 6065;
+    }
+    if (myLevel >= 32)
+    {
+        spell_Renew = 6077;
+        spell_FlashHeal = 9473;
     }
     if (myLevel >= 34)
     {
         spell_Heal = 6064;
+        spell_Resurrection = 10880;
     }
-    else if (myLevel >= 28)
+    if (myLevel >= 36)
     {
-        spell_Heal = 6063;
+        spell_PowerWord_Fortitude = 2791;
+        spell_PowerWord_Shield = 6066;
     }
-    else if (myLevel >= 22)
+    if (myLevel >= 38)
     {
-        spell_Heal = 2055;
+        spell_Renew = 6078;
+        spell_FlashHeal = 9474;
     }
-    else if (myLevel >= 16)
+    if (myLevel >= 40)
     {
-        spell_Heal = 2054;
+        spell_GreaterHeal = 2060;
+        spell_DivineSpirit = 14818;
+    }
+    if (myLevel >= 42)
+    {
+        spell_PowerWord_Shield = 10898;
+    }
+    if (myLevel >= 44)
+    {
+        spell_Renew = 10927;
+        spell_FlashHeal = 10915;
+    }
+    if (myLevel >= 46)
+    {
+        spell_GreaterHeal = 10963;
+        spell_Resurrection = 10881;
+    }
+    if (myLevel >= 48)
+    {
+        spell_PowerWord_Fortitude = 10937;
+        spell_PowerWord_Shield = 10899;
+    }
+    if (myLevel >= 50)
+    {
+        spell_Renew = 10928;
+        spell_FlashHeal = 10916;
+        spell_DivineSpirit = 14819;
+    }
+    if (myLevel >= 52)
+    {
+        spell_GreaterHeal = 10964;
+    }
+    if (myLevel >= 54)
+    {
+        spell_PowerWord_Shield = 10900;
+    }
+    if (myLevel >= 56)
+    {
+        spell_Renew = 10929;
+        spell_FlashHeal = 10917;
+    }
+    if (myLevel >= 58)
+    {
+        spell_GreaterHeal = 10965;
+        spell_Resurrection = 20770;
+    }
+    if (myLevel >= 60)
+    {
+        spell_Renew = 25315;
+        spell_GreaterHeal = 25314;
+        spell_DivineSpirit = 27841;
+        spell_PowerWord_Fortitude = 10938;
+        spell_Penance = 47540;
+        spell_PowerWord_Shield = 10901;
+    }
+    if (myLevel >= 61)
+    {
+        spell_FlashHeal = 25233;
+    }
+    if (myLevel >= 63)
+    {
+        spell_GreaterHeal = 25210;
+    }
+    if (myLevel >= 65)
+    {
+        spell_Renew = 25221;
+        spell_PowerWord_Shield = 25217;
+    }
+    if (myLevel >= 67)
+    {
+        spell_FlashHeal = 25235;
+    }
+    if (myLevel >= 68)
+    {
+        spell_GreaterHeal = 25213;
+        spell_Resurrection = 25435;
+    }
+    if (myLevel >= 70)
+    {
+        spell_Renew = 25222;
+        spell_DivineSpirit = 25312;
+        spell_PowerWord_Fortitude = 25389;
+        spell_Penance = 53005;
+        spell_PowerWord_Shield = 25218;
+    }
+    if (myLevel >= 73)
+    {
+        spell_GreaterHeal = 48062;
+        spell_FlashHeal = 48070;
+    }
+    if (myLevel >= 75)
+    {
+        spell_Renew = 48067;
+        spell_Penance = 53006;
+        spell_PowerWord_Shield = 48065;
     }
     if (myLevel >= 78)
     {
         spell_GreaterHeal = 48063;
-    }
-    else if (myLevel >= 73)
-    {
-        spell_GreaterHeal = 48062;
-    }
-    else if (myLevel >= 68)
-    {
-        spell_GreaterHeal = 25213;
-    }
-    else if (myLevel >= 63)
-    {
-        spell_GreaterHeal = 25210;
-    }
-    else if (myLevel >= 60)
-    {
-        spell_GreaterHeal = 25314;
-    }
-    else if (myLevel >= 58)
-    {
-        spell_GreaterHeal = 10965;
-    }
-    else if (myLevel >= 52)
-    {
-        spell_GreaterHeal = 10964;
-    }
-    else if (myLevel >= 46)
-    {
-        spell_GreaterHeal = 10963;
-    }
-    else if (myLevel >= 40)
-    {
-        spell_GreaterHeal = 2060;
+        spell_Resurrection = 48171;
     }
     if (myLevel >= 79)
     {
         spell_FlashHeal = 48071;
     }
-    else if (myLevel >= 73)
-    {
-        spell_FlashHeal = 48070;
-    }
-    else if (myLevel >= 67)
-    {
-        spell_FlashHeal = 25235;
-    }
-    else if (myLevel >= 61)
-    {
-        spell_FlashHeal = 25233;
-    }
-    else if (myLevel >= 56)
-    {
-        spell_FlashHeal = 10917;
-    }
-    else if (myLevel >= 50)
-    {
-        spell_FlashHeal = 10916;
-    }
-    else if (myLevel >= 44)
-    {
-        spell_FlashHeal = 10915;
-    }
-    else if (myLevel >= 38)
-    {
-        spell_FlashHeal = 9474;
-    }
-    else if (myLevel >= 32)
-    {
-        spell_FlashHeal = 9473;
-    }
-    else if (myLevel >= 26)
-    {
-        spell_FlashHeal = 9472;
-    }
-    else if (myLevel >= 20)
-    {
-        spell_FlashHeal = 2061;
-    }
-    if (myLevel >= 78)
-    {
-        spell_Resurrection = 48171;
-    }
-    else if (myLevel >= 68)
-    {
-        spell_Resurrection = 25435;
-    }
-    else if (myLevel >= 58)
-    {
-        spell_Resurrection = 20770;
-    }
-    else if (myLevel >= 46)
-    {
-        spell_Resurrection = 10881;
-    }
-    else if (myLevel >= 34)
-    {
-        spell_Resurrection = 10880;
-    }
-    else if (myLevel >= 22)
-    {
-        spell_Resurrection = 2010;
-    }
-    else if (myLevel >= 10)
-    {
-        spell_Resurrection = 2006;
-    }
-    if (myLevel >= 14)
-    {
-        spell_CureDisease = 528;
-    }
-    if (myLevel >= 18)
-    {
-        spell_DispelMagic = 527;
-    }
     if (myLevel >= 80)
     {
+        spell_Renew = 48068;
         spell_DivineSpirit = 48073;
-    }
-    else if (myLevel >= 70)
-    {
-        spell_DivineSpirit = 25312;
-    }
-    else if (myLevel >= 60)
-    {
-        spell_DivineSpirit = 27841;
-    }
-    else if (myLevel >= 50)
-    {
-        spell_DivineSpirit = 14819;
-    }
-    else if (myLevel >= 40)
-    {
-        spell_DivineSpirit = 14818;
-    }
-    else if (myLevel >= 30)
-    {
-        spell_DivineSpirit = 14752;
-    }
-    if (myLevel >= 80)
-    {
         spell_PowerWord_Fortitude = 48161;
+        spell_Penance = 53007;
+        spell_PowerWord_Shield = 48066;
     }
-    else if (myLevel >= 70)
-    {
-        spell_PowerWord_Fortitude = 25389;
-    }
-    else if (myLevel >= 60)
-    {
-        spell_PowerWord_Fortitude = 10938;
-    }
-    else if (myLevel >= 48)
-    {
-        spell_PowerWord_Fortitude = 10937;
-    }
-    else if (myLevel >= 36)
-    {
-        spell_PowerWord_Fortitude = 2791;
-    }
-    else if (myLevel >= 24)
-    {
-        spell_PowerWord_Fortitude = 1245;
-    }
-    else if (myLevel >= 12)
-    {
-        spell_PowerWord_Fortitude = 1244;
-    }
-    else if (myLevel >= 1)
-    {
-        spell_PowerWord_Fortitude = 1243;
-    }
+
     InitializeEquipments(false);
     std::ostringstream msgStream;
     msgStream << me->GetName() << " initialized";
     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
 }
 
+void NingerAction_Priest::ResetTalent()
+{
+    if (!me)
+    {
+        return;
+    }
+    me->resetTalents(true);
+    me->SendTalentsInfoData(false);
+
+    // talent tab : 201 - discipline, 202 - holy, 203 - shadow
+    LearnTalent(1898);
+    LearnTalent(344);
+    LearnTalent(352);
+    LearnTalent(343);
+    LearnTalent(347);
+    LearnTalent(348);
+    LearnTalent(341);
+    LearnTalent(351);
+    LearnTalent(1201);
+    LearnTalent(1771);
+    LearnTalent(1772);
+    LearnTalent(1773);
+    LearnTalent(322);
+    LearnTalent(1896);
+    LearnTalent(2235);
+    LearnTalent(1901);
+    LearnTalent(1895, 2);
+    LearnTalent(1774);
+    LearnTalent(1202);
+    LearnTalent(1897);
+    LearnTalent(1895, 3);
+
+    LearnTalent(406);
+    LearnTalent(401);
+    LearnTalent(1181);
+
+    LearnTalent(1894);
+
+    me->SendTalentsInfoData(false);
+
+    // priest trainer Astarii Starseeker
+    TrainSpells(4090);
+}
+
 void NingerAction_Priest::InitializeEquipments(bool pmReset)
 {
+    if (!me)
+    {
+        return;
+    }
     if (pmReset)
     {
         for (uint8 slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
@@ -373,8 +318,9 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
             }
         }
     }
+    uint32 myLevel = me->getLevel();
     uint32 minQuality = ItemQualities::ITEM_QUALITY_UNCOMMON;
-    if (me->getLevel() < 20)
+    if (myLevel < 20)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
@@ -382,28 +328,28 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
     {
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
         {
-            if (me->getLevel() < 30)
+            if (myLevel < 30)
             {
                 continue;
             }
         }
         else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS)
         {
-            if (me->getLevel() < 30)
+            if (myLevel < 30)
             {
                 continue;
             }
         }
         else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_NECK)
         {
-            if (me->getLevel() < 30)
+            if (myLevel < 30)
             {
                 continue;
             }
         }
         else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER1 || checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER2)
         {
-            if (me->getLevel() < 30)
+            if (myLevel < 30)
             {
                 continue;
             }
@@ -503,6 +449,20 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
     }
 }
 
+void NingerAction_Priest::Prepare()
+{
+    if (!me)
+    {
+        return;
+    }
+    else if (!me->IsAlive())
+    {
+        return;
+    }
+
+    me->Say("Prepared", Language::LANG_UNIVERSAL);
+}
+
 bool NingerAction_Priest::Heal(Unit* pmTarget)
 {
     if (!me)
@@ -529,6 +489,23 @@ bool NingerAction_Priest::Heal(Unit* pmTarget)
     float targetHealthPct = pmTarget->GetHealthPct();
     if (targetHealthPct < 30.0f)
     {
+        if (spell_PowerWord_Shield > 0)
+        {
+            if (!pmTarget->HasAura(spell_Weakened_Soul))
+            {
+                if (CastSpell(pmTarget, spell_PowerWord_Shield))
+                {
+                    return true;
+                }
+            }
+        }
+        if (spell_Penance > 0)
+        {
+            if (CastSpell(pmTarget, spell_Penance))
+            {
+                return true;
+            }
+        }
         if (spell_FlashHeal > 0)
         {
             if (CastSpell(pmTarget, spell_FlashHeal))
@@ -539,6 +516,16 @@ bool NingerAction_Priest::Heal(Unit* pmTarget)
     }
     if (targetHealthPct < 70.0f)
     {
+        if (spell_PowerWord_Shield > 0)
+        {
+            if (!pmTarget->HasAura(spell_Weakened_Soul))
+            {
+                if (CastSpell(pmTarget, spell_PowerWord_Shield))
+                {
+                    return true;
+                }
+            }
+        }
         if (spell_GreaterHeal > 0)
         {
             if (CastSpell(pmTarget, spell_GreaterHeal))
@@ -758,7 +745,7 @@ bool NingerAction_Priest::Revive(Player* pmTarget)
     {
         return false;
     }
-    else if (!pmTarget->IsAlive())
+    else if (pmTarget->IsAlive())
     {
         return false;
     }
@@ -769,7 +756,7 @@ bool NingerAction_Priest::Revive(Player* pmTarget)
     }
 
     if (spell_Resurrection > 0)
-    {
+    {        
         if (CastSpell(pmTarget, spell_Resurrection))
         {
             return true;

@@ -1056,8 +1056,9 @@ public:
     NingerAction_Base* ningerAction;
     std::unordered_map<uint32, NingerStrategy_Base*> strategyMap;
     uint32 activeStrategyIndex;
-    uint32 joinMemberGuid;
-    int joinDelay;
+    uint32 teleportTargetGuid;
+    int teleportDelay;
+    int reviveDelay;
 
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 

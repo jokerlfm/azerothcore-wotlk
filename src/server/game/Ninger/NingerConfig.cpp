@@ -471,9 +471,8 @@ bool NingerConfig::StartNinger()
     ManagerCheckDelay = GetIntDefault("ManagerCheckDelay", 60000);
     NingerCountEachLevel = GetIntDefault("NingerCountEachLevel", 20);
     UpdateDelay = GetIntDefault("UpdateDelay", 500);
-    AssembleDelay = GetIntDefault("AssembleDelay", 60000);
+    TeleportDelay = GetIntDefault("TeleportDelay", 60000);
     CorpseRunDelay = GetIntDefault("CorpseRunDelay", 120000);
-    JoinDelay = GetIntDefault("JoinDelay", 60000);
 
     if (Enable == 0)
     {

@@ -8,7 +8,9 @@ class NingerAction_Priest :public NingerAction_Base
 public:
     NingerAction_Priest();
     void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
+    void ResetTalent();
     void InitializeEquipments(bool pmReset);
+    void Prepare();
     bool Heal(Unit* pmTarget);
     bool SimpleHeal(Unit* pmTarget);
     bool Cure(Unit* pmTarget);
@@ -27,5 +29,8 @@ private:
     uint32 spell_DispelMagic;
     uint32 spell_DivineSpirit;
     uint32 spell_PowerWord_Fortitude;
+    uint32 spell_PowerWord_Shield;
+    uint32 spell_Penance;
+    uint32 spell_Weakened_Soul;
 };
 #endif

@@ -48,7 +48,7 @@
 #endif
 
 #ifndef RANGE_MIN_DISTANCE
-# define RANGE_MIN_DISTANCE 9.0f
+# define RANGE_MIN_DISTANCE 5.0f
 #endif
 
 #ifndef RANGE_NORMAL_DISTANCE
@@ -73,9 +73,8 @@ class NingerConfig
         UpdateDelay = 0;
         ManagerCheckDelay = 0;
         NingerCountEachLevel = 0;
-        AssembleDelay = 0;
+        TeleportDelay = 0;
         CorpseRunDelay = 0;
-        JoinDelay = 0;
     }
     NingerConfig(NingerConfig const&) = delete;
     NingerConfig& operator=(NingerConfig const&) = delete;
@@ -96,9 +95,8 @@ public:
     uint32 Reset;
     uint32 UpdateDelay;
     uint32 DPSDelay;
-    uint32 AssembleDelay;
+    uint32 TeleportDelay;
     uint32 CorpseRunDelay;
-    uint32 JoinDelay;
     uint32 ManagerCheckDelay;
     uint32 NingerCountEachLevel;
 

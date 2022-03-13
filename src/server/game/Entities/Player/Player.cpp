@@ -417,8 +417,9 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     groupRole = 0;
     strategyMap.clear();
     activeStrategyIndex = 0;
-    joinMemberGuid = 0;
-    joinDelay = 0;
+    teleportTargetGuid = 0;
+    teleportDelay = 0;
+    reviveDelay = 0;
 
     sScriptMgr->OnConstructPlayer(this);
 }

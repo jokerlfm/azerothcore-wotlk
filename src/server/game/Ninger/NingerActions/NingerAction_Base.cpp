@@ -17,6 +17,7 @@ NingerMovement::NingerMovement(Player* pmMe)
     activeMovementType = NingerMovementType::NingerMovementType_None;
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
+    chasePositionOK = false;
 }
 
 void NingerMovement::ResetMovement()
@@ -28,6 +29,7 @@ void NingerMovement::ResetMovement()
     activeMovementType = NingerMovementType::NingerMovementType_None;
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
+    chasePositionOK = false;
 }
 
 void NingerMovement::Update(uint32 pmDiff)
@@ -48,7 +50,7 @@ void NingerMovement::Update(uint32 pmDiff)
     {
         return;
     }
-    if (me->IsNonMeleeSpellCast(false))
+    if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return;
     }
@@ -110,12 +112,11 @@ void NingerMovement::Update(uint32 pmDiff)
                 break;
             }
             if (me->GetTarget() != ogChaseTarget)
-            {
+            {                
                 me->SetSelection(ogChaseTarget);
                 me->SetTarget(ogChaseTarget);
             }
-            bool ok = false;
-            if (unitTargetDistance >= chaseDistanceMin && unitTargetDistance <= chaseDistanceMax + MIN_DISTANCE_GAP)
+            if (unitTargetDistance >= chaseDistanceMin - MIN_DISTANCE_GAP && unitTargetDistance >= MELEE_MIN_DISTANCE && unitTargetDistance < chaseDistanceMax + MIN_DISTANCE_GAP)
             {
                 if (me->IsWithinLOSInMap(chaseTarget))
                 {
@@ -125,35 +126,120 @@ void NingerMovement::Update(uint32 pmDiff)
                     }
                     if (!me->isInFront(chaseTarget, M_PI / 4))
                     {
+                        chasePositionOK = false;
                         me->SetFacingToObject(chaseTarget);
                     }
-                    ok = true;
+                    else
+                    {
+                        chasePositionOK = true;
+                    }
+                }
+                else
+                {
+                    chasePositionOK = false;
                 }
             }
-            if (!ok)
+            else
             {
-                if (me->isMoving())
+                chasePositionOK = false;
+                if (!me->isMoving())
                 {
-                    ok = true;
+                    if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+                    {
+                        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                    }
+                    float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
+                    float nearX = 0, nearY = 0, nearZ = 0;
+                    float dynamicAngle = M_PI / 16;
+                    if (distanceInRange < INTERACTION_DISTANCE)
+                    {
+                        dynamicAngle = M_PI / 8;
+                    }
+                    float chaseAngle = chaseTarget->GetAngle(me);
+                    chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
+                    chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, me->GetCombatReach(), distanceInRange, chaseAngle);
+                    MoveTargetPosition(nearX, nearY, nearZ);
                 }
             }
-            if (!ok)
+        }
+        else
+        {
+            ResetMovement();
+        }
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Follow:
+    {
+        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogChaseTarget))
+        {
+            if (me->GetMapId() != chaseTarget->GetMapId())
             {
-                if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+                ResetMovement();
+                break;
+            }
+            if (chaseTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
+            {
+                if (Player* targetPlayer = chaseTarget->ToPlayer())
                 {
-                    me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                    if (!targetPlayer->IsInWorld())
+                    {
+                        ResetMovement();
+                        break;
+                    }
+                    else if (targetPlayer->IsBeingTeleported())
+                    {
+                        ResetMovement();
+                        break;
+                    }
                 }
-                float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
-                float nearX = 0, nearY = 0, nearZ = 0;
-                float dynamicAngle = M_PI / 16;
-                if (distanceInRange < INTERACTION_DISTANCE)
+            }
+            float unitTargetDistance = me->GetDistance(chaseTarget);
+            if (unitTargetDistance > VISIBILITY_DISTANCE_LARGE)
+            {
+                ResetMovement();
+                break;
+            }
+            if (me->GetTarget() != ogChaseTarget)
+            {
+                me->SetSelection(ogChaseTarget);
+                me->SetTarget(ogChaseTarget);
+            }
+            if (unitTargetDistance >= chaseDistanceMin - MIN_DISTANCE_GAP  && unitTargetDistance < chaseDistanceMax + MIN_DISTANCE_GAP)
+            {
+                if (me->IsWithinLOSInMap(chaseTarget))
                 {
-                    dynamicAngle = M_PI / 8;
+                    if (me->isMoving())
+                    {
+                        me->StopMoving();
+                    }
+                    chasePositionOK = true;
                 }
-                float chaseAngle = chaseTarget->GetAngle(me);
-                chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
-                chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, me->GetCombatReach(), distanceInRange, chaseAngle);
-                MoveTargetPosition(nearX, nearY, nearZ);
+                else
+                {
+                    chasePositionOK = false;
+                }
+            }
+            else
+            {
+                chasePositionOK = false;
+                if (!me->isMoving())
+                {
+                    if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+                    {
+                        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                    }
+                    float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
+                    float nearX = 0, nearY = 0, nearZ = 0;
+                    float dynamicAngle = M_PI / 16;
+                    if (distanceInRange < INTERACTION_DISTANCE)
+                    {
+                        dynamicAngle = M_PI / 8;
+                    }
+                    float chaseAngle = chaseTarget->GetAngle(me);
+                    chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
+                    chaseTarget->GetNearPoint(me, nearX, nearY, nearZ, me->GetCombatReach(), distanceInRange, chaseAngle);
+                    MoveTargetPosition(nearX, nearY, nearZ);
+                }
             }
         }
         else
@@ -187,7 +273,7 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
     {
         return false;
     }
-    if (me->IsNonMeleeSpellCast(false))
+    if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return true;
     }
@@ -223,44 +309,34 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
             return true;
         }
     }
-    ResetMovement();
     ogChaseTarget = pmChaseTarget->GetGUID();
     activeMovementType = NingerMovementType::NingerMovementType_Chase;
     if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
     {
         me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
     }
-    bool distanceValid = false;
-    if (unitTargetDistance < chaseDistanceMax + MIN_DISTANCE_GAP)
-    {
-        if (chaseDistanceMin > MELEE_MIN_DISTANCE)
-        {
-            if (unitTargetDistance > chaseDistanceMin)
-            {
-                distanceValid = true;
-            }
-            else
-            {
-                distanceValid = false;
-            }
-        }
-        else
-        {
-            distanceValid = true;
-        }
-    }
-    if (distanceValid)
+    if (unitTargetDistance >= chaseDistanceMin - MIN_DISTANCE_GAP && unitTargetDistance >= MELEE_MIN_DISTANCE && unitTargetDistance < chaseDistanceMax + MIN_DISTANCE_GAP)
     {
         if (me->IsWithinLOSInMap(pmChaseTarget))
         {
             if (!me->isInFront(pmChaseTarget, M_PI / 4))
             {
+                chasePositionOK = false;
                 me->SetFacingToObject(pmChaseTarget);
             }
+            else
+            {
+                chasePositionOK = true;
+            }
+        }
+        else
+        {
+            chasePositionOK = false;
         }
     }
     else
     {
+        chasePositionOK = false;
         float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
         float nearX = 0, nearY = 0, nearZ = 0;
         float dynamicAngle = M_PI / 16;
@@ -271,6 +347,95 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
         float chaseAngle = pmChaseTarget->GetAngle(me);
         chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
         pmChaseTarget->GetNearPoint(me, nearX, nearY, nearZ, me->GetCombatReach(), distanceInRange, chaseAngle);
+        MoveTargetPosition(nearX, nearY, nearZ);
+    }
+    return true;
+}
+
+bool NingerMovement::Follow(Unit* pmFollowTarget, float pmFollowDistanceMin, float pmFollowDistanceMax)
+{
+    if (!me)
+    {
+        return false;
+    }
+    if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (me->HasAuraType(SPELL_AURA_MOD_PACIFY))
+    {
+        return false;
+    }
+    if (me->HasUnitState(UnitState::UNIT_STATE_NOT_MOVE))
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return true;
+    }
+    if (!pmFollowTarget)
+    {
+        return false;
+    }
+    if (me->GetMapId() != pmFollowTarget->GetMapId())
+    {
+        return false;
+    }
+    float unitTargetDistance = me->GetDistance(pmFollowTarget);
+    if (unitTargetDistance > VISIBILITY_DISTANCE_LARGE)
+    {
+        return false;
+    }
+    if (pmFollowTarget->GetTypeId() == TypeID::TYPEID_PLAYER)
+    {
+        if (Player* targetPlayer = pmFollowTarget->ToPlayer())
+        {
+            if (targetPlayer->IsBeingTeleported())
+            {
+                return false;
+            }
+        }
+    }
+    chaseDistanceMin = pmFollowDistanceMin;
+    chaseDistanceMax = pmFollowDistanceMax;
+    if (activeMovementType == NingerMovementType::NingerMovementType_Follow)
+    {
+        if (ogChaseTarget == pmFollowTarget->GetGUID())
+        {
+            return true;
+        }
+    }
+    ogChaseTarget = pmFollowTarget->GetGUID();
+    activeMovementType = NingerMovementType::NingerMovementType_Follow;
+    if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+    {
+        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+    }
+    if (unitTargetDistance >= chaseDistanceMin - MIN_DISTANCE_GAP && unitTargetDistance < chaseDistanceMax + MIN_DISTANCE_GAP)
+    {
+        if (me->IsWithinLOSInMap(pmFollowTarget))
+        {
+            chasePositionOK = true;
+        }
+        else
+        {
+            chasePositionOK = false;
+        }
+    }
+    else
+    {
+        chasePositionOK = false;
+        float distanceInRange = frand(chaseDistanceMin, chaseDistanceMax);
+        float nearX = 0, nearY = 0, nearZ = 0;
+        float dynamicAngle = M_PI / 16;
+        if (distanceInRange < INTERACTION_DISTANCE)
+        {
+            dynamicAngle = M_PI / 8;
+        }
+        float chaseAngle = pmFollowTarget->GetAngle(me);
+        chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
+        pmFollowTarget->GetNearPoint(me, nearX, nearY, nearZ, me->GetCombatReach(), distanceInRange, chaseAngle);
         MoveTargetPosition(nearX, nearY, nearZ);
     }
     return true;
@@ -299,7 +464,7 @@ void NingerMovement::MovePoint(float pmX, float pmY, float pmZ, uint32 pmLimitDe
     {
         return;
     }
-    if (me->IsNonMeleeSpellCast(false))
+    if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return;
     }
@@ -341,11 +506,6 @@ NingerAction_Base::NingerAction_Base()
 {
     me = nullptr;
     rm = nullptr;
-    maxTalentTab = 0;
-    if (me)
-    {
-        maxTalentTab = me->GetMostPointsTalentTree();
-    }
     if (rm)
     {
         rm->ResetMovement();
@@ -363,15 +523,10 @@ void NingerAction_Base::Prepare()
 void NingerAction_Base::Reset()
 {
     rti = -1;
-    if (me)
-    {
-        maxTalentTab = me->GetMostPointsTalentTree();
-    }
     if (rm)
     {
         rm->ResetMovement();
     }
-    maxTalentTab = 0;
     chaseDistanceMin = 1.0f;
     chaseDistanceMax = 3.0f;
     rti = -1;
@@ -380,15 +535,15 @@ void NingerAction_Base::Reset()
 
 void NingerAction_Base::Update(uint32 pmDiff)
 {
-
+    rm->Update(pmDiff);
 }
 
-bool NingerAction_Base::DPS(Unit* pmTarget, bool pmChase, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax)
+bool NingerAction_Base::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax)
 {
     return false;
 }
 
-bool NingerAction_Base::Tank(Unit* pmTarget, bool pmChase, bool pmAOE)
+bool NingerAction_Base::Tank(Unit* pmTarget, bool pmAOE)
 {
     return false;
 }
@@ -423,7 +578,7 @@ bool NingerAction_Base::Revive(Player* pmTarget)
     return false;
 }
 
-bool NingerAction_Base::Petting(bool pmSummon)
+bool NingerAction_Base::Petting(bool pmSummon, bool pmReset)
 {
     return false;
 }
@@ -433,1046 +588,65 @@ void NingerAction_Base::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpeci
 
 }
 
+void NingerAction_Base::ResetTalent()
+{
+
+}
+
 void NingerAction_Base::InitializeEquipments(bool pmReset)
 {
 
 }
 
-void NingerAction_Base::HandleChatCommand(Player* pmSender, std::string pmCMD)
+void NingerAction_Base::LearnTalent(uint32 pmTalentId, uint32 pmMaxRank)
 {
-    std::vector<std::string> commandVector = sNingerManager->SplitString(pmCMD, " ", true);
-    std::string commandName = commandVector.at(0);
-    if (commandName == "role")
+    if (!me)
     {
-        std::ostringstream replyStream;
-        if (commandVector.size() > 1)
-        {
-            std::string newRole = commandVector.at(1);
-            if (newRole == "tank")
-            {
-                me->groupRole = GroupRole::GroupRole_Tank;
-            }
-            else if (newRole == "healer")
-            {
-                me->groupRole = GroupRole::GroupRole_Healer;
-            }
-            else if (newRole == "dps")
-            {
-                me->groupRole = GroupRole::GroupRole_DPS;
-            }
-        }
-        if (me->groupRole == GroupRole::GroupRole_Tank)
-        {
-            replyStream << "My group role is tank";
-        }
-        else if (me->groupRole == GroupRole::GroupRole_Healer)
-        {
-            replyStream << "My group role is healer";
-        }
-        else if (me->groupRole == GroupRole::GroupRole_DPS)
-        {
-            replyStream << "My group role is dps";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
+        return;
     }
-    else if (commandName == "engage")
+    uint32 checkRank = 0;
+    while (checkRank < pmMaxRank)
     {
-        if (NingerStrategy_Base* ns = me->strategyMap[me->activeStrategyIndex])
-        {
-            ns->chase = true;
-            ns->follow = true;
-            if (Unit* target = pmSender->GetSelectedUnit())
-            {
-                if (ns->Engage(target))
-                {
-                    int engageLimit = DEFAULT_ENGAGE_LIMIT_DELAY;
-                    if (commandVector.size() > 1)
-                    {
-                        std::string checkStr = commandVector.at(1);
-                        engageLimit = atoi(checkStr.c_str());
-                    }
-                    ns->engageLimit = engageLimit;
-                    std::ostringstream replyStream;
-                    replyStream << "Try to engage " << target->GetName();                    
-                    me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-                }
-            }
-        }
+        me->LearnTalent(pmTalentId, checkRank);
+        checkRank++;
     }
-    else if (commandName == "tank")
-    {
-        if (NingerStrategy_Base* ns = me->strategyMap[me->activeStrategyIndex])
-        {
-            ns->chase = true;
-            ns->follow = true;
-            if (Unit* target = pmSender->GetSelectedUnit())
-            {
-                if (Tank(target, ns->chase, ns->aoe))
-                {
-                    int engageLimit = DEFAULT_ENGAGE_LIMIT_DELAY;
-                    if (commandVector.size() > 1)
-                    {
-                        std::string checkStr = commandVector.at(1);
-                        engageLimit = atoi(checkStr.c_str());
-                    }
-                    ns->engageLimit = engageLimit;
-                    std::ostringstream replyStream;
-                    replyStream << "Try to engage " << target->GetName();
-                    me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-                }
-            }
-        }
-    }
-    else if (commandName == "revive")
-    {
-        if (pmReceiver->IsAlive())
-        {
-            receiverAI->reviveDelay = 2000;
-            if (Script_Base* sb = receiverAI->sb)
-            {
-                if (NingerMovement* rm = sb->rm)
-                {
-                    rm->ResetMovement();
-                }
-            }
-        }
-    }
-    else if (commandName == "follow")
-    {
-        std::ostringstream replyStream;
-        bool takeAction = true;
-        if (commandVector.size() > 1)
-        {
-            std::string cmdDistanceStr = commandVector.at(1);
-            float cmdDistance = atof(cmdDistanceStr.c_str());
-            if (cmdDistance == 0.0f)
-            {
-                receiverAI->following = false;
-                replyStream << "Stop following. ";
-                takeAction = false;
-            }
-            else if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE)
-            {
-                receiverAI->followDistance = cmdDistance;
-                replyStream << "Distance updated. ";
-            }
-            else
-            {
-                replyStream << "Distance is not valid. ";
-                takeAction = false;
-            }
-        }
-        if (takeAction)
-        {
-            receiverAI->eatDelay = 0;
-            receiverAI->drinkDelay = 0;
-            receiverAI->staying = false;
-            receiverAI->holding = false;
-            receiverAI->following = true;
-            if (receiverAI->Follow())
-            {
-                replyStream << "Following " << receiverAI->followDistance;
-            }
-            else
-            {
-                replyStream << "can not follow";
-            }
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "chase")
-    {
-        std::ostringstream replyStream;
-        bool takeAction = true;
-        if (commandVector.size() > 2)
-        {
-            std::string cmdMinDistanceStr = commandVector.at(1);
-            float cmdMinDistance = atof(cmdMinDistanceStr.c_str());
-            if (cmdMinDistance < MELEE_MIN_DISTANCE)
-            {
-                cmdMinDistance = MELEE_MIN_DISTANCE;
-            }
-            std::string cmdMaxDistanceStr = commandVector.at(2);
-            float cmdMaxDistance = atof(cmdMaxDistanceStr.c_str());
-            if (cmdMaxDistance > RANGE_HEAL_DISTANCE)
-            {
-                cmdMaxDistance = RANGE_HEAL_DISTANCE;
-            }
-            else if (cmdMaxDistance < MELEE_MAX_DISTANCE)
-            {
-                cmdMaxDistance = MELEE_MAX_DISTANCE;
-            }
-            if (cmdMinDistance > cmdMaxDistance)
-            {
-                cmdMinDistance = cmdMaxDistance - MELEE_MIN_DISTANCE;
-            }
-            receiverAI->chaseDistanceMin = cmdMinDistance;
-            receiverAI->chaseDistanceMax = cmdMaxDistance;
-            replyStream << "Chase distance range updated. " << receiverAI->chaseDistanceMin << " " << receiverAI->chaseDistanceMax;
-        }
-        else
-        {
-            replyStream << "Chase distance range is " << receiverAI->chaseDistanceMin << " " << receiverAI->chaseDistanceMax;
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "stay")
-    {
-        std::string targetGroupRole = "";
-        if (commandVector.size() > 1)
-        {
-            targetGroupRole = commandVector.at(1);
-        }
-        if (receiverAI->Stay(targetGroupRole))
-        {
-            WhisperTo(pmSender, "Staying", Language::LANG_UNIVERSAL, pmReceiver);
-        }
-    }
-    else if (commandName == "hold")
-    {
-        std::string targetGroupRole = "";
-        if (commandVector.size() > 1)
-        {
-            targetGroupRole = commandVector.at(1);
-        }
-        if (receiverAI->Hold(targetGroupRole))
-        {
-            WhisperTo(pmReceiver, "Holding", Language::LANG_UNIVERSAL, pmSender);
-        }
-    }
-    else if (commandName == "rest")
-    {
-        std::ostringstream replyStream;
-        if (receiverAI->sb->Eat(true))
-        {
-            receiverAI->eatDelay = DEFAULT_REST_DELAY;
-            receiverAI->drinkDelay = 1000;
-            replyStream << "Resting";
-        }
-        else
-        {
-            replyStream << "Can not rest";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "who")
-    {
-        if (Awareness_Base* ningerAI = pmReceiver->awarenessMap[pmReceiver->activeAwarenessIndex])
-        {
-            if (Script_Base* sb = ningerAI->sb)
-            {
-                WhisperTo(pmSender, characterTalentTabNameMap[pmReceiver->getClass()][sb->maxTalentTab], Language::LANG_UNIVERSAL, pmReceiver);
-            }
-        }
-    }
-    else if (commandName == "assemble")
-    {
-        std::ostringstream replyStream;
-        if (receiverAI->teleportAssembleDelay > 0)
-        {
-            replyStream << "I am on the way";
-        }
-        else
-        {
-            if (pmReceiver->IsAlive())
-            {
-                if (pmReceiver->GetDistance(pmSender) < VISIBILITY_DISTANCE_TINY)
-                {
-                    receiverAI->teleportAssembleDelay = urand(10 * IN_MILLISECONDS, 15 * IN_MILLISECONDS);
-                    replyStream << "We are close, I will teleport to you in " << receiverAI->teleportAssembleDelay / 1000 << " seconds";
-                }
-                else
-                {
-                    receiverAI->teleportAssembleDelay = urand(30 * IN_MILLISECONDS, 1 * MINUTE * IN_MILLISECONDS);
-                    replyStream << "I will teleport to you in " << receiverAI->teleportAssembleDelay / 1000 << " seconds";
-                }
-            }
-            else
-            {
-                receiverAI->teleportAssembleDelay = urand(1 * MINUTE * IN_MILLISECONDS, 2 * MINUTE * IN_MILLISECONDS);
-                replyStream << "I will teleport to you and revive in " << receiverAI->teleportAssembleDelay / 1000 << " seconds";
-            }
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "gather")
-    {
-        std::ostringstream replyStream;
-        if (receiverAI->moveDelay > 0)
-        {
-            replyStream << "I am on the way";
-        }
-        else
-        {
-            if (pmReceiver->IsAlive())
-            {
-                if (pmReceiver->GetDistance(pmSender) < RANGE_HEAL_DISTANCE)
-                {
-                    if (pmReceiver->IsNonMeleeSpellCast(false))
-                    {
-                        pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-                        pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-                    }
-                    pmReceiver->GetMotionMaster()->Initialize();
-                    pmReceiver->StopMoving();
-                    receiverAI->eatDelay = 0;
-                    receiverAI->drinkDelay = 0;
-                    int moveDelay = 1000;
-                    if (commandVector.size() > 1)
-                    {
-                        std::string moveDelayStr = commandVector.at(1);
-                        moveDelay = atoi(moveDelayStr.c_str());
-                        if (moveDelay < 1000 || moveDelay > 6000)
-                        {
-                            moveDelay = 1000;
-                        }
-                    }
-                    receiverAI->moveDelay = moveDelay;
-                    receiverAI->sb->rm->MovePoint(pmSender->GetPosition(), moveDelay);
-                    replyStream << "I will move to you";
-                }
-                else
-                {
-                    replyStream << "too far away";
-                }
-            }
-            else
-            {
-                replyStream << "I am dead ";
-            }
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "cast")
-    {
-        std::ostringstream replyStream;
-        if (pmReceiver->IsAlive())
-        {
-            if (commandVector.size() > 1)
-            {
-                std::ostringstream targetStream;
-                uint8 arrayCount = 0;
-                for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
-                {
-                    if (arrayCount > 0)
-                    {
-                        targetStream << (*it) << " ";
-                    }
-                    arrayCount++;
-                }
-                std::string spellName = TrimString(targetStream.str());
-                Unit* senderTarget = pmSender->GetSelectedUnit();
-                if (!senderTarget)
-                {
-                    senderTarget = pmReceiver;
-                }
-                if (receiverAI->sb->CastSpell(senderTarget, spellName, VISIBILITY_DISTANCE_NORMAL))
-                {
-                    replyStream << "Cast spell " << spellName << " on " << senderTarget->GetName();
-                }
-                else
-                {
-                    replyStream << "Can not cast spell " << spellName << " on " << senderTarget->GetName();
-                }
-            }
-        }
-        else
-        {
-            replyStream << "I am dead";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "cancel")
-    {
-        std::ostringstream replyStream;
-        if (pmReceiver->IsAlive())
-        {
-            if (commandVector.size() > 1)
-            {
-                std::ostringstream targetStream;
-                uint8 arrayCount = 0;
-                for (std::vector<std::string>::iterator it = commandVector.begin(); it != commandVector.end(); it++)
-                {
-                    if (arrayCount > 0)
-                    {
-                        targetStream << (*it) << " ";
-                    }
-                    arrayCount++;
-                }
-                std::string spellName = TrimString(targetStream.str());
-                if (receiverAI->sb->CancelAura(spellName))
-                {
-                    replyStream << "Aura canceled " << spellName;
-                }
-                else
-                {
-                    replyStream << "Can not cancel aura " << spellName;
-                }
-            }
-        }
-        else
-        {
-            replyStream << "I am dead";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "use")
-    {
-        std::ostringstream replyStream;
-        if (pmReceiver->IsAlive())
-        {
-            if (commandVector.size() > 1)
-            {
-                std::string useType = commandVector.at(1);
-                if (useType == "go")
-                {
-                    if (commandVector.size() > 2)
-                    {
-                        std::ostringstream goNameStream;
-                        uint32 checkPos = 2;
-                        while (checkPos < commandVector.size())
-                        {
-                            goNameStream << commandVector.at(checkPos) << " ";
-                            checkPos++;
-                        }
-                        std::string goName = TrimString(goNameStream.str());
-                        bool validToUse = false;
-                        std::list<GameObject*> nearGOList;
-                        pmReceiver->GetGameObjectListWithEntryInGrid(nearGOList, 0, MELEE_MAX_DISTANCE);
-                        for (std::list<GameObject*>::iterator it = nearGOList.begin(); it != nearGOList.end(); it++)
-                        {
-                            if ((*it)->GetName() == goName)
-                            {
-                                pmReceiver->SetFacingToObject((*it));
-                                pmReceiver->StopMoving();
-                                pmReceiver->GetMotionMaster()->Initialize();
-                                (*it)->Use(pmReceiver);
-                                replyStream << "Use game object : " << goName;
-                                validToUse = true;
-                                break;
-                            }
-                        }
-                        if (!validToUse)
-                        {
-                            replyStream << "No go with name " << goName << " nearby";
-                        }
-                    }
-                    else
-                    {
-                        replyStream << "No go name";
-                    }
-                }
-                else if (useType == "item")
-                {
+}
 
-                }
-                else
-                {
-                    replyStream << "Unknown type";
-                }
-            }
-            else
-            {
-                replyStream << "Use what?";
-            }
-        }
-        else
-        {
-            replyStream << "I am dead";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "stop")
+void NingerAction_Base::TrainSpells(uint32 pmTrainerEntry)
+{
+    TrainerSpellData const* trainer_spells = sObjectMgr->GetNpcTrainerSpells(pmTrainerEntry);
+    bool hasNew = false;
+    while (true)
     {
-        std::ostringstream replyStream;
-        if (pmReceiver->IsAlive())
+        hasNew = false;
+        for (TrainerSpellMap::const_iterator itr = trainer_spells->spellList.begin(); itr != trainer_spells->spellList.end(); ++itr)
         {
-            pmReceiver->StopMoving();
-            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
-            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-            pmReceiver->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
-            pmReceiver->AttackStop();
-            if (Script_Base* sb = receiverAI->sb)
+            TrainerSpell const* tSpell = &itr->second;
+            if (me->HasSpell(tSpell->spell))
             {
-                sb->PetStop();
-                sb->ClearTarget();
+                continue;
             }
-            receiverAI->moveDelay = 2000;
-            replyStream << "Stopped";
-        }
-        else
-        {
-            replyStream << "I am dead";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "delay")
-    {
-        std::ostringstream replyStream;
-        if (commandVector.size() > 1)
-        {
-            int delayMS = std::stoi(commandVector.at(1));
-            receiverAI->dpsDelay = delayMS;
-            replyStream << "DPS delay set to : " << delayMS;
-        }
-        else
-        {
-            replyStream << "DPS delay is : " << receiverAI->dpsDelay;
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "attackers")
-    {
-        std::ostringstream replyStream;
-        if (pmReceiver->IsAlive())
-        {
-            replyStream << "attackers list : ";
-            std::unordered_set<Unit*> attackers = pmReceiver->getAttackers();
-            for (std::unordered_set<Unit*>::iterator aIT = attackers.begin(); aIT != attackers.end(); aIT++)
+            if (tSpell->reqSpell && !me->HasSpell(tSpell->reqSpell))
             {
-                if (Unit* eachAttacker = *aIT)
-                {
-                    replyStream << eachAttacker->GetName() << ", ";
-                }
+                continue;
+            }
+            TrainerSpellState state = me->GetTrainerSpellState(tSpell);
+            if (state == TrainerSpellState::TRAINER_SPELL_GREEN)
+            {
+                me->learnSpell(tSpell->spell);
+                hasNew = true;
             }
         }
-        else
+        if (!hasNew)
         {
-            replyStream << "I am dead";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "cure")
-    {
-        std::ostringstream replyStream;
-        if (commandVector.size() > 1)
-        {
-            std::string cureCMD = commandVector.at(1);
-            if (cureCMD == "on")
-            {
-                receiverAI->cure = true;
-            }
-            else if (cureCMD == "off")
-            {
-                receiverAI->cure = false;
-            }
-            else
-            {
-                replyStream << "Unknown state";
-            }
-        }
-        if (receiverAI->cure)
-        {
-            replyStream << "auto cure is on";
-        }
-        else
-        {
-            replyStream << "auto cure is off";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "petting")
-    {
-        std::ostringstream replyStream;
-        if (commandVector.size() > 1)
-        {
-            std::string cureCMD = commandVector.at(1);
-            if (cureCMD == "on")
-            {
-                receiverAI->petting = true;
-            }
-            else if (cureCMD == "off")
-            {
-                receiverAI->petting = false;
-            }
-            else
-            {
-                replyStream << "Unknown state";
-            }
-        }
-        if (receiverAI->petting)
-        {
-            replyStream << "petting is on";
-        }
-        else
-        {
-            replyStream << "petting is off";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "aoe")
-    {
-        std::ostringstream replyStream;
-        if (commandVector.size() > 1)
-        {
-            std::string on = commandVector.at(1);
-            if (on == "on")
-            {
-                receiverAI->aoe = true;
-            }
-            else if (on == "off")
-            {
-                receiverAI->aoe = false;
-            }
-        }
-        if (receiverAI->aoe)
-        {
-            replyStream << "AOE is on";
-        }
-        else
-        {
-            replyStream << "AOE is off";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "mark")
-    {
-        std::ostringstream replyStream;
-        if (commandVector.size() > 1)
-        {
-            std::string markCMD = commandVector.at(1);
-            if (markCMD == "on")
-            {
-                receiverAI->mark = true;
-            }
-            else if (markCMD == "off")
-            {
-                receiverAI->mark = false;
-            }
-            else
-            {
-                replyStream << "Unknown state";
-            }
-        }
-        if (receiverAI->mark)
-        {
-            replyStream << "Mark is on";
-        }
-        else
-        {
-            replyStream << "Mark is off";
-        }
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "emote")
-    {
-        if (pmReceiver->IsAlive())
-        {
-            if (commandVector.size() > 1)
-            {
-                int emoteCMD = std::stoi(commandVector.at(1));
-                pmReceiver->HandleEmoteCommand((Emote)emoteCMD);
-            }
-            else
-            {
-                pmReceiver->AttackStop();
-                pmReceiver->CombatStop();
-            }
-        }
-        else
-        {
-            WhisperTo(pmSender, "I am dead", Language::LANG_UNIVERSAL, pmReceiver);
-        }
-    }
-    else if (commandName == "pa")
-    {
-        if (pmReceiver->getClass() == Classes::CLASS_PALADIN)
-        {
-            std::ostringstream replyStream;
-            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string auratypeName = commandVector.at(1);
-                    if (auratypeName == "concentration")
-                    {
-                        sp->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                    }
-                    else if (auratypeName == "devotion")
-                    {
-                        sp->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                    }
-                    else if (auratypeName == "retribution")
-                    {
-                        sp->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                    }
-                    else if (auratypeName == "fire")
-                    {
-                        sp->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                    }
-                    else if (auratypeName == "frost")
-                    {
-                        sp->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                    }
-                    else if (auratypeName == "shadow")
-                    {
-                        sp->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                    }
-                    else
-                    {
-                        replyStream << "Unknown type";
-                    }
-                }
-                switch (sp->auraType)
-                {
-                case PaladinAuraType::PaladinAuraType_Concentration:
-                {
-                    replyStream << "concentration";
-                    break;
-                }
-                case PaladinAuraType::PaladinAuraType_Devotion:
-                {
-                    replyStream << "devotion";
-                    break;
-                }
-                case PaladinAuraType::PaladinAuraType_Retribution:
-                {
-                    replyStream << "retribution";
-                    break;
-                }
-                case PaladinAuraType::PaladinAuraType_FireResistant:
-                {
-                    replyStream << "fire";
-                    break;
-                }
-                case PaladinAuraType::PaladinAuraType_FrostResistant:
-                {
-                    replyStream << "frost";
-                    break;
-                }
-                case PaladinAuraType::PaladinAuraType_ShadowResistant:
-                {
-                    replyStream << "shadow";
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
-                }
-            }
-            me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-        }
-    }
-    else if (commandName == "pb")
-    {
-        if (pmReceiver->getClass() == Classes::CLASS_PALADIN)
-        {
-            std::ostringstream replyStream;
-            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string blessingTypeName = commandVector.at(1);
-                    if (blessingTypeName == "kings")
-                    {
-                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-                    }
-                    else if (blessingTypeName == "might")
-                    {
-                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-                    }
-                    else if (blessingTypeName == "wisdom")
-                    {
-                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
-                    }
-                    else if (blessingTypeName == "salvation")
-                    {
-                        sp->blessingType = PaladinBlessingType::PaladinBlessingType_Salvation;
-                    }
-                    else
-                    {
-                        replyStream << "Unknown type";
-                    }
-                }
-                switch (sp->blessingType)
-                {
-                case PaladinBlessingType::PaladinBlessingType_Kings:
-                {
-                    replyStream << "kings";
-                    break;
-                }
-                case PaladinBlessingType::PaladinBlessingType_Might:
-                {
-                    replyStream << "might";
-                    break;
-                }
-                case PaladinBlessingType::PaladinBlessingType_Wisdom:
-                {
-                    replyStream << "wisdom";
-                    break;
-                }
-                case PaladinBlessingType::PaladinBlessingType_Salvation:
-                {
-                    replyStream << "salvation";
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
-                }
-            }
-            me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-        }
-    }
-    else if (commandName == "ps")
-    {
-        if (pmReceiver->getClass() == Classes::CLASS_PALADIN)
-        {
-            std::ostringstream replyStream;
-            if (Script_Paladin* sp = (Script_Paladin*)receiverAI->sb)
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string sealTypeName = commandVector.at(1);
-                    if (sealTypeName == "righteousness")
-                    {
-                        sp->sealType = PaladinSealType::PaladinSealType_Righteousness;
-                    }
-                    else if (sealTypeName == "justice")
-                    {
-                        sp->sealType = PaladinSealType::PaladinSealType_Justice;
-                    }
-                    else if (sealTypeName == "command")
-                    {
-                        sp->sealType = PaladinSealType::PaladinSealType_Command;
-                    }
-                    else
-                    {
-                        replyStream << "Unknown type";
-                    }
-                }
-                switch (sp->sealType)
-                {
-                case PaladinSealType::PaladinSealType_Righteousness:
-                {
-                    replyStream << "righteousness";
-                    break;
-                }
-                case PaladinSealType::PaladinSealType_Justice:
-                {
-                    replyStream << "justice";
-                    break;
-                }
-                case PaladinSealType::PaladinSealType_Command:
-                {
-                    replyStream << "command";
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
-                }
-            }
-            me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-        }
-    }
-    else if (commandName == "ha")
-    {
-        if (pmReceiver->getClass() == Classes::CLASS_HUNTER)
-        {
-            std::ostringstream replyStream;
-            if (Script_Hunter* sh = (Script_Hunter*)receiverAI->sb)
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string aspectName = commandVector.at(1);
-                    if (aspectName == "hawk")
-                    {
-                        sh->aspectType = HunterAspectType::HunterAspectType_Hawk;
-                    }
-                    else if (aspectName == "monkey")
-                    {
-                        sh->aspectType = HunterAspectType::HunterAspectType_Monkey;
-                    }
-                    else if (aspectName == "wild")
-                    {
-                        sh->aspectType = HunterAspectType::HunterAspectType_Wild;
-                    }
-                    else if (aspectName == "pack")
-                    {
-                        sh->aspectType = HunterAspectType::HunterAspectType_Pack;
-                    }
-                    else
-                    {
-                        replyStream << "Unknown type";
-                    }
-                }
-                switch (sh->aspectType)
-                {
-                case HunterAspectType::HunterAspectType_Hawk:
-                {
-                    replyStream << "hawk";
-                    break;
-                }
-                case HunterAspectType::HunterAspectType_Monkey:
-                {
-                    replyStream << "monkey";
-                    break;
-                }
-                case HunterAspectType::HunterAspectType_Wild:
-                {
-                    replyStream << "wild";
-                    break;
-                }
-                case HunterAspectType::HunterAspectType_Pack:
-                {
-                    replyStream << "pack";
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
-                }
-            }
-            me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-        }
-    }
-    else if (commandName == "equip")
-    {
-        if (commandVector.size() > 1)
-        {
-            std::string equipType = commandVector.at(1);
-            if (equipType == "molten core")
-            {
-                if (pmReceiver->getClass() == Classes::CLASS_DRUID)
-                {
-                    for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
-                    {
-                        if (Item* currentEquip = pmReceiver->GetItemByPos(INVENTORY_SLOT_BAG_0, checkEquipSlot))
-                        {
-                            pmReceiver->DestroyItem(INVENTORY_SLOT_BAG_0, checkEquipSlot, true);
-                        }
-                    }
-                    EquipNewItem(pmReceiver, 16983, EquipmentSlots::EQUIPMENT_SLOT_HEAD);
-                    EquipNewItem(pmReceiver, 19139, EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS);
-                    EquipNewItem(pmReceiver, 16833, EquipmentSlots::EQUIPMENT_SLOT_CHEST);
-                    EquipNewItem(pmReceiver, 11764, EquipmentSlots::EQUIPMENT_SLOT_WRISTS);
-                    EquipNewItem(pmReceiver, 16831, EquipmentSlots::EQUIPMENT_SLOT_HANDS);
-                    EquipNewItem(pmReceiver, 19149, EquipmentSlots::EQUIPMENT_SLOT_WAIST);
-                    EquipNewItem(pmReceiver, 15054, EquipmentSlots::EQUIPMENT_SLOT_LEGS);
-                    EquipNewItem(pmReceiver, 16982, EquipmentSlots::EQUIPMENT_SLOT_FEET);
-                    EquipNewItem(pmReceiver, 18803, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND);
-                    EquipNewItem(pmReceiver, 2802, EquipmentSlots::EQUIPMENT_SLOT_TRINKET1);
-                    EquipNewItem(pmReceiver, 18406, EquipmentSlots::EQUIPMENT_SLOT_TRINKET2);
-                    EquipNewItem(pmReceiver, 18398, EquipmentSlots::EQUIPMENT_SLOT_FINGER1);
-                    EquipNewItem(pmReceiver, 18813, EquipmentSlots::EQUIPMENT_SLOT_FINGER2);
-                    EquipNewItem(pmReceiver, 18811, EquipmentSlots::EQUIPMENT_SLOT_BACK);
-                    EquipNewItem(pmReceiver, 16309, EquipmentSlots::EQUIPMENT_SLOT_NECK);
-                    std::ostringstream replyStream;
-                    replyStream << "Equip all fire resistance gears.";
-                    me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-                }
-            }
-            else if (equipType == "reset")
-            {
-                InitializeEquipments(pmReceiver, true);
-                std::ostringstream replyStream;
-                replyStream << "All my equipments are reset.";
-                me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-            }
-        }
-    }
-    else if (commandName == "rti")
-    {
-        int targetIcon = -1;
-        if (commandVector.size() > 1)
-        {
-            std::string iconIndex = commandVector.at(1);
-            targetIcon = atoi(iconIndex.c_str());
-        }
-        if (targetIcon >= 0 && targetIcon < TARGETICONCOUNT)
-        {
-            receiverAI->sb->rti = targetIcon;
-        }
-        std::ostringstream replyStream;
-        replyStream << "RTI is " << receiverAI->sb->rti;
-        me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-    }
-    else if (commandName == "assist")
-    {
-        if (receiverAI->sb->Assist(nullptr))
-        {
-            receiverAI->assistDelay = 5000;
-            std::ostringstream replyStream;
-            replyStream << "Try to pin down my RTI : " << receiverAI->sb->rti;
-            me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
-        }
-    }
-    else if (commandName == "prepare")
-    {
-        sNingerManager->PrepareNinger(pmReceiver);
-    }
-    else if (commandName == "wlc")
-    {
-        if (pmReceiver->getClass() == Classes::CLASS_WARLOCK)
-        {
-            std::ostringstream replyStream;
-            if (Script_Warlock* swl = (Script_Warlock*)receiverAI->sb)
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string curseName = commandVector.at(1);
-                    if (curseName == "none")
-                    {
-                        swl->curseType = WarlockCurseType::WarlockCurseType_None;
-                    }
-                    else if (curseName == "element")
-                    {
-                        swl->curseType = WarlockCurseType::WarlockCurseType_Element;
-                    }
-                    else if (curseName == "weakness")
-                    {
-                        swl->curseType = WarlockCurseType::WarlockCurseType_Weakness;
-                    }
-                    else if (curseName == "tongues")
-                    {
-                        swl->curseType = WarlockCurseType::WarlockCurseType_Tongues;
-                    }
-                    else
-                    {
-                        replyStream << "Unknown type";
-                    }
-                }
-                switch (swl->curseType)
-                {
-                case WarlockCurseType::WarlockCurseType_None:
-                {
-                    replyStream << "none";
-                    break;
-                }
-                case WarlockCurseType::WarlockCurseType_Element:
-                {
-                    replyStream << "element";
-                    break;
-                }
-                case WarlockCurseType::WarlockCurseType_Weakness:
-                {
-                    replyStream << "weakness";
-                    break;
-                }
-                case WarlockCurseType::WarlockCurseType_Tongues:
-                {
-                    replyStream << "tongues";
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
-                }
-            }
-            me->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmSender);
+            break;
         }
     }
 }
 
 void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, uint32 pmMaxRequiredLevel, uint32 pmModType)
 {
+    bool checkStat = true;
     uint32 inventoryType = 0;
     if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
     {
@@ -1500,7 +674,7 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
     }
     else if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_CHEST)
     {
-        inventoryType = 20;
+        inventoryType = 5;
     }
     else if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_LEGS)
     {
@@ -1528,7 +702,7 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
     }
     else if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_RANGED)
     {
-        inventoryType = 26;
+        inventoryType = 15;        
     }
     else
     {
@@ -1563,13 +737,20 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
         if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(*entryIt))
         {
             bool hasStat = false;
-            for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
+            if (checkStat)
             {
-                if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
-                {                    
-                    hasStat = true;
-                    break;
+                for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
+                {
+                    if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
+                    {
+                        hasStat = true;
+                        break;
+                    }
                 }
+            }
+            else
+            {
+                hasStat = true;
             }
             if (hasStat)
             {
@@ -1577,7 +758,7 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
                 {
                     uint16 dest = 0;
                     if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
-                    {                        
+                    {
                         me->EquipItem(dest, pItem, true);
                         break;
                     }
@@ -1637,7 +818,7 @@ bool NingerAction_Base::UseItem(Item* pmItem, Unit* pmTarget)
         return false;
     }
 
-    if (me->IsNonMeleeSpellCast(true))
+    if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return false;
     }
@@ -1661,7 +842,7 @@ bool NingerAction_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheck
     {
         return false;
     }
-    if (me->IsNonMeleeSpellCast(false))
+    if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return true;
     }
@@ -1961,11 +1142,11 @@ bool NingerAction_Base::Follow(Unit* pmTarget, float pmMinDistance, float pmMaxD
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
+    else if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return false;
     }
-    return rm->Chase(pmTarget, pmMinDistance, pmMaxDistance);
+    return rm->Follow(pmTarget, pmMinDistance, pmMaxDistance);
 }
 
 bool NingerAction_Base::RandomTeleport()

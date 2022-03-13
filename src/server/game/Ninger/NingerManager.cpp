@@ -228,16 +228,10 @@ void NingerManager::LogoutNingers()
 {
     for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
     {
-        if (Player* eachNinger = ObjectAccessor::FindPlayerByLowGUID((*reIT)->character_id))
+        if (NingerEntity* eachNinger = *reIT)
         {
-            if (eachNinger->IsInWorld())
-            {
-                if (WorldSession* ws = eachNinger->GetSession())
-                {
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Logout ninger %s", eachNinger->GetName().c_str());
-                    ws->LogoutPlayer(true);
-                }
-            }
+            eachNinger->entityState = NingerEntityState::NingerEntityState_DoLogoff;
+            eachNinger->checkDelay = 10;
         }
     }
 }
@@ -372,7 +366,19 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
     }
     else
     {
-        uint32 target_class = Classes::CLASS_PRIEST;
+        uint32 target_class = Classes::CLASS_HUNTER;
+        uint32 target_specialty = 1;
+        uint32 classRand = urand(1, 100);
+        if (classRand < 30)
+        {
+            target_class = Classes::CLASS_PRIEST;
+            target_specialty = 0;
+        }
+        else
+        {
+            target_class = Classes::CLASS_HUNTER;
+            target_specialty = 1;
+        }
         uint32 target_race = 0;
         if (pmAlliance)
         {
@@ -384,7 +390,6 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
             uint32 raceIndex = urand(0, hordeRaces[target_class].size() - 1);
             target_race = hordeRaces[target_class][raceIndex];
         }
-        uint32 target_specialty = 0;
         std::ostringstream sqlStream;
         sqlStream << "INSERT INTO ninger (ninger_id,account_id, account_name, character_id, target_level, target_race, target_class, target_specialty) VALUES (" << currentNingerCount << ", 0, '" << checkAccountName << "', 0, " << pmLevel << ", " << target_race << ", " << target_class << ", " << target_specialty << ")";
         std::string sql = sqlStream.str();
@@ -455,15 +460,15 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             }
             if (targetPlayer->groupRole == GroupRole::GroupRole_Tank)
             {
-                replyStream << "Group role is tank";
+                replyStream << "Role is tank";
             }
             else if (targetPlayer->groupRole == GroupRole::GroupRole_Healer)
             {
-                replyStream << "Group role is healer";
+                replyStream << "Role is healer";
             }
             else if (targetPlayer->groupRole == GroupRole::GroupRole_DPS)
             {
-                replyStream << "Group role is dps";
+                replyStream << "Role is dps";
             }
             if (pmTargetPlayer)
             {
@@ -472,7 +477,30 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             else
             {
                 sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-            }            
+            }
+        }
+    }
+    else if (commandName == "who")
+    {
+        if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+        else if (pmTargetPlayer)
+        {
+            std::ostringstream replyStream;
+            replyStream << characterTalentTabNameMap[pmTargetPlayer->getClass()][pmTargetPlayer->ningerAction->specialty];
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
         }
     }
     else if (commandName == "arrangement")
@@ -506,8 +534,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
 
                 for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                 {
-                    Player* member = groupRef->GetSource();
-                    if (member)
+                    if (Player* member = groupRef->GetSource())
                     {
                         //if (member->GetMapId() == 619)
                         //{
@@ -525,6 +552,10 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         //{
                         //    member->activeStrategyIndex = 0;
                         //}
+                        if (member->GetGUID() == pmPlayer->GetGUID())
+                        {
+                            continue;
+                        }
                         if (NingerStrategy_Base* ns = member->strategyMap[member->activeStrategyIndex])
                         {
                             ns->Reset();
@@ -695,45 +726,43 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
         }
         sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
     }
-    else if (commandName == "join")
+    else if (commandName == "assemble")
     {
         std::ostringstream replyStream;
-        if (!pmTargetPlayer)
+        Player* teleportTarget = pmPlayer->GetSelectedPlayer();
+        if (!teleportTarget)
         {
-            replyStream << "No target";
-            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-            return;
+            teleportTarget = pmPlayer;
         }
-        if (pmTargetGroup)
+        if (pmTargetPlayer)
+        {
+            pmTargetPlayer->teleportTargetGuid = teleportTarget->GetGUID().GetCounter();
+            if (!pmTargetPlayer->IsAlive())
+            {
+                pmTargetPlayer->teleportDelay = sNingerConfig->CorpseRunDelay;
+                pmTargetPlayer->reviveDelay = sNingerConfig->CorpseRunDelay + 5000;
+                replyStream << "I am dead, Prepare to do corpserun to " << teleportTarget->GetName() << " in " << pmTargetPlayer->teleportDelay / 1000 << " seconds";
+            }
+            else
+            {
+                pmTargetPlayer->teleportDelay = sNingerConfig->TeleportDelay;
+                replyStream << "Prepare to teleport to " << teleportTarget->GetName() << " in " << pmTargetPlayer->teleportDelay / 1000 << " seconds";
+            }
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+        }
+        else if (pmTargetGroup)
         {
             for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
             {
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmTargetPlayer->GetGUID())
+                    if (member->GetGUID() != teleportTarget->GetGUID())
                     {
-                        member->joinDelay = sNingerConfig->JoinDelay;
-                        member->joinMemberGuid = member->GetGUID().GetCounter();
-                        replyStream << "Prepare to join " << member->GetName();
-                        if (member->GetGUID() != pmPlayer->GetGUID())
-                        {
-                            member->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
-                        }
-                        else
-                        {
-                            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
-                        }
+                        HandleChatCommand(pmPlayer, pmContent, member, pmTargetGroup);
                     }
                 }
             }
-        }
-        else
-        {
-            pmPlayer->joinDelay = sNingerConfig->JoinDelay;
-            pmPlayer->joinMemberGuid = pmTargetPlayer->GetGUID().GetCounter();
-            replyStream << "Prepare to join " << pmTargetPlayer->GetName();
-            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
         }
     }
     else if (commandName == "leader")
@@ -854,6 +883,624 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "engage")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                ns->freeze = false;
+                if (Unit* target = pmPlayer->GetSelectedUnit())
+                {
+                    if (ns->Engage(target))
+                    {
+                        int engageLimit = DEFAULT_ACTION_LIMIT_DELAY;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string checkStr = commandVector.at(1);
+                            engageLimit = atoi(checkStr.c_str());
+                        }
+                        ns->actionLimit = engageLimit;
+                        ns->ogActionTarget = target->GetGUID();
+                        ns->actionType = ActionType::ActionType_Engage;
+                        std::ostringstream replyStream;
+                        replyStream << "Try to engage " << target->GetName();
+                        pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                    }
+                }
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "tank")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                ns->freeze = false;
+                if (Unit* target = pmPlayer->GetSelectedUnit())
+                {
+                    if (ns->Tank(target))
+                    {
+                        int engageLimit = DEFAULT_ACTION_LIMIT_DELAY;
+                        if (commandVector.size() > 1)
+                        {
+                            std::string checkStr = commandVector.at(1);
+                            engageLimit = atoi(checkStr.c_str());
+                        }
+                        ns->actionLimit = engageLimit;
+                        ns->ogActionTarget = target->GetGUID();
+                        ns->actionType = ActionType::ActionType_Engage;
+                        std::ostringstream replyStream;
+                        replyStream << "Try to engage " << target->GetName();
+                        pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                    }
+                }
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "freeze")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                ns->freeze = true;
+                pmTargetPlayer->AttackStop();
+                pmTargetPlayer->StopMoving();
+                pmTargetPlayer->InterruptNonMeleeSpells(true);
+                pmTargetPlayer->ningerAction->ClearTarget();
+                pmTargetPlayer->ningerAction->PetStop();
+                std::ostringstream replyStream;
+                replyStream << "Freezed";
+                pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "prepare")
+    {
+        if (pmTargetPlayer)
+        {
+            pmTargetPlayer->ningerAction->Prepare();
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "rest")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                ns->Rest(true);
+                pmTargetPlayer->Whisper("Resting", Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "revive")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                ns->freeze = false;
+                if (Player* target = pmPlayer->GetSelectedPlayer())
+                {
+                    if (ns->Revive(target))
+                    {
+                        ns->actionLimit = DEFAULT_ACTION_LIMIT_DELAY;
+                        ns->ogActionTarget = target->GetGUID();
+                        ns->actionType = ActionType::ActionType_Revive;
+                        std::ostringstream replyStream;
+                        replyStream << "Try to do reviving";
+                        pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                    }
+                }
+                else if (ns->Revive())
+                {
+                    std::ostringstream replyStream;
+                    replyStream << "Try to do reviving";
+                    pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                }
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "follow")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                if (commandVector.size() > 1)
+                {
+                    std::string cmdDistanceStr = commandVector.at(1);
+                    float cmdDistance = atof(cmdDistanceStr.c_str());
+                    if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE && cmdDistance > ns->followDistanceMin)
+                    {
+                        ns->followDistanceMax = cmdDistance;
+                        if (commandVector.size() > 2)
+                        {
+                            cmdDistanceStr = commandVector.at(2);
+                            cmdDistance = atof(cmdDistanceStr.c_str());
+                            if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE && cmdDistance < ns->followDistanceMax)
+                            {
+                                ns->followDistanceMin = cmdDistance;
+                            }
+                            else
+                            {
+                                replyStream << "Distance is not valid";
+                            }
+                        }
+                        replyStream << "Follow distance - " << ns->followDistanceMax << " " << ns->followDistanceMin;
+                    }
+                    else
+                    {
+                        replyStream << "Distance is not valid";
+                    }
+                }
+                else
+                {
+                    if (ns->Follow())
+                    {
+                        ns->freeze = false;
+                        ns->restLimit = 0;
+                        ns->actionLimit = 0;
+                        replyStream << "Following - " << ns->followDistanceMax << " " << ns->followDistanceMin;
+                    }
+                    else
+                    {
+                        replyStream << "can not follow";
+                    }
+                }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "gather")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                if (pmTargetPlayer->IsAlive())
+                {
+                    if (pmPlayer->GetDistance(pmTargetPlayer) < FOLLOW_MAX_DISTANCE)
+                    {
+                        if (ns->gatherDelay > 0)
+                        {
+                            replyStream << "I am on the way";
+                        }
+                        else
+                        {
+                            ns->freeze = false;
+                            ns->restLimit = 0;
+                            ns->actionLimit = 0;
+                            ns->gatherDelay = IN_MILLISECONDS;
+                            if (pmTargetPlayer->IsNonMeleeSpellCast(false))
+                            {
+                                pmTargetPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+                                pmTargetPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+                            }
+                            pmTargetPlayer->ningerAction->rm->MovePoint(pmPlayer->GetPosition(), ns->gatherDelay);
+                            replyStream << "I will move to you";
+                        }
+                    }
+                    else
+                    {
+                        replyStream << "I am too far away";
+                    }
+                }
+                else
+                {
+                    replyStream << "I am dead";
+                }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "cast")
+    {
+
+    }
+    else if (commandName == "unaura")
+    {
+
+    }
+    else if (commandName == "delay")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                if (commandVector.size() > 1)
+                {
+                    int delayMS = std::stoi(commandVector.at(1));
+                    ns->dpsDelay = delayMS;
+                    replyStream << "DPS delay set to : " << delayMS;
+                }
+                else
+                {
+                    replyStream << "DPS delay is : " << ns->dpsDelay;
+                }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "cure")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                if (commandVector.size() > 1)
+                {
+                    std::string cureCMD = commandVector.at(1);
+                    if (cureCMD == "on")
+                    {
+                        ns->cure = true;
+                    }
+                    else if (cureCMD == "off")
+                    {
+                        ns->cure = false;
+                    }
+                    else
+                    {
+                        replyStream << "Unknown state";
+                    }
+                }
+                if (ns->cure)
+                {
+                    replyStream << "auto cure is on";
+                }
+                else
+                {
+                    replyStream << "auto cure is off";
+                }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "petting")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                if (commandVector.size() > 1)
+                {
+                    std::string switchCMD = commandVector.at(1);
+                    if (switchCMD == "on")
+                    {
+                        ns->petting = true;
+                    }
+                    else if (switchCMD == "off")
+                    {
+                        ns->petting = false;
+                    }
+                    else if (switchCMD == "reset")
+                    {
+                        if (pmTargetPlayer->getClass() == Classes::CLASS_HUNTER)
+                        {
+                            if (NingerAction_Hunter* naHunter = (NingerAction_Hunter*)pmTargetPlayer->ningerAction)
+                            {
+                                if (naHunter->Petting(ns->petting, true))
+                                {
+                                    replyStream << "Pet abandoned. ";
+                                }
+                                else
+                                {
+                                    replyStream << "reset failed";
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        replyStream << "Unknown state";
+                    }
+                }
+                if (ns->petting)
+                {
+                    replyStream << "Petting is on";
+                }
+                else
+                {
+                    replyStream << "Petting is off";
+                }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "aoe")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                if (commandVector.size() > 1)
+                {
+                    std::string switchCMD = commandVector.at(1);
+                    if (switchCMD == "on")
+                    {
+                        ns->aoe = true;
+                    }
+                    else if (switchCMD == "off")
+                    {
+                        ns->aoe = false;
+                    }
+                    else
+                    {
+                        replyStream << "Unknown state";
+                    }
+                }
+                if (ns->aoe)
+                {
+                    replyStream << "AOE is on";
+                }
+                else
+                {
+                    replyStream << "AOE is off";
+                }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "rti")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                int targetIcon = -1;
+                if (commandVector.size() > 1)
+                {
+                    std::string iconIndex = commandVector.at(1);
+                    targetIcon = atoi(iconIndex.c_str());
+                }
+                if (targetIcon >= 0 && targetIcon < TARGETICONCOUNT)
+                {
+                    pmTargetPlayer->ningerAction->rti = targetIcon;
+                }
+                replyStream << "RTI is " << pmTargetPlayer->ningerAction->rti;
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "equip")
+    {
+        if (pmTargetPlayer)
+        {
+            std::ostringstream replyStream;
+            pmTargetPlayer->ningerAction->InitializeEquipments(true);
+            replyStream << "Equipments reset";
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "talent")
+    {
+        if (pmTargetPlayer)
+        {
+            std::ostringstream replyStream;
+            pmTargetPlayer->ningerAction->ResetTalent();
+            replyStream << "Talents reset";
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
                     }
                 }
             }

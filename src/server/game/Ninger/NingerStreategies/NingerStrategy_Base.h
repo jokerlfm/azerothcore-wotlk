@@ -12,6 +12,13 @@ enum GroupRole :uint32
     GroupRole_Healer = 2,
 };
 
+enum ActionType :uint32
+{
+    ActionType_None = 0,
+    ActionType_Engage = 1,
+    ActionType_Revive = 2,
+};
+
 class NingerStrategy_Base
 {
 public:
@@ -21,12 +28,14 @@ public:
     virtual void Reset();
     virtual void Update(uint32 pmDiff);
     virtual bool Engage(Unit* pmTarget);
+    virtual bool Tank(Unit* pmTarget);
     virtual bool Tank();
     virtual bool DPS(bool pmDelay = true);
     virtual bool Heal();
     virtual bool Cure();
     virtual bool Buff();
     virtual bool Revive();
+    virtual bool Revive(Unit* pmTarget);
     virtual bool Rest(bool pmForce = false);
     virtual bool Petting();
     virtual bool Follow();
@@ -35,8 +44,7 @@ public:
     virtual void SetGroupRole(std::string pmRoleName);    
 
 public:
-    Player* me;    
-    uint32 groupRole;
+    Player* me;        
     bool initialized;
 
     float chaseDistanceMin;
@@ -59,13 +67,14 @@ public:
     int combatDuration;    
     int wanderDuration;
 
-    bool follow;
-    bool chase;    
+    bool freeze;
     bool cure;
     bool aoe;
     bool petting;
 
-    int engageLimit;
+    uint32 actionType;
+    int actionLimit;
+    ObjectGuid ogActionTarget;
 
 private:
     bool GroupInCombat();

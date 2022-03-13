@@ -9,7 +9,6 @@
 NingerStrategy_Base::NingerStrategy_Base()
 {
     me = nullptr;
-    groupRole = GroupRole::GroupRole_DPS;
     initialized = false;
 
     updateDelay = sNingerConfig->UpdateDelay;
@@ -26,17 +25,18 @@ NingerStrategy_Base::NingerStrategy_Base()
     wanderDuration = 0;
     combatDuration = 0;
 
-    follow = true;
-    chase = true;
+    freeze = false;
     cure = true;
     aoe = true;
     petting = true;
 
-    engageLimit = 0;
+    actionLimit = 0;
+    ogActionTarget = ObjectGuid::Empty;
+    actionType = ActionType::ActionType_None;
 
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
-    followDistanceMin = MELEE_MIN_DISTANCE;
+    followDistanceMin = 0;
     followDistanceMax = MELEE_MAX_DISTANCE;
 }
 
@@ -66,13 +66,14 @@ void NingerStrategy_Base::Reset()
     wanderDuration = 0;
     combatDuration = 0;
 
-    follow = true;
-    chase = true;
+    freeze = false;
     cure = true;
     aoe = true;
     petting = true;
 
-    engageLimit = 0;
+    actionLimit = 0;
+    ogActionTarget = ObjectGuid::Empty;
+    actionType = ActionType::ActionType_None;
 
     chaseDistanceMin = MELEE_MIN_DISTANCE;
     chaseDistanceMax = MELEE_MAX_DISTANCE;
@@ -82,12 +83,11 @@ void NingerStrategy_Base::Reset()
     {
     case Classes::CLASS_WARRIOR:
     {
-        groupRole = GroupRole::GroupRole_Tank;
+        me->groupRole = GroupRole::GroupRole_Tank;
         break;
     }
     case Classes::CLASS_HUNTER:
     {
-        followDistanceMin = FOLLOW_NORMAL_DISTANCE;
         followDistanceMax = FOLLOW_FAR_DISTANCE;
         chaseDistanceMin = RANGE_MIN_DISTANCE;
         chaseDistanceMax = RANGE_NORMAL_DISTANCE;
@@ -110,7 +110,7 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_PRIEST:
     {
-        groupRole = GroupRole::GroupRole_Healer;
+        me->groupRole = GroupRole::GroupRole_Healer;
         followDistanceMax = FOLLOW_FAR_DISTANCE;
         chaseDistanceMin = RANGE_MIN_DISTANCE;
         chaseDistanceMax = RANGE_NORMAL_DISTANCE;
@@ -147,8 +147,50 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
     if (!initialized)
     {
         return;
-    }    
-    me->ningerAction->rm->Update(pmDiff);
+    }
+    if (freeze)
+    {
+        return;
+    }
+    me->ningerAction->Update(pmDiff);
+    if (actionLimit > 0)
+    {
+        actionLimit -= pmDiff;
+        if (actionLimit < 0)
+        {
+            actionLimit = 0;
+        }
+        if (Unit* actionTarget = ObjectAccessor::GetUnit(*me, ogActionTarget))
+        {
+            switch (actionType)
+            {
+            case ActionType_None:
+            {
+                break;
+            }
+            case ActionType_Engage:
+            {
+                if (Engage(actionTarget))
+                {
+                    return;
+                }
+                break;
+            }
+            case ActionType_Revive:
+            {
+                if (Revive(actionTarget))
+                {
+                    return;
+                }
+                break;
+            }                
+            default:
+                break;
+            }
+        }
+        actionLimit = 0;
+        ogActionTarget.Clear();
+    }
     if (Group* myGroup = me->GetGroup())
     {
         if (assembleDelay > 0)
@@ -203,7 +245,7 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
         {
             restLimit = 0;
             combatDuration += pmDiff;
-            switch (groupRole)
+            switch (me->groupRole)
             {
             case GroupRole::GroupRole_DPS:
             {
@@ -387,25 +429,48 @@ bool NingerStrategy_Base::Engage(Unit* pmTarget)
     {
         return false;
     }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
     if (NingerAction_Base* nab = me->ningerAction)
     {
-        switch (groupRole)
+        switch (me->groupRole)
         {
         case GroupRole::GroupRole_Tank:
         {
-            return me->ningerAction->Tank(pmTarget, chase, aoe);
+            return me->ningerAction->Tank(pmTarget, aoe);
         }
         case GroupRole::GroupRole_DPS:
         {
-            if (combatDuration > dpsDelay)
-            {
-                return me->ningerAction->DPS(pmTarget, chase, aoe, chaseDistanceMin, chaseDistanceMax);
-            }
+            return me->ningerAction->DPS(pmTarget, aoe, chaseDistanceMin, chaseDistanceMax);
         }
         default:
         {
             break;
         }
+        }
+    }
+
+    return false;
+}
+
+bool NingerStrategy_Base::Tank(Unit* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    if (Group* myGroup = me->GetGroup())
+    {
+        if (me->groupRole == GroupRole::GroupRole_Tank)
+        {
+            if (Engage(pmTarget))
+            {
+                myGroup->SetTargetIcon(7, me->GetGUID(), pmTarget->GetGUID());
+                return true;
+            }
         }
     }
 
@@ -437,7 +502,21 @@ bool NingerStrategy_Base::DPS(bool pmDelay)
         {
             if (Unit* tankTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
             {
-                return me->ningerAction->DPS(tankTarget, chase, aoe, chaseDistanceMin, chaseDistanceMax);
+                if (me->ningerAction->DPS(tankTarget, aoe, chaseDistanceMin, chaseDistanceMax))
+                {
+                    return true;
+                }
+            }
+        }
+
+        if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+        {
+            if (Unit* leaderTarget = leader->GetSelectedUnit())
+            {
+                if (me->ningerAction->DPS(leaderTarget, aoe, chaseDistanceMin, chaseDistanceMax))
+                {
+                    return true;
+                }
             }
         }
     }
@@ -458,6 +537,35 @@ bool NingerStrategy_Base::Tank()
 
     if (Group* myGroup = me->GetGroup())
     {
+        Unit* ogTankTarget = ObjectAccessor::GetUnit(*me, myGroup->GetGuidByTargetIcon(7));
+        if (ogTankTarget)
+        {
+            if (!ogTankTarget->GetTarget().IsEmpty())
+            {
+                if (ogTankTarget->GetTarget() != me->GetGUID())
+                {
+                    if (me->ningerAction->Tank(ogTankTarget, aoe))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        Unit* myTarget = me->GetSelectedUnit();
+        if (myTarget)
+        {
+            if (!myTarget->GetTarget().IsEmpty())
+            {
+                if (myTarget->GetTarget() != me->GetGUID())
+                {
+                    if (me->ningerAction->Tank(myTarget, aoe))
+                    {
+                        myGroup->SetTargetIcon(7, me->GetGUID(), myTarget->GetGUID());
+                        return true;
+                    }
+                }
+            }
+        }
         Unit* nearestOTUnit = nullptr;
         float nearestDistance = VISIBILITY_DISTANCE_NORMAL;
         for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
@@ -503,18 +611,67 @@ bool NingerStrategy_Base::Tank()
         }
         if (nearestOTUnit)
         {
-            if (me->ningerAction->Tank(nearestOTUnit, chase, aoe))
+            if (me->ningerAction->Tank(nearestOTUnit, aoe))
             {
                 myGroup->SetTargetIcon(7, me->GetGUID(), nearestOTUnit->GetGUID());
                 return true;
             }
         }
-
-        if (ObjectGuid ogTankTarget = myGroup->GetGuidByTargetIcon(7))
+        if (me->ningerAction->Tank(ogTankTarget, aoe))
         {
-            if (Unit* tankTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
+            return true;
+        }
+        if (myTarget)
+        {
+            if (me->ningerAction->Tank(myTarget, aoe))
             {
-                return me->ningerAction->Tank(nearestOTUnit, chase, aoe);
+                myGroup->SetTargetIcon(7, me->GetGUID(), myTarget->GetGUID());
+                return true;
+            }
+        }
+        Unit* nearestAttacker = nullptr;
+        nearestDistance = VISIBILITY_DISTANCE_NORMAL;
+        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            if (Player* member = groupRef->GetSource())
+            {
+                if (member->IsAlive())
+                {
+                    if (member->GetGUID() != me->GetGUID())
+                    {
+                        float memberDistance = me->GetDistance(member);
+                        if (memberDistance < VISIBILITY_DISTANCE_NORMAL)
+                        {
+                            std::unordered_set<Unit*> memberAttackers = member->getAttackers();
+                            for (std::unordered_set<Unit*>::iterator ait = memberAttackers.begin(); ait != memberAttackers.end(); ++ait)
+                            {
+                                if (Unit* eachAttacker = *ait)
+                                {
+                                    if (me->IsValidAttackTarget(eachAttacker))
+                                    {
+                                        float eachDistance = me->GetDistance(eachAttacker);
+                                        if (eachDistance < nearestDistance)
+                                        {
+                                            if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
+                                            {
+                                                nearestDistance = eachDistance;
+                                                nearestAttacker = eachAttacker;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (nearestAttacker)
+        {
+            if (me->ningerAction->Tank(nearestAttacker, aoe))
+            {
+                myGroup->SetTargetIcon(7, me->GetGUID(), nearestAttacker->GetGUID());
+                return true;
             }
         }
     }
@@ -639,10 +796,42 @@ bool NingerStrategy_Base::Revive()
                 {
                     if (me->ningerAction->Revive(member))
                     {
+                        actionLimit = DEFAULT_ACTION_LIMIT_DELAY;
+                        ogActionTarget = member->GetGUID();
+                        actionType = ActionType::ActionType_Revive;
                         return true;
                     }
                 }
             }
+        }
+    }
+
+    return false;
+}
+
+bool NingerStrategy_Base::Revive(Unit* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (!pmTarget)
+    {
+        return false;
+    }
+    if (Player* targetPlayer = pmTarget->ToPlayer())
+    {
+        if (targetPlayer->IsAlive())
+        {
+            return false;
+        }
+        if (me->ningerAction->Revive(targetPlayer))
+        {
+            return true;
         }
     }
 
@@ -683,7 +872,7 @@ bool NingerStrategy_Base::Buff()
 
 bool NingerStrategy_Base::Petting()
 {
-    if (me->ningerAction->Petting())
+    if (me->ningerAction->Petting(petting))
     {
         return true;
     }
@@ -725,10 +914,6 @@ bool NingerStrategy_Base::Cure()
 
 bool NingerStrategy_Base::Follow()
 {
-    if (!follow)
-    {
-        return false;
-    }
     if (!me)
     {
         return false;
@@ -743,6 +928,7 @@ bool NingerStrategy_Base::Follow()
         {
             if (me->ningerAction->Follow(leader, followDistanceMin, followDistanceMax))
             {
+                ogActionTarget = leader->GetGUID();
                 return true;
             }
         }
@@ -781,7 +967,7 @@ std::string NingerStrategy_Base::GetGroupRole()
     {
         return "";
     }
-    switch (groupRole)
+    switch (me->groupRole)
     {
     case GroupRole::GroupRole_DPS:
     {
@@ -811,14 +997,14 @@ void NingerStrategy_Base::SetGroupRole(std::string pmRoleName)
     }
     if (pmRoleName == "dps")
     {
-        groupRole = GroupRole::GroupRole_DPS;
+        me->groupRole = GroupRole::GroupRole_DPS;
     }
     else if (pmRoleName == "tank")
     {
-        groupRole = GroupRole::GroupRole_Tank;
+        me->groupRole = GroupRole::GroupRole_Tank;
     }
     else if (pmRoleName == "healer")
     {
-        groupRole = GroupRole::GroupRole_Healer;
+        me->groupRole = GroupRole::GroupRole_Healer;
     }
 }

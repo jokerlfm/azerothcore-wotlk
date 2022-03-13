@@ -439,6 +439,7 @@ void NingerEntity::Update(uint32 pmDiff)
                 {
                     if (WorldSession* ws = me->GetSession())
                     {
+                        me->RemoveFromGroup();
                         ws->LogoutPlayer(true);
                         entityState = NingerEntityState::NingerEntityState_CheckLogoff;
                         break;

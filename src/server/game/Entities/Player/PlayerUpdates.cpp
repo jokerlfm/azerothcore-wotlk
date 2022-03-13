@@ -447,30 +447,40 @@ void Player::Update(uint32 p_time)
         }
     }
 
-    if (joinDelay > 0)
+    if (teleportDelay > 0)
     {
-        joinDelay -= p_time;
-        if (joinDelay <= 0)
+        teleportDelay -= p_time;
+        if (teleportDelay <= 0)
         {
-            joinDelay = 0;
+            teleportDelay = 0;
             std::ostringstream replyStream;
-            if (Player* member = ObjectAccessor::FindPlayerByLowGUID(joinMemberGuid))
+            if (Player* teleportTarget = ObjectAccessor::FindPlayerByLowGUID(teleportTargetGuid))
             {
-                if (member->IsInWorld())
+                if (teleportTarget->IsInWorld())
                 {
-                    replyStream << "Joining " << member->GetName();
-                    TeleportTo(member->GetMapId(), member->GetPositionX(), member->GetPositionY(), member->GetPositionZ(), member->GetOrientation());
+                    replyStream << GetName() << " Teleport to " << teleportTarget->GetName();
+                    TeleportTo(teleportTarget->GetMapId(), teleportTarget->GetPositionX(), teleportTarget->GetPositionY(), teleportTarget->GetPositionZ(), teleportTarget->GetOrientation());
                 }
                 else
                 {
-                    replyStream << member->GetName() << " is not in world";
+                    replyStream << teleportTarget->GetName() << " is not in world";
                 }
             }
             else
             {
-                replyStream << member->GetName() << " not exists";
+                replyStream << teleportTargetGuid << " not exists";
             }
             sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), this);
+        }
+    }
+
+    if (reviveDelay > 0)
+    {
+        reviveDelay -= p_time;
+        if (reviveDelay <= 0)
+        {
+            reviveDelay = 0;
+            ResurrectPlayer(10.0f);
         }
     }
 }

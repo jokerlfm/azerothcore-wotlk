@@ -1715,7 +1715,7 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
             _player->GetSession()->HandleGroupAcceptOpcode(wpAccept);
             std::ostringstream replyStream_Talent;
             _player->ningerAction->Reset();
-            replyStream_Talent << "My talent category is " << sNingerManager->characterTalentTabNameMap[_player->getClass()][_player->ningerAction->maxTalentTab];
+            replyStream_Talent << sNingerManager->characterTalentTabNameMap[_player->getClass()][_player->ningerAction->specialty];
             _player->Whisper(replyStream_Talent.str(), Language::LANG_UNIVERSAL, inviter);
         }
         break;
