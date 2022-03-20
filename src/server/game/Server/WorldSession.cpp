@@ -305,18 +305,21 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
         ProcessQueryCallbacks();
         if (_player)
         {
-            if (_player->IsBeingTeleportedNear())
+            if (_player->strategyMap.size() > 0)
             {
-                WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
-                pkt << _player->GetPackGUID();
-                pkt << uint32(0); // flags
-                pkt << uint32(0); // time
-                HandleMoveTeleportAck(pkt);
-            }
-            else if (_player->IsBeingTeleportedFar())
-            {
-                HandleMoveWorldportAck();
-                _player->strategyMap[_player->activeStrategyIndex]->Report();
+                if (_player->IsBeingTeleportedNear())
+                {
+                    WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
+                    pkt << _player->GetPackGUID();
+                    pkt << uint32(0); // flags
+                    pkt << uint32(0); // time
+                    HandleMoveTeleportAck(pkt);
+                }
+                else if (_player->IsBeingTeleportedFar())
+                {
+                    HandleMoveWorldportAck();
+                    _player->strategyMap[_player->activeStrategyIndex]->Report();
+                }
             }
         }
 
@@ -1703,6 +1706,10 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
         {
             break;
         }
+        else if (!_player->ningerAction)
+        {
+            break;
+        }
         if (Group* grp = _player->GetGroupInvite())
         {
             Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID());
@@ -1762,6 +1769,10 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
             break;
         }
         else if (!_player->IsInWorld())
+        {
+            break;
+        }
+        else if (!_player->ningerAction)
         {
             break;
         }

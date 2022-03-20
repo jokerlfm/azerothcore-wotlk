@@ -369,16 +369,26 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
         uint32 target_class = Classes::CLASS_HUNTER;
         uint32 target_specialty = 1;
         uint32 classRand = urand(1, 100);
-        if (classRand < 30)
+        if (classRand < 25)
         {
             target_class = Classes::CLASS_PRIEST;
             target_specialty = 0;
+        }
+        else if (classRand < 50)
+        {
+            target_class = Classes::CLASS_WARRIOR;
+            target_specialty = 2;
         }
         else
         {
             target_class = Classes::CLASS_HUNTER;
             target_specialty = 1;
         }
+
+        // lfm debug
+        //target_class = Classes::CLASS_WARRIOR;
+        //target_specialty = 2;
+
         uint32 target_race = 0;
         if (pmAlliance)
         {
@@ -729,40 +739,56 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
     else if (commandName == "assemble")
     {
         std::ostringstream replyStream;
-        Player* teleportTarget = pmPlayer->GetSelectedPlayer();
-        if (!teleportTarget)
+        if (Player* teleportTarget = ObjectAccessor::FindPlayer(pmPlayer->GetTarget()))
         {
-            teleportTarget = pmPlayer;
-        }
-        if (pmTargetPlayer)
-        {
-            pmTargetPlayer->teleportTargetGuid = teleportTarget->GetGUID().GetCounter();
-            if (!pmTargetPlayer->IsAlive())
+            if (pmTargetPlayer)
             {
-                pmTargetPlayer->teleportDelay = sNingerConfig->CorpseRunDelay;
-                pmTargetPlayer->reviveDelay = sNingerConfig->CorpseRunDelay + 5000;
-                replyStream << "I am dead, Prepare to do corpserun to " << teleportTarget->GetName() << " in " << pmTargetPlayer->teleportDelay / 1000 << " seconds";
-            }
-            else
-            {
-                pmTargetPlayer->teleportDelay = sNingerConfig->TeleportDelay;
-                replyStream << "Prepare to teleport to " << teleportTarget->GetName() << " in " << pmTargetPlayer->teleportDelay / 1000 << " seconds";
-            }
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
+                if (teleportTarget->GetGUID() != pmTargetPlayer->GetGUID())
                 {
-                    if (member->GetGUID() != teleportTarget->GetGUID())
+                    pmTargetPlayer->teleportTargetGuid = teleportTarget->GetGUID().GetCounter();
+                    if (!pmTargetPlayer->IsAlive())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member, pmTargetGroup);
+                        pmTargetPlayer->teleportDelay = sNingerConfig->CorpseRunDelay;
+                        pmTargetPlayer->reviveDelay = sNingerConfig->CorpseRunDelay + 5000;
+                        replyStream << "I am dead, Prepare to do corpserun to " << teleportTarget->GetName() << " in " << pmTargetPlayer->teleportDelay / 1000 << " seconds";
+                    }
+                    else
+                    {
+                        pmTargetPlayer->teleportDelay = sNingerConfig->TeleportDelay;
+                        replyStream << "Prepare to teleport to " << teleportTarget->GetName() << " in " << pmTargetPlayer->teleportDelay / 1000 << " seconds";
+                    }
+                    if (pmTargetPlayer->GetGUID() == pmPlayer->GetGUID())
+                    {
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str(), pmPlayer);
+                    }
+                    else
+                    {
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
                     }
                 }
             }
+            else if (pmTargetGroup)
+            {
+                for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    Player* member = groupRef->GetSource();
+                    if (member)
+                    {
+                        if (member->GetGUID() != teleportTarget->GetGUID())
+                        {
+                            HandleChatCommand(pmPlayer, pmContent, member, pmTargetGroup);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                HandleChatCommand(pmPlayer, pmContent, pmPlayer);
+            }
+        }
+        else
+        {
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "No target", pmPlayer);
         }
     }
     else if (commandName == "leader")
@@ -910,7 +936,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         ns->actionType = ActionType::ActionType_Engage;
                         std::ostringstream replyStream;
                         replyStream << "Try to engage " << target->GetName();
-                        pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
                     }
                 }
             }
@@ -952,7 +978,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         ns->actionType = ActionType::ActionType_Engage;
                         std::ostringstream replyStream;
                         replyStream << "Try to engage " << target->GetName();
-                        pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
                     }
                 }
             }
@@ -979,14 +1005,12 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
             {
                 ns->freeze = true;
-                pmTargetPlayer->AttackStop();
                 pmTargetPlayer->StopMoving();
                 pmTargetPlayer->InterruptNonMeleeSpells(true);
-                pmTargetPlayer->ningerAction->ClearTarget();
                 pmTargetPlayer->ningerAction->PetStop();
                 std::ostringstream replyStream;
                 replyStream << "Freezed";
-                pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
             }
         }
         else if (pmTargetGroup)
@@ -1066,14 +1090,14 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         ns->actionType = ActionType::ActionType_Revive;
                         std::ostringstream replyStream;
                         replyStream << "Try to do reviving";
-                        pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
                     }
                 }
                 else if (ns->Revive())
                 {
                     std::ostringstream replyStream;
                     replyStream << "Try to do reviving";
-                    pmPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                    pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
                 }
             }
         }
@@ -1110,7 +1134,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         {
                             cmdDistanceStr = commandVector.at(2);
                             cmdDistance = atof(cmdDistanceStr.c_str());
-                            if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE && cmdDistance < ns->followDistanceMax)
+                            if (cmdDistance >= 0 && cmdDistance <= FOLLOW_MAX_DISTANCE && cmdDistance < ns->followDistanceMax)
                             {
                                 ns->followDistanceMin = cmdDistance;
                             }
@@ -1140,6 +1164,58 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         replyStream << "can not follow";
                     }
                 }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "chase")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                std::ostringstream replyStream;
+                if (commandVector.size() > 1)
+                {
+                    std::string cmdDistanceStr = commandVector.at(1);
+                    float cmdDistance = atof(cmdDistanceStr.c_str());
+                    if (cmdDistance >= MELEE_MIN_DISTANCE && cmdDistance <= RANGE_MAX_DISTANCE && cmdDistance > ns->chaseDistanceMin)
+                    {
+                        ns->chaseDistanceMax = cmdDistance;
+                        if (commandVector.size() > 2)
+                        {
+                            cmdDistanceStr = commandVector.at(2);
+                            cmdDistance = atof(cmdDistanceStr.c_str());
+                            if (cmdDistance >= MELEE_MIN_DISTANCE && cmdDistance <= RANGE_MAX_DISTANCE && cmdDistance < ns->chaseDistanceMax)
+                            {
+                                ns->chaseDistanceMin = cmdDistance;
+                            }
+                            else
+                            {
+                                replyStream << "Distance is not valid";
+                            }
+                        }
+                    }
+                    else
+                    {
+                        replyStream << "Distance is not valid";
+                    }
+                }
+                replyStream << "Chase distance - " << ns->chaseDistanceMax << " " << ns->chaseDistanceMin;
                 pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
             }
         }

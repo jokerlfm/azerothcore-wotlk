@@ -40,7 +40,6 @@ public:
     uint32 activeMovementType;
     float chaseDistanceMin;
     float chaseDistanceMax;
-    bool chasePositionOK;
 };
 
 class NingerAction_Base
@@ -63,13 +62,14 @@ public:
     virtual void ResetTalent();
     virtual void InitializeEquipments(bool pmReset = false);
 
+    void RemoveEquipments();
     void LearnTalent(uint32 pmTalentId, uint32 pmMaxRank = MAX_TALENT_RANK);
     void TrainSpells(uint32 pmTrainerEntry);
-    void EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, uint32 pmMaxRequiredLevel, uint32 pmModType);
+    void EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, uint32 pmMaxRequiredLevel, int pmModType, std::unordered_set<uint32> pmInventoryTypeSet = std::unordered_set<uint32>());
     void PetAttack(Unit* pmTarget);
     void PetStop();
     bool UseItem(Item* pmItem, Unit* pmTarget);
-    bool CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheckAura = false, bool pmOnlyMyAura = false, bool pmClearShapeShift = false);
+    bool CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheckAura = false, bool pmOnlyMyAura = false, bool pmClearShapeShift = false, uint32 pmMaxAuraStack = 1);
     void ClearShapeshift();
     void CancelAura(uint32 pmSpellID);
     bool Eat();

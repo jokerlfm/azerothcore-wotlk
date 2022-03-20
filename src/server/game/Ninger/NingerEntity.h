@@ -15,6 +15,7 @@ enum NingerEntityState :uint32
     NingerEntityState_DoEnum,
     NingerEntityState_CheckEnum,
     NingerEntityState_Initialize,
+    NingerEntityState_Equip,
     NingerEntityState_Online,
     NingerEntityState_Exit,
     NingerEntityState_CheckLogoff,

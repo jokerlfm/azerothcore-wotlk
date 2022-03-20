@@ -28,7 +28,7 @@
 #endif
 
 #ifndef FOLLOW_NORMAL_DISTANCE
-# define FOLLOW_NORMAL_DISTANCE 9.0f
+# define FOLLOW_NORMAL_DISTANCE 12.0f
 #endif
 
 #ifndef FOLLOW_FAR_DISTANCE
@@ -40,7 +40,7 @@
 #endif
 
 #ifndef MELEE_MIN_DISTANCE
-# define MELEE_MIN_DISTANCE 0.5f
+# define MELEE_MIN_DISTANCE 0.1f
 #endif
 
 #ifndef MELEE_MAX_DISTANCE
@@ -48,7 +48,7 @@
 #endif
 
 #ifndef RANGE_MIN_DISTANCE
-# define RANGE_MIN_DISTANCE 5.0f
+# define RANGE_MIN_DISTANCE 7.0f
 #endif
 
 #ifndef RANGE_NORMAL_DISTANCE

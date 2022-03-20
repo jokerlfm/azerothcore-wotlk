@@ -88,7 +88,7 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_HUNTER:
     {
-        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
         chaseDistanceMin = RANGE_MIN_DISTANCE;
         chaseDistanceMax = RANGE_NORMAL_DISTANCE;
         break;
@@ -103,7 +103,7 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_WARLOCK:
     {
-        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
         chaseDistanceMin = RANGE_MIN_DISTANCE;
         chaseDistanceMax = RANGE_NORMAL_DISTANCE;
         break;
@@ -111,7 +111,7 @@ void NingerStrategy_Base::Reset()
     case Classes::CLASS_PRIEST:
     {
         me->groupRole = GroupRole::GroupRole_Healer;
-        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
         chaseDistanceMin = RANGE_MIN_DISTANCE;
         chaseDistanceMax = RANGE_NORMAL_DISTANCE;
         break;
@@ -122,7 +122,7 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_MAGE:
     {
-        followDistanceMax = FOLLOW_FAR_DISTANCE;
+        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
         chaseDistanceMin = RANGE_MIN_DISTANCE;
         chaseDistanceMax = RANGE_NORMAL_DISTANCE;
         break;
@@ -631,36 +631,20 @@ bool NingerStrategy_Base::Tank()
         }
         Unit* nearestAttacker = nullptr;
         nearestDistance = VISIBILITY_DISTANCE_NORMAL;
-        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        std::unordered_set<Unit*> myAttackers = me->getAttackers();
+        for (std::unordered_set<Unit*>::iterator ait = myAttackers.begin(); ait != myAttackers.end(); ++ait)
         {
-            if (Player* member = groupRef->GetSource())
+            if (Unit* eachAttacker = *ait)
             {
-                if (member->IsAlive())
+                if (me->IsValidAttackTarget(eachAttacker))
                 {
-                    if (member->GetGUID() != me->GetGUID())
+                    float eachDistance = me->GetDistance(eachAttacker);
+                    if (eachDistance < nearestDistance)
                     {
-                        float memberDistance = me->GetDistance(member);
-                        if (memberDistance < VISIBILITY_DISTANCE_NORMAL)
+                        if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
                         {
-                            std::unordered_set<Unit*> memberAttackers = member->getAttackers();
-                            for (std::unordered_set<Unit*>::iterator ait = memberAttackers.begin(); ait != memberAttackers.end(); ++ait)
-                            {
-                                if (Unit* eachAttacker = *ait)
-                                {
-                                    if (me->IsValidAttackTarget(eachAttacker))
-                                    {
-                                        float eachDistance = me->GetDistance(eachAttacker);
-                                        if (eachDistance < nearestDistance)
-                                        {
-                                            if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
-                                            {
-                                                nearestDistance = eachDistance;
-                                                nearestAttacker = eachAttacker;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            nearestDistance = eachDistance;
+                            nearestAttacker = eachAttacker;
                         }
                     }
                 }

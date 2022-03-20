@@ -44,8 +44,7 @@ void NingerAction_Hunter::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     }
     specialty = pmSpecialtyTabIndex;
     me->ClearInCombat();
-    uint32 myLevel = me->getLevel();
-    if (myLevel != pmTargetLevel)
+    if (me->getLevel() != pmTargetLevel)
     {
         me->GiveLevel(pmTargetLevel);
         me->LearnDefaultSkills();
@@ -53,6 +52,7 @@ void NingerAction_Hunter::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
 
         ResetTalent();
     }
+    uint32 myLevel = me->getLevel();
     spell_AutoShot = 75;
     me->learnSpell(197);
     me->learnSpell(264);
@@ -255,7 +255,6 @@ void NingerAction_Hunter::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_MendPet = 48990;
     }
     me->UpdateSkillsToMaxSkillsForLevel();
-    InitializeEquipments(myLevel != pmTargetLevel);
     std::ostringstream msgStream;
     msgStream << me->GetName() << " initialized";
     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
@@ -519,6 +518,10 @@ void NingerAction_Hunter::InitializeEquipments(bool pmReset)
         }
         EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, me->getLevel(), modType);
     }
+
+    std::ostringstream msgStream;
+    msgStream << me->GetName() << " Equiped";
+    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
 }
 
 void NingerAction_Hunter::Prepare()
@@ -551,6 +554,7 @@ void NingerAction_Hunter::Prepare()
                 myPet->ToggleAutocast(pS, true);
             }
         }
+        myPet->SetPower(Powers::POWER_HAPPINESS, HAPPINESS_LEVEL_SIZE * 2);
     }
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
@@ -565,13 +569,17 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceM
     {
         return false;
     }
-    if (pmTarget)
+    if (!pmTarget)
     {
-        if (!me->IsValidAttackTarget(pmTarget))
+        return false;
+    }
+    else if (!me->IsValidAttackTarget(pmTarget))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
         {
-            me->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
-            return false;
+            ClearTarget();
         }
+        return false;
     }
     float targetDistance = me->GetDistance(pmTarget);
     if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
@@ -583,7 +591,7 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceM
     {
         return true;
     }
-    if (!rm->chasePositionOK)
+    if (targetDistance > RANGE_MAX_DISTANCE)
     {
         return true;
     }
@@ -592,7 +600,14 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceM
     {
         if (spell->m_spellInfo->Id == spell_AutoShot)
         {
-            shooting = true;
+            if (spell->m_targets.GetUnitTargetGUID() == pmTarget->GetGUID())
+            {
+                shooting = true;
+            }
+            else
+            {
+                me->InterruptSpell(CURRENT_AUTOREPEAT_SPELL, true);
+            }
         }
         else
         {
@@ -627,7 +642,7 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceM
         return true;
     }
 
-    return false;
+    return true;
 }
 
 bool NingerAction_Hunter::Buff(Unit* pmTarget)
@@ -709,10 +724,23 @@ bool NingerAction_Hunter::Petting(bool pmSummon, bool pmReset)
             {
                 if (PetStable* ps = me->GetPetStable())
                 {
-                    if (ps->CurrentPet || ps->UnslottedPets.size() > 0)
+                    if (ps->CurrentPet)
                     {
                         me->CastSpell(me, spell_CallPet);
                         return true;
+                    }
+                    else if (ps->UnslottedPets.size() > 0)
+                    {
+                        if (ps->UnslottedPets[0].Health > 0)
+                        {
+                            me->CastSpell(me, spell_CallPet);
+                            return true;
+                        }
+                        else
+                        {
+                            me->CastSpell(me, spell_RevivePet);
+                            return true;
+                        }
                     }
                 }
                 uint32 beastEntry = 0;

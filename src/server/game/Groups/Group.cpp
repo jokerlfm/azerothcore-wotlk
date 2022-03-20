@@ -127,6 +127,9 @@ bool Group::Create(Player* leader)
     m_looterGuid = leaderGuid;
     m_masterLooterGuid.Clear();
 
+    // lfm group loot set to free
+    m_lootMethod = LootMethod::FREE_FOR_ALL;
+
     m_dungeonDifficulty = DUNGEON_DIFFICULTY_NORMAL;
     m_raidDifficulty = RAID_DIFFICULTY_10MAN_NORMAL;
 

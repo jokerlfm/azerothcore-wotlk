@@ -36,7 +36,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         me->LearnCustomSpells();
 
         ResetTalent();
-        InitializeEquipments(true);
+        RemoveEquipments();
     }
     uint32 myLevel = me->getLevel();
     if (myLevel >= 1)
@@ -244,8 +244,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_Penance = 53007;
         spell_PowerWord_Shield = 48066;
     }
-
-    InitializeEquipments(false);
+    me->UpdateSkillsToMaxSkillsForLevel();
     std::ostringstream msgStream;
     msgStream << me->GetName() << " initialized";
     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
@@ -447,6 +446,10 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
         }
         EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, me->getLevel(), modType);
     }
+
+    std::ostringstream msgStream;
+    msgStream << me->GetName() << " Equiped";
+    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
 }
 
 void NingerAction_Priest::Prepare()

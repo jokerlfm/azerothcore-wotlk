@@ -371,15 +371,7 @@ void NingerEntity::Update(uint32 pmDiff)
                     }
                     me->ningerAction->me = me;
                     me->ningerAction->rm = new NingerMovement(me);
-                    me->ningerAction->InitializeCharacter(target_level, target_specialty);
-                    for (std::unordered_map<uint32, NingerStrategy_Base*>::iterator nsbIt = me->strategyMap.begin(); nsbIt != me->strategyMap.end(); nsbIt++)
-                    {
-                        if (NingerStrategy_Base* nsb = nsbIt->second)
-                        {
-                            nsb->me = me;
-                            nsb->initialized = true;
-                        }
-                    }                    
+                    me->ningerAction->InitializeCharacter(target_level, target_specialty);        
                     sCharacterCache->LoadCharacterCacheStorage();
                     offlineDelay = urand(2 * HOUR * IN_MILLISECONDS, 4 * HOUR * IN_MILLISECONDS);
                     std::ostringstream replyStream;
@@ -387,11 +379,33 @@ void NingerEntity::Update(uint32 pmDiff)
                     std::string replyString = replyStream.str();
                     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyString);
                     sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, replyString);
-                    entityState = NingerEntityState::NingerEntityState_Online;
+                    entityState = NingerEntityState::NingerEntityState_Equip;
                     break;
                 }
             }
             entityState = NingerEntityState::NingerEntityState_OffLine;
+            break;
+        }
+        case NingerEntityState::NingerEntityState_Equip:
+        {
+            if (Player* me = ObjectAccessor::FindPlayerByLowGUID(character_id))
+            {
+                if (me->IsInWorld())
+                {
+                    me->ningerAction->InitializeEquipments();
+                    for (std::unordered_map<uint32, NingerStrategy_Base*>::iterator nsbIt = me->strategyMap.begin(); nsbIt != me->strategyMap.end(); nsbIt++)
+                    {
+                        if (NingerStrategy_Base* nsb = nsbIt->second)
+                        {
+                            nsb->me = me;
+                            nsb->initialized = true;
+                        }
+                    }
+                    entityState = NingerEntityState::NingerEntityState_Online;
+                    break;
+                }
+            }
+            offlineDelay = urand(2 * IN_MILLISECONDS, 4 * IN_MILLISECONDS);
             break;
         }
         case NingerEntityState::NingerEntityState_Online:
@@ -404,6 +418,16 @@ void NingerEntity::Update(uint32 pmDiff)
                     if (me->IsInWorld())
                     {
                         me->ningerAction->Prepare();
+                        if (Group* myGroup = me->GetGroup())
+                        {
+                            if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+                            {
+                                if (leader->GetSession()->isNinger)
+                                {
+                                    me->RemoveFromGroup();
+                                }
+                            }
+                        }
                     }
                 }
             }
