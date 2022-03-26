@@ -2841,7 +2841,8 @@ std::string Creature::GetScriptName() const
 uint32 Creature::GetScriptId() const
 {
     if (CreatureData const* creatureData = GetCreatureData())
-        return creatureData->ScriptId;
+        if (uint32 scriptId = creatureData->ScriptId)
+            return scriptId;
 
     return sObjectMgr->GetCreatureTemplate(GetEntry())->ScriptID;
 }
@@ -3526,4 +3527,9 @@ bool Creature::CanGeneratePickPocketLoot() const
 void Creature::SetRespawnTime(uint32 respawn)
 {
     m_respawnTime = respawn ? GameTime::GetGameTime().count() + respawn : 0;
+}
+
+void Creature::SetCorpseRemoveTime(uint32 delay)
+{
+    m_corpseRemoveTime = GameTime::GetGameTime().count() + delay;
 }
