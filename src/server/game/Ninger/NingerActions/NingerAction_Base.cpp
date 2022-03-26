@@ -334,7 +334,33 @@ bool NingerMovement::Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float 
             {
                 dynamicAngle = M_PI / 8;
             }
-            float chaseAngle = pmChaseTarget->GetAngle(me);
+            float chaseAngle = 0.0f;
+            Unit* baseUnit = me;
+            if (Group* myGroup = me->GetGroup())
+            {
+                if (me->groupRole != GroupRole::GroupRole_Tank)
+                {
+                    for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                    {
+                        if (Player* member = groupRef->GetSource())
+                        {
+                            if (member->GetGUID() != me->GetGUID())
+                            {
+                                if (member->groupRole == GroupRole::GroupRole_Tank)
+                                {
+                                    if (member->GetDistance(pmChaseTarget) < FOLLOW_NORMAL_DISTANCE)
+                                    {
+                                        baseUnit = member;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            pmChaseTarget->GetAngle(baseUnit);
+            chaseAngle = chaseAngle + 2 * M_PI;
             chaseAngle = frand(chaseAngle - dynamicAngle, chaseAngle + dynamicAngle);
             pmChaseTarget->GetNearPoint(me, nearX, nearY, nearZ, me->GetCombatReach(), distanceInRange, chaseAngle);
             MoveTargetPosition(nearX, nearY, nearZ);
@@ -723,7 +749,7 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
     }
     else if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_RANGED)
     {
-        inventoryType = 15;        
+        inventoryType = 25;
     }
     else
     {
@@ -744,7 +770,7 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
         minRequiredLevel = 0;
     }
     std::unordered_set<uint32> availableItemEntrySet;
-    std::ostringstream inventoryTypeQueryStream; 
+    std::ostringstream inventoryTypeQueryStream;
     if (pmInventoryTypeSet.size() > 0)
     {
         inventoryTypeQueryStream << " ( 1 = 0 ";
@@ -759,15 +785,21 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
         inventoryTypeQueryStream << " InventoryType = " << inventoryType;
     }
     std::string inventoryTypeQuery = inventoryTypeQueryStream.str();
-    QueryResult itemQR = WorldDatabase.Query("SELECT entry FROM item_template where {} and class = {} and subclass = {} and Quality >= {} and RequiredLevel <= {} and RequiredLevel >= {} and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand()", inventoryTypeQuery, pmClass, pmSubclass, pmMinQuality, pmMaxRequiredLevel, minRequiredLevel);
-    if (itemQR)
+    int activeQuality = pmMinQuality;
+    while (activeQuality >= 0)
     {
-        do
+        QueryResult itemQR = WorldDatabase.Query("SELECT entry FROM item_template where {} and class = {} and subclass = {} and Quality >= {} and RequiredLevel <= {} and RequiredLevel >= {} and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand()", inventoryTypeQuery, pmClass, pmSubclass, activeQuality, pmMaxRequiredLevel, minRequiredLevel);
+        if (itemQR)
         {
-            Field* fields = itemQR->Fetch();
-            availableItemEntrySet.insert(fields[0].Get<uint32>());
-        } while (itemQR->NextRow());
+            do
+            {
+                Field* fields = itemQR->Fetch();
+                availableItemEntrySet.insert(fields[0].Get<uint32>());
+            } while (itemQR->NextRow());
+        }
+        activeQuality--;
     }
+
     for (std::unordered_set<uint32>::iterator entryIt = availableItemEntrySet.begin(); entryIt != availableItemEntrySet.end(); entryIt++)
     {
         if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(*entryIt))
@@ -872,8 +904,42 @@ bool NingerAction_Base::UseItem(Item* pmItem, Unit* pmTarget)
     return false;
 }
 
+bool NingerAction_Base::UseItem(Item* pmItem, Item* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    if (me->CanUseItem(pmItem) != EQUIP_ERR_OK)
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return false;
+    }
+    if (!pmTarget)
+    {
+        return false;
+    }
+
+    if (const ItemTemplate* proto = pmItem->GetTemplate())
+    {
+        SpellCastTargets targets;
+        targets.SetItemTarget(pmTarget);
+        me->CastItemUseSpell(pmItem, targets, 1, 0);
+        return true;
+    }
+
+    return false;
+}
+
 bool NingerAction_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheckAura, bool pmOnlyMyAura, bool pmClearShapeShift, uint32 pmMaxAuraStack)
 {
+    if (!SpellValid(pmSpellId))
+    {
+        return false;
+    }
     if (!me)
     {
         return false;
@@ -885,10 +951,6 @@ bool NingerAction_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheck
     if (pmClearShapeShift)
     {
         ClearShapeshift();
-    }
-    if (!SpellValid(pmSpellId))
-    {
-        return false;
     }
     const SpellInfo* pS = sSpellMgr->GetSpellInfo(pmSpellId);
     if (!pS)

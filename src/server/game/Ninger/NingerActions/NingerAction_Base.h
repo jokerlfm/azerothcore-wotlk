@@ -69,6 +69,7 @@ public:
     void PetAttack(Unit* pmTarget);
     void PetStop();
     bool UseItem(Item* pmItem, Unit* pmTarget);
+    bool UseItem(Item* pmItem, Item* pmTarget);
     bool CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheckAura = false, bool pmOnlyMyAura = false, bool pmClearShapeShift = false, uint32 pmMaxAuraStack = 1);
     void ClearShapeshift();
     void CancelAura(uint32 pmSpellID);

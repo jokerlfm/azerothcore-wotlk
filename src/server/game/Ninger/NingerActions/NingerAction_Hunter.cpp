@@ -492,11 +492,13 @@ void NingerAction_Hunter::InitializeEquipments(bool pmReset)
             {
                 equipItemSubClass = 6;
             }
+            modType = -1;
         }
         else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_RANGED)
         {
             equipItemClass = 2;
             equipItemSubClass = 2;
+            modType = -1;
         }
         else
         {

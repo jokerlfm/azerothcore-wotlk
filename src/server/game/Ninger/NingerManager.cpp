@@ -379,6 +379,11 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
             target_class = Classes::CLASS_WARRIOR;
             target_specialty = 2;
         }
+        else if (classRand < 75)
+        {
+            target_class = Classes::CLASS_ROGUE;
+            target_specialty = 1;
+        }
         else
         {
             target_class = Classes::CLASS_HUNTER;
@@ -386,8 +391,8 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
         }
 
         // lfm debug
-        //target_class = Classes::CLASS_WARRIOR;
-        //target_specialty = 2;
+        //target_class = Classes::CLASS_ROGUE;
+        //target_specialty = 1;
 
         uint32 target_race = 0;
         if (pmAlliance)
@@ -1007,6 +1012,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 ns->freeze = true;
                 pmTargetPlayer->StopMoving();
                 pmTargetPlayer->InterruptNonMeleeSpells(true);
+                pmTargetPlayer->AttackStop();
                 pmTargetPlayer->ningerAction->PetStop();
                 std::ostringstream replyStream;
                 replyStream << "Freezed";
