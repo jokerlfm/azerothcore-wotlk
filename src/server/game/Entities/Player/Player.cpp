@@ -413,11 +413,13 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     fishingDelay = 0;
     // lfm ninger
     groupRole = 0;
-    strategyMap.clear();
-    activeStrategyIndex = 0;
     teleportTargetGuid = 0;
     teleportDelay = 0;
     reviveDelay = 0;
+    ningerMovement = nullptr;
+    ningerAction = nullptr;
+    strategyMap.clear();
+    activeStrategyIndex = 0;
 
     sScriptMgr->OnConstructPlayer(this);
 }
@@ -2369,6 +2371,24 @@ void Player::GiveXP(uint32 xp, Unit* victim, float group_rate, bool isLFGReward)
     }
 
     uint8 level = getLevel();
+
+    // lfm expansion check
+    uint32 expansion = GetSession()->Expansion();
+    if (level >= 70)
+    {
+        if (expansion < 2)
+        {
+            return;
+        }
+    }
+    else if (level >= 60)
+    {
+        if (expansion < 1)
+        {
+            return;
+        }
+    }
+
 
     sScriptMgr->OnGivePlayerXP(this, xp, victim);
 

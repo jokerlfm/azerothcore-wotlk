@@ -56,5 +56,6 @@ private:
 
     int spellDelay_DemoralizingShout;
     int spellDelay_BattleShout;
+    int spellDelay_Revenge;
 };
 #endif

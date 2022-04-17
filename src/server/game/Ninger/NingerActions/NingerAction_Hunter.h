@@ -19,7 +19,7 @@ public:
     void ResetTalent();
     void InitializeEquipments(bool pmReset);
     void Prepare();
-    bool DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    bool DPS(Unit* pmTarget, bool pmAOE);
     bool Buff(Unit* pmTarget);
     bool Petting(bool pmSummon = true, bool pmReset = false);
     void PetStop();

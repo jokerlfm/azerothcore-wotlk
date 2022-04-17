@@ -5,6 +5,10 @@
 #define DEFAULT_ACTION_LIMIT_DELAY 5000
 #endif
 
+#ifndef DEFAULT_MOVEMENT_UPDATE_DELAY
+#define DEFAULT_MOVEMENT_UPDATE_DELAY 500
+#endif
+
 #include "Unit.h"
 #include "Item.h"
 #include "Player.h"
@@ -15,8 +19,17 @@ enum NingerMovementType :uint32
 {
     NingerMovementType_None = 0,
     NingerMovementType_Point,
+    NingerMovementType_Tank,
     NingerMovementType_Chase,
     NingerMovementType_Follow,
+};
+
+enum NingerMovementDirection :uint32
+{
+    NingerMovementDirection_Forward = 0,
+    NingerMovementDirection_Back,
+    NingerMovementDirection_Left,
+    NingerMovementDirection_Right,
 };
 
 class NingerMovement
@@ -26,20 +39,23 @@ public:
     void ResetMovement();
     void Update(uint32 pmDiff);
 
-    bool Chase(Unit* pmChaseTarget, float pmChaseDistanceMin, float pmChaseDistanceMax, uint32 pmLimitDelay = DEFAULT_ACTION_LIMIT_DELAY);
-    bool Follow(Unit* pmFollowTarget, float pmFollowDistanceMin, float pmFollowDistanceMax);
-    void MovePoint(Position pmTargetPosition, uint32 pmLimitDelay = DEFAULT_ACTION_LIMIT_DELAY);
-    void MovePoint(float pmX, float pmY, float pmZ, uint32 pmLimitDelay = DEFAULT_ACTION_LIMIT_DELAY);
-    void MoveTargetPosition();
-    void MoveTargetPosition(float pmX, float pmY, float pmZ);
+    bool Tank(Unit* pmTankTarget);
+    bool Chase(Unit* pmChaseTarget, bool pmForceBack = false);
+    bool Follow(Unit* pmFollowTarget);
+    void Point(Position pmPosTarget, uint32 pmLimit = DEFAULT_ACTION_LIMIT_DELAY);
+    bool Direction(Player* pmCommander, uint32 pmDirection, uint32 pmLimit = DEFAULT_ACTION_LIMIT_DELAY);
+    Position PredictPosition(Unit* target);
 
 public:
     Player* me;
+    ObjectGuid ogTankTarget;
     ObjectGuid ogChaseTarget;
+    ObjectGuid ogFollowTarget;
     Position positionTarget;
+    bool positionOK;
+    bool forceBack;
     uint32 activeMovementType;
-    float chaseDistanceMin;
-    float chaseDistanceMax;
+    int movingDelay;
 };
 
 class NingerAction_Base
@@ -49,7 +65,7 @@ public:
     virtual void Reset();
     virtual void Prepare();
     virtual void Update(uint32 pmDiff);
-    virtual bool DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    virtual bool DPS(Unit* pmTarget, bool pmAOE);
     virtual bool Tank(Unit* pmTarget, bool pmAOE);
     virtual bool Heal(Unit* pmTarget);
     virtual bool SimpleHeal(Unit* pmTarget);
@@ -75,8 +91,6 @@ public:
     void CancelAura(uint32 pmSpellID);
     bool Eat();
     bool Drink();
-    bool Chase(Unit* pmTarget, float pmMinDistance, float pmMaxDistance);
-    bool Follow(Unit* pmTarget, float pmMinDistance, float pmMaxDistance);
     bool RandomTeleport();
 
     void ChooseTarget(Unit* pmTarget);
@@ -88,11 +102,8 @@ public:
     Unit* GetAnyUnitInRange(float pmMinRange = 0.0f, float pmMaxRange = VISIBILITY_DISTANCE_NORMAL);
 
     Player* me;
-    NingerMovement* rm;
 
     uint32 specialty;
-    float chaseDistanceMin;
-    float chaseDistanceMax;
     int rti;
 };
 #endif

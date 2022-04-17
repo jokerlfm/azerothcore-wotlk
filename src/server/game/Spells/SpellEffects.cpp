@@ -3702,7 +3702,10 @@ void Spell::EffectThreat(SpellEffIndex /*effIndex*/)
     if (!unitTarget->CanHaveThreatList() || m_caster->IsFriendlyTo(unitTarget))
         return;
 
-    unitTarget->AddThreat(m_caster, float(damage));
+    // lfm threat spell will be halved
+    //unitTarget->AddThreat(m_caster, float(damage));
+    float threat = float(damage) / 2.0f;
+    unitTarget->AddThreat(m_caster, threat);
 }
 
 void Spell::EffectHealMaxHealth(SpellEffIndex /*effIndex*/)

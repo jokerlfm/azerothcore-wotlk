@@ -528,6 +528,7 @@ void NingerAction_Hunter::InitializeEquipments(bool pmReset)
 
 void NingerAction_Hunter::Prepare()
 {
+    NingerAction_Base::Prepare();
     if (!me)
     {
         return;
@@ -536,7 +537,6 @@ void NingerAction_Hunter::Prepare()
     {
         return;
     }
-
     if (!me->HasItemCount(ammoEntry, 1000))
     {
         me->StoreNewItemInBestSlots(ammoEntry, 1000);
@@ -561,7 +561,7 @@ void NingerAction_Hunter::Prepare()
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
 
-bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax)
+bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE)
 {
     if (!me)
     {
@@ -583,12 +583,20 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceM
         }
         return false;
     }
+    else if (pmTarget->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
     float targetDistance = me->GetDistance(pmTarget);
     if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
     {
         return false;
     }
-    rm->Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax);
+    me->ningerMovement->Chase(pmTarget);
     if (CastSpell(pmTarget, spell_HuntersMark, true))
     {
         return true;

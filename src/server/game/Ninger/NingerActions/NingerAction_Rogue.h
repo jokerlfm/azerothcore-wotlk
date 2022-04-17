@@ -11,10 +11,10 @@ public:
     void ResetTalent();
     void InitializeEquipments(bool pmReset);
     void Prepare();
-    bool DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax);
+    bool DPS(Unit* pmTarget, bool pmAOE);
     bool Buff(Unit* pmTarget);
 
-private:
+public:
     uint32 spell_Dismantle;
     uint32 spell_Eviscerate;
     uint32 spell_FanofKnives;

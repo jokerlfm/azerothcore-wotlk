@@ -16,7 +16,11 @@
 #endif
 
 #ifndef MIN_DISTANCE_GAP
-# define MIN_DISTANCE_GAP 0.5f
+# define MIN_DISTANCE_GAP 0.05f
+#endif
+
+#ifndef MIN_ANGLE_GAP
+# define MIN_ANGLE_GAP 0.1f
 #endif
 
 #ifndef FOLLOW_MIN_DISTANCE
@@ -44,11 +48,11 @@
 #endif
 
 #ifndef MELEE_MAX_DISTANCE
-# define MELEE_MAX_DISTANCE 1.0f
+# define MELEE_MAX_DISTANCE 0.5f
 #endif
 
 #ifndef RANGE_MIN_DISTANCE
-# define RANGE_MIN_DISTANCE 7.0f
+# define RANGE_MIN_DISTANCE 8.0f
 #endif
 
 #ifndef RANGE_NORMAL_DISTANCE
@@ -69,8 +73,9 @@ class NingerConfig
     NingerConfig()
     {
         Enable = 0;
+        Reset = 0;
+        ReviveDelay = 0;
         DPSDelay = 0;
-        UpdateDelay = 0;
         ManagerCheckDelay = 0;
         NingerCountEachLevel = 0;
         TeleportDelay = 0;
@@ -93,7 +98,7 @@ public:
     bool StartNinger();
     uint32 Enable;
     uint32 Reset;
-    uint32 UpdateDelay;
+    uint32 ReviveDelay;
     uint32 DPSDelay;
     uint32 TeleportDelay;
     uint32 CorpseRunDelay;

@@ -449,24 +449,34 @@ void Player::Update(uint32 p_time)
         if (teleportDelay <= 0)
         {
             teleportDelay = 0;
-            std::ostringstream replyStream;
-            if (Player* teleportTarget = ObjectAccessor::FindPlayerByLowGUID(teleportTargetGuid))
+            if (IsBeingTeleported())
             {
-                if (teleportTarget->IsInWorld())
-                {
-                    replyStream << GetName() << " Teleport to " << teleportTarget->GetName();
-                    TeleportTo(teleportTarget->GetMapId(), teleportTarget->GetPositionX(), teleportTarget->GetPositionY(), teleportTarget->GetPositionZ(), teleportTarget->GetOrientation());
-                }
-                else
-                {
-                    replyStream << teleportTarget->GetName() << " is not in world";
-                }
+                teleportDelay = 1000;
             }
             else
             {
-                replyStream << teleportTargetGuid << " not exists";
+                if (Player* teleportTarget = ObjectAccessor::FindPlayerByLowGUID(teleportTargetGuid))
+                {
+                    TeleportTo(teleportTarget->GetWorldLocation());
+                    ClearInCombat();
+                    SetSelection(ObjectGuid::Empty);
+                    SetTarget(ObjectGuid::Empty);
+                    if (IsAlive())
+                    {
+                        GetMotionMaster()->Clear();
+                        if (getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+                        {
+                            SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                        }
+                        Say("Arrived", Language::LANG_UNIVERSAL);
+                    }
+                    else
+                    {
+                        Say("I will revive in 5 seconds", Language::LANG_UNIVERSAL);
+                        reviveDelay = 5000;
+                    }
+                }
             }
-            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), this);
         }
     }
 
@@ -476,7 +486,11 @@ void Player::Update(uint32 p_time)
         if (reviveDelay <= 0)
         {
             reviveDelay = 0;
-            ResurrectPlayer(10.0f);
+            ResurrectPlayer(0.1f);
+            ClearInCombat();
+            SetSelection(ObjectGuid::Empty);
+            SetTarget(ObjectGuid::Empty);
+            GetMotionMaster()->Clear();
         }
     }
 }

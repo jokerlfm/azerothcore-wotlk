@@ -370,7 +370,7 @@ void NingerEntity::Update(uint32 pmDiff)
                     }
                     }
                     me->ningerAction->me = me;
-                    me->ningerAction->rm = new NingerMovement(me);
+                    me->ningerMovement = new NingerMovement(me);
                     me->ningerAction->InitializeCharacter(target_level, target_specialty);        
                     sCharacterCache->LoadCharacterCacheStorage();
                     offlineDelay = urand(2 * HOUR * IN_MILLISECONDS, 4 * HOUR * IN_MILLISECONDS);
@@ -401,6 +401,7 @@ void NingerEntity::Update(uint32 pmDiff)
                             nsb->initialized = true;
                         }
                     }
+                    me->strategyMap[me->activeStrategyIndex]->randomTeleportDelay = urand(2 * IN_MILLISECONDS, 20 * IN_MILLISECONDS);
                     entityState = NingerEntityState::NingerEntityState_Online;
                     break;
                 }
@@ -428,6 +429,10 @@ void NingerEntity::Update(uint32 pmDiff)
                                 }
                             }
                         }
+                    }
+                    else
+                    {
+                        entityState = NingerEntityState::NingerEntityState_Exit;
                     }
                 }
             }

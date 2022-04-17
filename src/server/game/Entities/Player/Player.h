@@ -47,6 +47,7 @@
 #include "NingerAction_Base.h"
 class NingerStrategy_Base;
 class NingerAction_Base;
+class NingerMovement;
 
 struct CreatureTemplate;
 struct Mail;
@@ -1055,6 +1056,7 @@ public:
 
     // 0 dps, 1 tank, 2 healer
     uint32 groupRole;
+    NingerMovement* ningerMovement;
     NingerAction_Base* ningerAction;
     std::unordered_map<uint32, NingerStrategy_Base*> strategyMap;
     uint32 activeStrategyIndex;

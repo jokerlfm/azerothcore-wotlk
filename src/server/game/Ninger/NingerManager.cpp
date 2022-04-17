@@ -224,14 +224,25 @@ void NingerManager::UpdateNingerEntities(uint32 pmDiff)
     }
 }
 
-void NingerManager::LogoutNingers()
+void NingerManager::LogoutNingers(bool pmInstant)
 {
     for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
     {
         if (NingerEntity* eachNinger = *reIT)
         {
-            eachNinger->entityState = NingerEntityState::NingerEntityState_DoLogoff;
-            eachNinger->checkDelay = 10;
+            if (pmInstant)
+            {
+                if (Player* eachPlayer = ObjectAccessor::FindPlayerByLowGUID(eachNinger->character_id))
+                {
+                    eachPlayer->GetSession()->LogoutPlayer(true);
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Logout ninger : {} ", eachPlayer->GetName().c_str());
+                }
+            }
+            else
+            {
+                eachNinger->entityState = NingerEntityState::NingerEntityState_DoLogoff;
+                eachNinger->checkDelay = 10;
+            }
         }
     }
 }
@@ -288,15 +299,41 @@ bool NingerManager::LoginNinger(uint32 pmLevel, uint32 pmCount)
             uint32 allianceCount = addCount / 2;
             uint32 hordeCount = addCount - allianceCount;
             int checkCount = allianceCount;
+            int tankA = 1;
+            int tankH = 1;
+            int healerA = 1;
+            int healerH = 1;
             while (checkCount > 0)
             {
-                CreateNinger(pmLevel, true);
+                uint32 groupRole = GroupRole::GroupRole_DPS;
+                if (tankA > 0)
+                {
+                    groupRole = GroupRole::GroupRole_Tank;
+                    tankA--;
+                }
+                else if (healerA > 0)
+                {
+                    groupRole = GroupRole::GroupRole_Healer;
+                    healerA--;
+                }
+                CreateNinger(pmLevel, true, groupRole);
                 checkCount--;
             }
             checkCount = hordeCount;
             while (checkCount > 0)
             {
-                CreateNinger(pmLevel, false);
+                uint32 groupRole = GroupRole::GroupRole_DPS;
+                if (tankH > 0)
+                {
+                    groupRole = GroupRole::GroupRole_Tank;
+                    tankH--;
+                }
+                else if (healerH > 0)
+                {
+                    groupRole = GroupRole::GroupRole_Healer;
+                    healerH--;
+                }
+                CreateNinger(pmLevel, false, groupRole);
                 checkCount--;
             }
         }
@@ -329,6 +366,7 @@ bool NingerManager::LoginNinger(uint32 pmLevel, uint32 pmCount)
                     {
                         if (eachRE->entityState == NingerEntityState::NingerEntityState_OffLine)
                         {
+                            eachRE->checkDelay = urand(5 * IN_MILLISECONDS, 5 * MINUTE * IN_MILLISECONDS);
                             eachRE->entityState = NingerEntityState::NingerEntityState_Enter;
                             toOnline--;
                             if (toOnline <= 0)
@@ -344,7 +382,7 @@ bool NingerManager::LoginNinger(uint32 pmLevel, uint32 pmCount)
     return true;
 }
 
-void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
+void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance, uint32 pmGroupRole)
 {
     uint32 currentNingerCount = 0;
     QueryResult ningerQR = CharacterDatabase.Query("SELECT count(*) FROM ninger");
@@ -362,32 +400,35 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance)
     QueryResult accountNameQR = LoginDatabase.Query(querySQL.c_str());
     if (accountNameQR)
     {
-        sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Account already %s exists.", checkAccountName.c_str());
+        sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Account already {} exists.", checkAccountName);
     }
     else
     {
         uint32 target_class = Classes::CLASS_HUNTER;
         uint32 target_specialty = 1;
         uint32 classRand = urand(1, 100);
-        if (classRand < 25)
-        {
-            target_class = Classes::CLASS_PRIEST;
-            target_specialty = 0;
-        }
-        else if (classRand < 50)
+        if (pmGroupRole == GroupRole::GroupRole_Tank)
         {
             target_class = Classes::CLASS_WARRIOR;
             target_specialty = 2;
         }
-        else if (classRand < 75)
+        else if (pmGroupRole == GroupRole::GroupRole_Healer)
         {
-            target_class = Classes::CLASS_ROGUE;
-            target_specialty = 1;
+            target_class = Classes::CLASS_PRIEST;
+            target_specialty = 0;
         }
         else
         {
-            target_class = Classes::CLASS_HUNTER;
-            target_specialty = 1;
+            if (classRand < 50)
+            {
+                target_class = Classes::CLASS_ROGUE;
+                target_specialty = 1;
+            }
+            else if (classRand < 200)
+            {
+                target_class = Classes::CLASS_HUNTER;
+                target_specialty = 1;
+            }
         }
 
         // lfm debug
@@ -525,205 +566,68 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
         {
             if (pmTargetGroup->GetLeaderGUID() == pmPlayer->GetGUID())
             {
-                bool paladinAura_concentration = false;
-                bool paladinAura_devotion = false;
-                bool paladinAura_retribution = false;
-                bool paladinAura_fire = false;
-                bool paladinAura_frost = false;
-                bool paladinAura_shadow = false;
-
-                bool paladinBlessing_kings = false;
-                bool paladinBlessing_might = false;
-                bool paladinBlessing_wisdom = false;
-                bool paladinBlessing_salvation = false;
-
-                bool paladinSeal_Justice = false;
-
-                bool warlockCurse_Weakness = false;
-                bool warlockCurse_Tongues = false;
-                bool warlockCurse_Element = false;
-
-                int rtiIndex = 0;
-
-                bool hunterAspect_wild = false;
-
                 for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                 {
                     if (Player* member = groupRef->GetSource())
                     {
-                        //if (member->GetMapId() == 619)
-                        //{
-                        //    member->activeStrategyIndex = 619;
-                        //}
-                        //else if (member->GetMapId() == 555)
-                        //{
-                        //    member->activeStrategyIndex = 555;
-                        //}
-                        //else if (member->GetMapId() == 585)
-                        //{
-                        //    member->activeStrategyIndex = 585;
-                        //}
-                        //else
-                        //{
-                        //    member->activeStrategyIndex = 0;
-                        //}
                         if (member->GetGUID() == pmPlayer->GetGUID())
                         {
                             continue;
                         }
                         if (NingerStrategy_Base* ns = member->strategyMap[member->activeStrategyIndex])
                         {
+                            //if (member->GetMapId() == 619)
+                            //{
+                            //    member->activeStrategyIndex = 619;
+                            //}
+                            //else if (member->GetMapId() == 555)
+                            //{
+                            //    member->activeStrategyIndex = 555;
+                            //}
+                            //else if (member->GetMapId() == 585)
+                            //{
+                            //    member->activeStrategyIndex = 585;
+                            //}
+                            //else
+                            //{
+                            //    member->activeStrategyIndex = 0;
+                            //}
                             ns->Reset();
-                        }
-                        if (NingerAction_Base* na = member->ningerAction)
-                        {
+                            member->groupRole = GroupRole::GroupRole_DPS;
                             switch (member->getClass())
                             {
                             case Classes::CLASS_WARRIOR:
                             {
                                 member->groupRole = GroupRole::GroupRole_Tank;
+                                ns->followDistance = MELEE_MIN_DISTANCE;
+                                ns->dpsDistance = MELEE_MIN_DISTANCE;
                                 break;
                             }
-                            case Classes::CLASS_SHAMAN:
+                            case Classes::CLASS_HUNTER:
                             {
-                                member->groupRole = GroupRole::GroupRole_DPS;
+                                ns->followDistance = FOLLOW_NEAR_DISTANCE;
+                                ns->dpsDistance = FOLLOW_NORMAL_DISTANCE;
+                                //rangeAngle += rangeAngleGap;
                                 break;
                             }
-                            case Classes::CLASS_PALADIN:
+                            case Classes::CLASS_ROGUE:
                             {
-                                member->groupRole = GroupRole::GroupRole_DPS;
+                                ns->followDistance = MELEE_MIN_DISTANCE;
+                                ns->dpsDistance = MELEE_MIN_DISTANCE;
                                 break;
                             }
                             case Classes::CLASS_PRIEST:
                             {
                                 member->groupRole = GroupRole::GroupRole_Healer;
-                                break;
-                            }
-                            case Classes::CLASS_DRUID:
-                            {
-                                member->groupRole = GroupRole::GroupRole_DPS;
+                                ns->followDistance = FOLLOW_NEAR_DISTANCE;
+                                ns->dpsDistance = FOLLOW_NORMAL_DISTANCE;
+                                //rangeAngle += rangeAngleGap;
                                 break;
                             }
                             default:
                             {
-                                member->groupRole = GroupRole::GroupRole_DPS;
                                 break;
                             }
-                            }
-                            if (member->getClass() == Classes::CLASS_PALADIN)
-                            {
-                                if (NingerAction_Paladin* nap = (NingerAction_Paladin*)na)
-                                {
-                                    if (!paladinBlessing_salvation)
-                                    {
-                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Salvation;
-                                        paladinBlessing_salvation = true;
-                                    }
-                                    else if (!paladinBlessing_might)
-                                    {
-                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-                                        paladinBlessing_might = true;
-                                    }
-                                    else if (!paladinBlessing_wisdom)
-                                    {
-                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Wisdom;
-                                        paladinBlessing_wisdom = true;
-                                    }
-                                    else if (!paladinBlessing_kings)
-                                    {
-                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Kings;
-                                        paladinBlessing_kings = true;
-                                    }
-                                    else
-                                    {
-                                        nap->blessingType = PaladinBlessingType::PaladinBlessingType_Might;
-                                        paladinBlessing_might = true;
-                                    }
-
-                                    if (!paladinAura_devotion)
-                                    {
-                                        nap->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                        paladinAura_devotion = true;
-                                    }
-                                    else if (!paladinAura_retribution)
-                                    {
-                                        nap->auraType = PaladinAuraType::PaladinAuraType_Retribution;
-                                        paladinAura_retribution = true;
-                                    }
-                                    else if (!paladinAura_concentration)
-                                    {
-                                        nap->auraType = PaladinAuraType::PaladinAuraType_Concentration;
-                                        paladinAura_concentration = true;
-                                    }
-                                    else if (!paladinAura_fire)
-                                    {
-                                        nap->auraType = PaladinAuraType::PaladinAuraType_FireResistant;
-                                        paladinAura_fire = true;
-                                    }
-                                    else if (!paladinAura_frost)
-                                    {
-                                        nap->auraType = PaladinAuraType::PaladinAuraType_FrostResistant;
-                                        paladinAura_frost = true;
-                                    }
-                                    else if (!paladinAura_shadow)
-                                    {
-                                        nap->auraType = PaladinAuraType::PaladinAuraType_ShadowResistant;
-                                        paladinAura_shadow = true;
-                                    }
-                                    else
-                                    {
-                                        nap->auraType = PaladinAuraType::PaladinAuraType_Devotion;
-                                        paladinAura_devotion = true;
-                                    }
-                                }
-                            }
-                            if (member->getClass() == Classes::CLASS_MAGE)
-                            {
-                                if (rtiIndex >= 0 && rtiIndex < TARGETICONCOUNT)
-                                {
-                                    na->rti = rtiIndex;
-                                    rtiIndex++;
-                                }
-                            }
-                            if (member->getClass() == Classes::CLASS_HUNTER)
-                            {
-                                if (NingerAction_Hunter* nah = (NingerAction_Hunter*)na)
-                                {
-                                    if (hunterAspect_wild)
-                                    {
-                                        nah->aspectType = HunterAspectType::HunterAspectType_Hawk;
-                                    }
-                                    else
-                                    {
-                                        nah->aspectType = HunterAspectType::HunterAspectType_Wild;
-                                        hunterAspect_wild = true;
-                                    }
-                                }
-                            }
-                            if (member->getClass() == Classes::CLASS_WARLOCK)
-                            {
-                                if (NingerAction_Warlock* naWarlock = (NingerAction_Warlock*)na)
-                                {
-                                    if (!warlockCurse_Weakness)
-                                    {
-                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Weakness;
-                                        warlockCurse_Weakness = true;
-                                    }
-                                    else if (!warlockCurse_Tongues)
-                                    {
-                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Tongues;
-                                        warlockCurse_Tongues = true;
-                                    }
-                                    else if (!warlockCurse_Element)
-                                    {
-                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Element;
-                                        warlockCurse_Element = true;
-                                    }
-                                    else
-                                    {
-                                        naWarlock->curseType = WarlockCurseType::WarlockCurseType_Weakness;
-                                    }
-                                }
                             }
                         }
                     }
@@ -1003,6 +907,33 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             }
         }
     }
+    else if (commandName == "angle")
+    {
+        if (pmTargetPlayer)
+        {
+            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+            {
+                ns->combatAngle = pmPlayer->GetOrientation();
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+            std::ostringstream replyStream;
+            replyStream << "Combat angle : " << pmPlayer->GetOrientation();
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+        }
+    }
     else if (commandName == "freeze")
     {
         if (pmTargetPlayer)
@@ -1133,23 +1064,10 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     std::string cmdDistanceStr = commandVector.at(1);
                     float cmdDistance = atof(cmdDistanceStr.c_str());
-                    if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE && cmdDistance > ns->followDistanceMin)
+                    if (cmdDistance >= FOLLOW_MIN_DISTANCE && cmdDistance <= FOLLOW_MAX_DISTANCE)
                     {
-                        ns->followDistanceMax = cmdDistance;
-                        if (commandVector.size() > 2)
-                        {
-                            cmdDistanceStr = commandVector.at(2);
-                            cmdDistance = atof(cmdDistanceStr.c_str());
-                            if (cmdDistance >= 0 && cmdDistance <= FOLLOW_MAX_DISTANCE && cmdDistance < ns->followDistanceMax)
-                            {
-                                ns->followDistanceMin = cmdDistance;
-                            }
-                            else
-                            {
-                                replyStream << "Distance is not valid";
-                            }
-                        }
-                        replyStream << "Follow distance - " << ns->followDistanceMax << " " << ns->followDistanceMin;
+                        ns->followDistance = cmdDistance;
+                        replyStream << "Follow distance - " << ns->followDistance;
                     }
                     else
                     {
@@ -1158,12 +1076,13 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 }
                 else
                 {
+                    ns->following = true;
                     if (ns->Follow())
                     {
                         ns->freeze = false;
                         ns->restLimit = 0;
                         ns->actionLimit = 0;
-                        replyStream << "Following - " << ns->followDistanceMax << " " << ns->followDistanceMin;
+                        replyStream << "Following - " << ns->followDistance;
                     }
                     else
                     {
@@ -1199,29 +1118,16 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     std::string cmdDistanceStr = commandVector.at(1);
                     float cmdDistance = atof(cmdDistanceStr.c_str());
-                    if (cmdDistance >= MELEE_MIN_DISTANCE && cmdDistance <= RANGE_MAX_DISTANCE && cmdDistance > ns->chaseDistanceMin)
+                    if (cmdDistance >= MELEE_MIN_DISTANCE && cmdDistance <= RANGE_MAX_DISTANCE)
                     {
-                        ns->chaseDistanceMax = cmdDistance;
-                        if (commandVector.size() > 2)
-                        {
-                            cmdDistanceStr = commandVector.at(2);
-                            cmdDistance = atof(cmdDistanceStr.c_str());
-                            if (cmdDistance >= MELEE_MIN_DISTANCE && cmdDistance <= RANGE_MAX_DISTANCE && cmdDistance < ns->chaseDistanceMax)
-                            {
-                                ns->chaseDistanceMin = cmdDistance;
-                            }
-                            else
-                            {
-                                replyStream << "Distance is not valid";
-                            }
-                        }
+                        ns->dpsDistance = cmdDistance;
                     }
                     else
                     {
                         replyStream << "Distance is not valid";
                     }
                 }
-                replyStream << "Chase distance - " << ns->chaseDistanceMax << " " << ns->chaseDistanceMin;
+                replyStream << "Chase distance - " << ns->dpsDistance;
                 pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
             }
         }
@@ -1251,24 +1157,11 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     if (pmPlayer->GetDistance(pmTargetPlayer) < FOLLOW_MAX_DISTANCE)
                     {
-                        if (ns->gatherDelay > 0)
-                        {
-                            replyStream << "I am on the way";
-                        }
-                        else
-                        {
-                            ns->freeze = false;
-                            ns->restLimit = 0;
-                            ns->actionLimit = 0;
-                            ns->gatherDelay = IN_MILLISECONDS;
-                            if (pmTargetPlayer->IsNonMeleeSpellCast(false))
-                            {
-                                pmTargetPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-                                pmTargetPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-                            }
-                            pmTargetPlayer->ningerAction->rm->MovePoint(pmPlayer->GetPosition(), ns->gatherDelay);
-                            replyStream << "I will move to you";
-                        }
+                        ns->restLimit = 0;
+                        ns->actionType = ActionType::ActionType_Move;
+                        ns->actionLimit = 3 * IN_MILLISECONDS;
+                        pmTargetPlayer->ningerMovement->Point(pmPlayer->GetPosition(), ns->actionLimit);
+                        replyStream << "I will move to you";
                     }
                     else
                     {
@@ -1297,9 +1190,152 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             }
         }
     }
+    else if (commandName == "move")
+    {
+        if (pmTargetPlayer)
+        {
+            std::ostringstream replyStream;
+            if (pmTargetPlayer->IsAlive())
+            {
+                if (commandVector.size() > 1)
+                {
+                    bool doAction = true;
+                    std::string direction = commandVector.at(1);
+                    uint32 directionType = NingerMovementDirection::NingerMovementDirection_Forward;
+                    if (direction == "forward")
+                    {
+
+                    }
+                    else if (direction == "back")
+                    {
+                        directionType = NingerMovementDirection::NingerMovementDirection_Back;
+                    }
+                    else if (direction == "left")
+                    {
+                        directionType = NingerMovementDirection::NingerMovementDirection_Left;
+                    }
+                    else if (direction == "right")
+                    {
+                        directionType = NingerMovementDirection::NingerMovementDirection_Right;
+                    }
+                    else
+                    {
+                        doAction = false;
+                        replyStream << "Direction invalid";
+                    }
+                    if (doAction)
+                    {
+                        if (commandVector.size() > 2)
+                        {
+                            std::string role = commandVector.at(2);
+                            if (role == "tank")
+                            {
+                                if (pmTargetPlayer->groupRole != GroupRole::GroupRole_Tank)
+                                {
+                                    doAction = false;
+                                }
+                            }
+                            else if (role == "healer")
+                            {
+                                if (pmTargetPlayer->groupRole != GroupRole::GroupRole_Healer)
+                                {
+                                    doAction = false;
+                                }
+                            }
+                            else if (role == "dps")
+                            {
+                                if (pmTargetPlayer->groupRole != GroupRole::GroupRole_DPS)
+                                {
+                                    doAction = false;
+                                }
+                            }
+                        }
+                        if (doAction)
+                        {
+                            if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+                            {
+                                uint32 actionLimit = 2 * IN_MILLISECONDS;
+                                if (pmTargetPlayer->ningerMovement->Direction(pmPlayer, directionType, actionLimit))
+                                {
+                                    ns->combatAngle = 0.0f;
+                                    ns->following = false;
+                                    ns->restLimit = 0;
+                                    ns->actionType = ActionType::ActionType_Move;
+                                    ns->actionLimit = actionLimit;
+                                    replyStream << direction;
+                                }
+                                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    replyStream << "No direction";
+                }
+            }
+            else
+            {
+                replyStream << "I am dead";
+            }
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
+    }
     else if (commandName == "cast")
     {
-
+        if (pmTargetPlayer)
+        {
+            std::ostringstream replyStream;
+            if (Unit* targetU = pmPlayer->GetSelectedUnit())
+            {
+                if (commandVector.size() > 1)
+                {
+                    uint32 spellId = std::stoi(commandVector.at(1));
+                    if (pmTargetPlayer->HasActiveSpell(spellId))
+                    {
+                        pmTargetPlayer->InterruptNonMeleeSpells(true);
+                        SpellCastResult scr = pmTargetPlayer->CastSpell(targetU, spellId);
+                        replyStream << "Cast spell : " << scr;
+                    }
+                }
+                else
+                {
+                    replyStream << "Spell name missing";
+                }
+            }
+            else
+            {
+                replyStream << "No target";
+            }
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+        }
+        else if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    {
+                        HandleChatCommand(pmPlayer, pmContent, member);
+                    }
+                }
+            }
+        }
     }
     else if (commandName == "unaura")
     {

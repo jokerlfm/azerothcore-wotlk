@@ -498,6 +498,7 @@ void NingerAction_Rogue::InitializeEquipments(bool pmReset)
 
 void NingerAction_Rogue::Prepare()
 {
+    NingerAction_Base::Prepare();
     if (!me)
     {
         return;
@@ -510,7 +511,7 @@ void NingerAction_Rogue::Prepare()
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
 
-bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMin, float pmChaseDistanceMax)
+bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE)
 {
     if (!me)
     {
@@ -532,13 +533,28 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMi
         }
         return false;
     }
+    else if (pmTarget->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    if (!me->CanSeeOrDetect(pmTarget))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
     float targetDistance = me->GetDistance(pmTarget);
     if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
     {
         return false;
     }
-    rm->Chase(pmTarget, pmChaseDistanceMin, pmChaseDistanceMax);
-    me->Attack(pmTarget, true);
+    me->ningerMovement->Chase(pmTarget, true);
     if (targetDistance > FOLLOW_NORMAL_DISTANCE)
     {
         if (CastSpell(me, spell_Sprint))
@@ -560,80 +576,33 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMi
     }
     if (targetDistance < INTERACTION_DISTANCE)
     {
-        if (myEnergy >= 60)
+        if (me->HasAura(spell_Stealth))
         {
-            if (me->HasAura(spell_Stealth))
+            if (const SpellInfo* pS = sSpellMgr->GetSpellInfo(spell_CheapShot))
             {
-                if (CastSpell(pmTarget, spell_CheapShot))
+                if (!pmTarget->IsImmunedToSpell(pS))
                 {
-                    return true;
-                }
-            }
-        }
-        if (CastSpell(me, spell_AdrenalineRush))
-        {
-            return true;
-        }
-        if (myEnergy >= 25)
-        {
-            if (comboPoints > 0)
-            {
-                if (pmTarget->isMoving())
-                {
-                    if (CastSpell(pmTarget, spell_KidneyShot))
+                    if (myEnergy >= 60)
                     {
-                        return true;
-                    }
-                }
-            }
-            if (pmTarget->IsNonMeleeSpellCast(false, false, true))
-            {
-                if (CastSpell(pmTarget, spell_Kick))
-                {
-                    return true;
-                }
-                if (comboPoints > 0)
-                {
-                    if (CastSpell(pmTarget, spell_KidneyShot))
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-        if (myEnergy >= 15)
-        {
-            if (SpellValid(spell_TricksoftheTrade))
-            {
-                if (Group* myGroup = me->GetGroup())
-                {
-                    for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                    {
-                        if (Player* member = groupRef->GetSource())
+                        if (CastSpell(pmTarget, spell_CheapShot))
                         {
-                            if (member->GetGUID() != me->GetGUID())
-                            {
-                                if (member->groupRole == GroupRole::GroupRole_Tank)
-                                {
-                                    if (CastSpell(member, spell_TricksoftheTrade))
-                                    {
-                                        return true;
-                                    }
-                                    break;
-                                }
-                            }
+                            return true;
                         }
                     }
+                    return true;
                 }
             }
         }
         if (pmTarget->GetTarget() == me->GetGUID())
         {
-            if (myEnergy >= 20)
+            if (pmTarget->GetTypeId() != TypeID::TYPEID_PLAYER)
             {
-                if (CastSpell(pmTarget, spell_Feint))
+                if (myEnergy >= 20)
                 {
-                    return true;
+                    if (CastSpell(pmTarget, spell_Feint))
+                    {
+                        return true;
+                    }
                 }
             }
             if (CastSpell(me, spell_Evasion))
@@ -648,49 +617,124 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, float pmChaseDistanceMi
                 }
             }
         }
-        if (myEnergy >= 25)
+        else
         {
-            if (!me->HasAura(spell_SliceandDice))
+            if (Unit* targetTarget = ObjectAccessor::GetUnit(*me, pmTarget->GetTarget()))
             {
-                if (comboPoints > 1)
+                if (Player* isTankPlayer = targetTarget->ToPlayer())
                 {
-                    if (CastSpell(pmTarget, spell_SliceandDice))
+                    if (isTankPlayer->groupRole == GroupRole::GroupRole_Tank)
                     {
-                        return true;
+                        if (pmTarget->getThreatMgr().getThreat(me) > pmTarget->getThreatMgr().getThreat(isTankPlayer) * 0.95f)
+                        {
+                            me->AttackStop();
+                            return true;
+                        }
                     }
                 }
             }
-            else
+            me->Attack(pmTarget, true);
+            if (CastSpell(me, spell_AdrenalineRush))
+            {
+                return true;
+            }
+            if (myEnergy >= 25)
             {
                 if (comboPoints > 0)
                 {
-                    uint32 finishRate = urand(1, 4);
-                    if (comboPoints > finishRate)
+                    if (pmTarget->isMoving())
                     {
-                        if (CastSpell(pmTarget, spell_Eviscerate))
+                        if (CastSpell(pmTarget, spell_KidneyShot))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                if (pmTarget->IsNonMeleeSpellCast(false, false, true))
+                {
+                    if (CastSpell(pmTarget, spell_Kick))
+                    {
+                        return true;
+                    }
+                    if (comboPoints > 0)
+                    {
+                        if (CastSpell(pmTarget, spell_KidneyShot))
                         {
                             return true;
                         }
                     }
                 }
             }
-            if (pmTarget->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+            if (myEnergy >= 15)
             {
-                if (CastSpell(pmTarget, spell_Dismantle))
+                if (SpellValid(spell_TricksoftheTrade))
+                {
+                    if (Group* myGroup = me->GetGroup())
+                    {
+                        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                        {
+                            if (Player* member = groupRef->GetSource())
+                            {
+                                if (member->GetGUID() != me->GetGUID())
+                                {
+                                    if (member->groupRole == GroupRole::GroupRole_Tank)
+                                    {
+                                        if (CastSpell(member, spell_TricksoftheTrade))
+                                        {
+                                            return true;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (myEnergy >= 25)
+            {
+                if (!me->HasAura(spell_SliceandDice))
+                {
+                    if (comboPoints > 1)
+                    {
+                        if (CastSpell(pmTarget, spell_SliceandDice))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (comboPoints > 0)
+                    {
+                        uint32 finishRate = urand(1, 4);
+                        if (comboPoints > finishRate)
+                        {
+                            if (CastSpell(pmTarget, spell_Eviscerate))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                if (pmTarget->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+                {
+                    if (CastSpell(pmTarget, spell_Dismantle, true))
+                    {
+                        return true;
+                    }
+                }
+                if (CastSpell(me, spell_BladeFlurry))
                 {
                     return true;
                 }
             }
-            if (CastSpell(me, spell_BladeFlurry))
+            if (myEnergy >= 45)
             {
-                return true;
-            }
-        }
-        if (myEnergy >= 45)
-        {
-            if (CastSpell(pmTarget, spell_SinisterStrike))
-            {
-                return true;
+                if (CastSpell(pmTarget, spell_SinisterStrike))
+                {
+                    return true;
+                }
             }
         }
     }
@@ -739,6 +783,13 @@ bool NingerAction_Rogue::Buff(Unit* pmTarget)
                         return true;
                     }
                 }
+            }
+        }
+        if (!me->GetGroup())
+        {
+            if (CastSpell(me, spell_Stealth, true))
+            {
+                return true;
             }
         }
     }

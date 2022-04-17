@@ -2763,6 +2763,9 @@ void World::_UpdateGameTime()
 /// Shutdown the server
 void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std::string& reason)
 {
+    // lfm ninger
+    sNingerManager->LogoutNingers(true);
+
     // ignore if server shutdown at next tick
     if (IsStopped())
         return;

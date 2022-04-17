@@ -17,6 +17,7 @@ enum ActionType :uint32
     ActionType_None = 0,
     ActionType_Engage = 1,
     ActionType_Revive = 2,
+    ActionType_Move = 3,
 };
 
 class NingerStrategy_Base
@@ -47,30 +48,27 @@ public:
     Player* me;        
     bool initialized;
 
-    float chaseDistanceMin;
-    float chaseDistanceMax;    
+    float dpsDistance;
+    float followDistance;
 
-    float followDistanceMin;
-    float followDistanceMax;    
-
-    int updateDelay;
     int randomTeleportDelay;
 
-    int assembleDelay;
-    int gatherDelay;
     int corpseRunDelay;
     int dpsDelay;
 
     int restLimit;
     int drinkDelay;
 
-    int combatDuration;    
+    int combatDuration;
     int wanderDuration;
+    int pvpDelay;
 
     bool freeze;
     bool cure;
     bool aoe;
     bool petting;
+    bool following;
+    float combatAngle;
 
     uint32 actionType;
     int actionLimit;

@@ -52,6 +52,9 @@
 #include "WorldSocket.h"
 #include <zlib.h>
 
+// lfm ninger
+#include "NingerAction_Rogue.h"
+
 namespace
 {
     std::string const DefaultPlayerName = "<none>";
@@ -1409,7 +1412,7 @@ uint32 WorldSession::DosProtection::GetMaxPacketCounterAllowed(uint16 opcode) co
     case CMSG_CORPSE_MAP_POSITION_QUERY:            //   0               1
     case CMSG_MOVE_TIME_SKIPPED:                    //   0               1
     case MSG_QUERY_NEXT_MAIL_TIME:                  //   0               1
-        case CMSG_SET_SHEATHED:                         //   0               1
+    case CMSG_SET_SHEATHED:                         //   0               1
     case MSG_RAID_TARGET_UPDATE:                    //   0               1
     case CMSG_PLAYER_LOGOUT:                        //   0               1
     case CMSG_LOGOUT_REQUEST:                       //   0               1
@@ -1712,13 +1715,30 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
         {
             break;
         }
+        if (Group* myGroup = _player->GetGroup())
+        {
+            if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+            {
+                if (leader->GetSession()->isNinger)
+                {
+                    _player->RemoveFromGroup();
+                }
+                else
+                {
+                    HandleGroupInviteOpcode(pmPacket);
+                }
+            }
+        }
         if (Group* grp = _player->GetGroupInvite())
         {
             Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID());
             if (!inviter)
             {
+                _player->RemoveFromGroup();
                 break;
             }
+            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, false);
+            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, true);
             WorldPacket wpAccept(CMSG_GROUP_ACCEPT, 4);
             wpAccept << uint32(0);
             _player->GetSession()->HandleGroupAcceptOpcode(wpAccept);
@@ -1726,6 +1746,13 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
             _player->ningerAction->Reset();
             replyStream_Talent << sNingerManager->characterTalentTabNameMap[_player->getClass()][_player->ningerAction->specialty];
             _player->Whisper(replyStream_Talent.str(), Language::LANG_UNIVERSAL, inviter);
+            if (_player->getClass() == Classes::CLASS_ROGUE)
+            {
+                if (NingerAction_Rogue* nar = (NingerAction_Rogue*)_player->ningerAction)
+                {
+                    nar->CancelAura(nar->spell_Stealth);
+                }
+            }
         }
         break;
     }
@@ -1782,7 +1809,7 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
         {
             _player->ResurectUsingRequestData();
             _player->ClearInCombat();
-            _player->ningerAction->rm->ResetMovement();
+            _player->ningerMovement->ResetMovement();
             _player->ningerAction->ClearTarget();
         }
         break;

@@ -50,7 +50,7 @@ public:
     void InitializeManager();
     void UpdateNingerManager(uint32 pmDiff);
     void UpdateNingerEntities(uint32 pmDiff);
-    void LogoutNingers();
+    void LogoutNingers(bool pmInstant=false);
     void DeleteNingers();
     bool LoginNinger(uint32 pmLevel, uint32 pmCount);
     void HandleChatCommand(Player* pmPlayer, std::string pmContent, Player* pmTargetPlayer = nullptr, Group* pmTargetGroup = nullptr);
@@ -69,7 +69,7 @@ public:
     std::unordered_map<uint32, std::unordered_map<uint32, std::string>> characterTalentTabNameMap;   
 
 private:
-    void CreateNinger(uint32 pmLevel, bool pmAlliance);
+    void CreateNinger(uint32 pmLevel, bool pmAlliance, uint32 pmGroupRole);
     int checkDelay;
 };
 

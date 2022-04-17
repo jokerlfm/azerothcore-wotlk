@@ -737,6 +737,25 @@ public:
     WorldLocation* wl;
 };
 
+// lfm herbs
+class Herb
+{
+public:
+    Herb()
+    {
+        guid = 0;
+        type = 0;
+        spawnMask = 0;
+        wl = new WorldLocation(0, 0.0f, 0.0f, 0.0f, 0.0f);
+    }
+
+public:
+    uint32 guid;
+    uint32 type;
+    uint8 spawnMask;
+    WorldLocation* wl;
+};
+
 class ObjectMgr
 {
     friend class PlayerDumpReader;
@@ -752,6 +771,9 @@ public:
     // 0 copper, 1 tin, 2 silver
     std::unordered_map<uint32, std::unordered_set<uint32>> veinEntryMap;
     std::unordered_map<uint32, std::unordered_set<Vein*>> veinGroupMap;
+
+    std::unordered_set<uint32> herbEntrySet;
+    std::unordered_set<Herb*> herbEntitySet;
 
     typedef std::unordered_map<uint32, Item*> ItemMap;
 

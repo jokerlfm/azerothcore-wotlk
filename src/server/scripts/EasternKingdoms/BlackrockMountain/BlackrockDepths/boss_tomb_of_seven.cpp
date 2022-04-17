@@ -177,7 +177,7 @@ public:
         {
             Voidwalkers = false;
             // Reset his gossip menu
-            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+            me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
             me->SetFaction(FACTION_FRIENDLY);
 
             // was set before event start, so set again

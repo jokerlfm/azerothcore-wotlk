@@ -311,6 +311,10 @@ ObjectMgr::ObjectMgr() :
     // lfm veins
     veinEntryMap.clear();
     veinGroupMap.clear();
+
+    // lfm herbs
+    herbEntrySet.clear();
+    herbEntitySet.clear();
 }
 
 ObjectMgr::~ObjectMgr()
@@ -673,6 +677,14 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     else if (creatureTemplate.Entry == 706 || creatureTemplate.Entry == 808 || creatureTemplate.Entry == 946)
     {
         creatureTemplate.faction = 37;
+    }
+    else if (creatureTemplate.Entry == 8125)
+    {
+        creatureTemplate.ScriptID = GetScriptId("npc_dirge_quikcleave");
+    }
+    else if (creatureTemplate.Entry == 18990)
+    {
+        creatureTemplate.npcflag = 80;
     }
 }
 
@@ -2398,6 +2410,74 @@ void ObjectMgr::LoadGameobjects()
     veinEntryMap[2].insert(1733);
     veinEntryMap[2].insert(105569);
 
+    // lfm herb entries
+    herbEntrySet.insert(1618);
+    herbEntrySet.insert(3724);
+    herbEntrySet.insert(1617);
+    herbEntrySet.insert(3725);
+    herbEntrySet.insert(1619);
+    herbEntrySet.insert(3726);
+    herbEntrySet.insert(1620);
+    herbEntrySet.insert(3727);
+    herbEntrySet.insert(1621);
+    herbEntrySet.insert(3729);
+    herbEntrySet.insert(1622);
+    herbEntrySet.insert(3730);
+    herbEntrySet.insert(2045);
+    herbEntrySet.insert(1623);
+    herbEntrySet.insert(1628);
+    herbEntrySet.insert(1624);
+    herbEntrySet.insert(2041);
+    herbEntrySet.insert(2042);
+    herbEntrySet.insert(2046);
+    herbEntrySet.insert(2043);
+    herbEntrySet.insert(2044);
+    herbEntrySet.insert(2866);
+    herbEntrySet.insert(142140);
+    herbEntrySet.insert(180165);
+    herbEntrySet.insert(142141);
+    herbEntrySet.insert(176642);
+    herbEntrySet.insert(142142);
+    herbEntrySet.insert(176636);
+    herbEntrySet.insert(180164);
+    herbEntrySet.insert(142143);
+    herbEntrySet.insert(183046);
+    herbEntrySet.insert(142144);
+    herbEntrySet.insert(142145);
+    herbEntrySet.insert(176637);
+    herbEntrySet.insert(176583);
+    herbEntrySet.insert(176638);
+    herbEntrySet.insert(180167);
+    herbEntrySet.insert(176584);
+    herbEntrySet.insert(176639);
+    herbEntrySet.insert(180168);
+    herbEntrySet.insert(176586);
+    herbEntrySet.insert(176640);
+    herbEntrySet.insert(180166);
+    herbEntrySet.insert(176587);
+    herbEntrySet.insert(176641);
+    herbEntrySet.insert(176588);
+    herbEntrySet.insert(176589);
+    herbEntrySet.insert(181270);
+    herbEntrySet.insert(183044);
+    herbEntrySet.insert(181271);
+    herbEntrySet.insert(183045);
+    herbEntrySet.insert(181277);
+    herbEntrySet.insert(181275);
+    herbEntrySet.insert(183043);
+    herbEntrySet.insert(181276);
+    herbEntrySet.insert(181278);
+    herbEntrySet.insert(181279);
+    herbEntrySet.insert(181280);
+    herbEntrySet.insert(181281);
+    herbEntrySet.insert(189973);
+    herbEntrySet.insert(190169);
+    herbEntrySet.insert(190170);
+    herbEntrySet.insert(191019);
+    herbEntrySet.insert(190173);
+    herbEntrySet.insert(190174);
+    herbEntrySet.insert(190175);
+
     //                                                0                1   2    3           4           5           6
     QueryResult result = WorldDatabase.Query("SELECT gameobject.guid, id, map, position_x, position_y, position_z, orientation, "
         //   7          8          9          10         11             12            13     14         15         16          17
@@ -2560,6 +2640,26 @@ void ObjectMgr::LoadGameobjects()
         //{
         //    AddGameobjectToGrid(guid, &data);
         //}
+
+        // lfm vein and herb spawn time
+        for (std::unordered_map<uint32, std::unordered_set<uint32>>::iterator typeIt = veinEntryMap.begin(); typeIt != veinEntryMap.end(); typeIt++)
+        {
+            if (typeIt->second.find(data.id) != typeIt->second.end())
+            {
+                if (data.spawntimesecs < 3600)
+                {
+                    data.spawntimesecs = 3600;
+                }
+            }
+        }
+        if (herbEntrySet.find(data.id) != herbEntrySet.end())
+        {
+            if (data.spawntimesecs < 3600)
+            {
+                data.spawntimesecs = 3600;
+            }
+        }
+
         if (gameEvent == 0)
         {
             AddGameobjectToGrid(guid, &data);
@@ -2636,6 +2736,24 @@ void ObjectMgr::LoadGameobjects()
         }
     }
 
+    // lfm herb 
+    for (std::unordered_set<Herb*>::iterator herbIt = herbEntitySet.begin(); herbIt != herbEntitySet.end(); herbIt++)
+    {
+        if (Herb* eachherb = *herbIt)
+        {
+            uint8 mask = eachherb->spawnMask;
+            for (uint8 i = 0; mask != 0; i++, mask >>= 1)
+            {
+                if (mask & 1)
+                {
+                    CellCoord cellCoord = Acore::ComputeCellCoord(eachherb->wl->m_positionX, eachherb->wl->m_positionY);
+                    CellObjectGuids& cell_guids = _mapObjectGuidsStore[MAKE_PAIR32(eachherb->wl->m_mapId, i)][cellCoord.GetId()];
+                    cell_guids.gameobjects.insert(eachherb->guid);
+                }
+            }
+        }
+    }
+
     LOG_INFO("server.loading", ">> Loaded {} gameobjects in {} ms", (unsigned long)_gameObjectDataStore.size(), GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
@@ -2691,35 +2809,73 @@ void ObjectMgr::AddGameobjectToGrid(ObjectGuid::LowType guid, GameObjectData con
             break;
         }
     }
+
     if (!grouped)
     {
-        uint8 mask = data->spawnMask;
-        for (uint8 i = 0; mask != 0; i++, mask >>= 1)
+        // lfm herbs
+        if (herbEntrySet.find(data->id) != herbEntrySet.end())
         {
-            if (mask & 1)
+            bool included = false;
+            for (std::unordered_set<Herb*>::iterator herbIt = herbEntitySet.begin(); herbIt != herbEntitySet.end(); herbIt++)
             {
-                CellCoord cellCoord = Acore::ComputeCellCoord(data->posX, data->posY);
-                CellObjectGuids& cell_guids = _mapObjectGuidsStore[MAKE_PAIR32(data->mapid, i)][cellCoord.GetId()];
-                cell_guids.gameobjects.insert(guid);
+                if (Herb* eachHerb = *herbIt)
+                {
+                    if (eachHerb->wl->GetMapId() == data->mapid)
+                    {
+                        float eachDistance = eachHerb->wl->GetExactDist(data->posX, data->posY, data->posZ);
+                        if (eachDistance < 100.0f)
+                        {
+                            included = true;
+                            break;
+                        }
+                        //if (eachDistance < 20.0f)
+                        //{
+                        //    included = true;
+                        //    break;
+                        //}
+                        //else if (eachDistance < 100.0f)
+                        //{
+                        //    if (Map* eachMap = sMapMgr->FindBaseMap(eachHerb->wl->GetMapId()))
+                        //    {
+                        //        PositionFullTerrainStatus data;
+                        //        eachMap->GetFullTerrainStatusForPosition(0, eachHerb->wl->m_positionX, eachHerb->wl->m_positionY, eachHerb->wl->m_positionZ, 1.0f, data);
+                        //        if (data.outdoors)
+                        //        {
+                        //            included = true;
+                        //            break;
+                        //        }
+                        //    }
+                        //}
+                    }
+                }
+            }
+            if (!included)
+            {
+                Herb* addGroupHerb = new Herb();
+                addGroupHerb->guid = guid;
+                addGroupHerb->type = 0;
+                addGroupHerb->spawnMask = data->spawnMask;
+                addGroupHerb->wl->SetMapId(data->mapid);
+                addGroupHerb->wl->m_positionX = data->posX;
+                addGroupHerb->wl->m_positionY = data->posY;
+                addGroupHerb->wl->m_positionZ = data->posZ;
+                herbEntitySet.insert(addGroupHerb);
+            }
+        }
+        else
+        {
+            uint8 mask = data->spawnMask;
+            for (uint8 i = 0; mask != 0; i++, mask >>= 1)
+            {
+                if (mask & 1)
+                {
+                    CellCoord cellCoord = Acore::ComputeCellCoord(data->posX, data->posY);
+                    CellObjectGuids& cell_guids = _mapObjectGuidsStore[MAKE_PAIR32(data->mapid, i)][cellCoord.GetId()];
+                    cell_guids.gameobjects.insert(guid);
+                }
             }
         }
     }
-
-    //for (std::unordered_set<uint32>::iterator entryIt = sObjectMgr->veinEntrySet.begin(); entryIt != sObjectMgr->veinEntrySet.end(); entryIt++)
-    //{
-    //    uint32 eachVeinEntry = *entryIt;
-    //    std::list<GameObject*> veins;
-    //    Acore::AllGameObjectsWithEntryInRange checker(this, eachVeinEntry, 50.0f);
-    //    Acore::GameObjectListSearcher<Acore::AllGameObjectsWithEntryInRange> searcher(this, veins, checker);
-    //    Cell::VisitWorldObjects(this, searcher, 50.0f);
-    //    for (std::list<GameObject*>::iterator goIt = veins.begin(); goIt != veins.end(); goIt++)
-    //    {
-    //        if (GameObject* eachVein = *goIt)
-    //        {
-    //            return;
-    //        }
-    //    }
-    //}
 }
 
 void ObjectMgr::RemoveGameobjectFromGrid(ObjectGuid::LowType guid, GameObjectData const* data)
@@ -4180,6 +4336,10 @@ void ObjectMgr::LoadPlayerInfo()
             PlayerClassLevelInfo& levelInfo = info->levelInfo[current_level - 1];
 
             levelInfo.basehealth = fields[2].Get<uint16>();
+
+            // lfm player base health
+            levelInfo.basehealth = levelInfo.basehealth * 150 / 100;
+
             levelInfo.basemana = fields[3].Get<uint16>();
 
             ++count;
@@ -4365,6 +4525,17 @@ void ObjectMgr::LoadPlayerInfo()
                 continue;
             }
             //PlayerXPperLevel
+
+            // lfm xp
+            if (current_level >= 70)
+            {
+                current_xp = current_xp * 150 / 100;
+            }
+            else if (current_level >= 60)
+            {
+                current_xp = current_xp * 2;
+            }
+
             _playerXPperLevel[current_level] = current_xp;
             ++count;
         } while (result->NextRow());
@@ -5132,6 +5303,16 @@ void ObjectMgr::LoadQuests()
                     qinfo->GetQuestId(), qinfo->RewardSpell, qinfo->RewardSpell);
                 qinfo->RewardSpell = 0;                    // no spell will be casted on player
             }
+        }
+
+        // lfm quests
+        if (qinfo->Id == 6622 || qinfo->Id == 6624)
+        {
+            qinfo->RewardSpell = 10847;
+        }
+        if (qinfo->Id == 6607)
+        {
+            qinfo->RewardSpell = 18249;
         }
 
         if (qinfo->RewardMailTemplateId)
@@ -6394,8 +6575,7 @@ void ObjectMgr::LoadQuestGreetings()
         _questGreetingStore[type].emplace(std::piecewise_construct, std::forward_as_tuple(id), std::forward_as_tuple(greetEmoteType, greetEmoteDelay, std::move(greeting)));
 
         ++count;
-    }
-    while (result->NextRow());
+    } while (result->NextRow());
 
     LOG_INFO("server.loading", ">> Loaded {} quest_greeting in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
@@ -9453,6 +9633,9 @@ void ObjectMgr::LoadScriptNames()
     {
         _scriptNamesStore.push_back((*result)[0].Get<std::string>());
     } while (result->NextRow());
+
+    // lfm script names
+    _scriptNamesStore.push_back("npc_dirge_quikcleave");
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
     LOG_INFO("server.loading", ">> Loaded {} ScriptNames in {} ms", _scriptNamesStore.size(), GetMSTimeDiffToNow(oldMSTime));

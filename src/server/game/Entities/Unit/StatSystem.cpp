@@ -1112,13 +1112,50 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         weaponMaxDamage = 0.0f;
     }
 
+    float dmgMultiplier = 1.0f;
+
+    // lfm creature damage
+    float lfmMultiplier = 1.0f;
+    if (const CreatureTemplate* ci = GetCreatureTemplate())
+    {
+        switch (ci->rank)
+        {
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
+        {
+            lfmMultiplier = 1.5f;
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
+        {
+            lfmMultiplier = 1.5f;
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RARE:
+        {
+            lfmMultiplier = 2.0f;
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            lfmMultiplier = 2.5f;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+        dmgMultiplier = ci->DamageModifier;
+    }
+    weaponMinDamage = weaponMinDamage * lfmMultiplier;
+    weaponMaxDamage = weaponMaxDamage * lfmMultiplier;
+
     float attackPower      = GetTotalAttackPowerValue(attType);
     float attackSpeedMulti = GetAPMultiplier(attType, normalized);
     float baseValue        = GetModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance;
     float basePct          = GetModifierValue(unitMod, BASE_PCT) * attackSpeedMulti;
     float totalValue       = GetModifierValue(unitMod, TOTAL_VALUE);
     float totalPct         = addTotalPct ? GetModifierValue(unitMod, TOTAL_PCT) : 1.0f;
-    float dmgMultiplier    = GetCreatureTemplate()->DamageModifier; // = DamageModifier * _GetDamageMod(rank);
 
     minDamage = ((weaponMinDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;
     maxDamage = ((weaponMaxDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;

@@ -1025,6 +1025,94 @@ public:
         void EnterCombat(Unit* /*who*/) override { }
     };
 
+    bool OnGossipHello(Player* player, Creature* creature) override
+    {
+        if (player->IsQuestRewarded(6624))
+        {
+            bool canTrain = false;
+            uint32 faValue = player->GetSkillValue(129);
+            if (faValue >= 240)
+            {
+                if (!player->HasSpell(10841))
+                {
+                    canTrain = true;
+                }
+            }
+            if (faValue >= 260)
+            {
+                if (!player->HasSpell(18629))
+                {
+                    canTrain = true;
+                }
+            }
+            if (faValue >= 290)
+            {
+                if (!player->HasSpell(18630))
+                {
+                    canTrain = true;
+                }
+            }
+            if (canTrain)
+            {
+                AddGossipItemFor(player, GossipOptionIcon::GOSSIP_ICON_CHAT, "Train me.", eTradeskill::GOSSIP_SENDER_MAIN, eTradeskill::GOSSIP_ACTION_INFO_DEF);
+                SendGossipMenuFor(player, 6414, creature->GetGUID());
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action) override
+    {
+        if (sender == eTradeskill::GOSSIP_SENDER_MAIN && action == eTradeskill::GOSSIP_ACTION_INFO_DEF)
+        {
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            uint32 targetSpell = 0;
+            uint32 faValue = player->GetSkillValue(129);
+            if (targetSpell == 0)
+            {
+                if (faValue >= 240)
+                {
+                    if (!player->HasSpell(10841))
+                    {
+                        targetSpell = 10841;
+                    }
+                }
+            }
+            if (targetSpell == 0)
+            {
+                if (faValue >= 260)
+                {
+                    if (!player->HasSpell(18629))
+                    {
+                        targetSpell = 18629;
+                    }
+                }
+            }
+            if (targetSpell == 0)
+            {
+                if (faValue >= 290)
+                {
+                    if (!player->HasSpell(18630))
+                    {
+                        targetSpell = 18630;
+                    }
+                }
+            }
+            if (targetSpell > 0)
+            {
+                creature->SendPlaySpellVisual(179); // 53 SpellCastDirected
+                creature->SendPlaySpellImpact(player->GetGUID(), 362); // 113 EmoteSalute
+                player->learnSpell(targetSpell);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     bool OnQuestAccept(Player* player, Creature* creature, Quest const* quest) override
     {
         if ((quest->GetQuestId() == 6624) || (quest->GetQuestId() == 6622))
@@ -1036,6 +1124,64 @@ public:
     CreatureAI* GetAI(Creature* creature) const override
     {
         return new npc_doctorAI(creature);
+    }
+};
+
+class npc_dirge_quikcleave : public CreatureScript
+{
+public:
+    npc_dirge_quikcleave() : CreatureScript("npc_dirge_quikcleave") { }
+
+    struct npc_dirge_quikcleaveAI : public ScriptedAI
+    {
+        npc_dirge_quikcleaveAI(Creature* creature) : ScriptedAI(creature) { }
+    };
+
+    bool OnGossipHello(Player* player, Creature* creature) override
+    {
+        if (player->IsQuestRewarded(6610))
+        {
+            bool canTrain = false;
+            uint32 cValue = player->GetSkillValue(185);
+            if (cValue >= 225)
+            {
+                if (!player->HasSpell(18260))
+                {
+                    AddGossipItemFor(player, GossipOptionIcon::GOSSIP_ICON_CHAT, "Train me.", eTradeskill::GOSSIP_SENDER_MAIN, eTradeskill::GOSSIP_ACTION_INFO_DEF);
+                    SendGossipMenuFor(player, 5798, creature->GetGUID());
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action) override
+    {
+        if (sender == eTradeskill::GOSSIP_SENDER_MAIN && action == eTradeskill::GOSSIP_ACTION_INFO_DEF)
+        {
+            ClearGossipMenuFor(player);
+            CloseGossipMenuFor(player);
+            uint32 cValue = player->GetSkillValue(185);
+            if (cValue >= 225)
+            {
+                if (!player->HasSpell(18260))
+                {
+                    creature->SendPlaySpellVisual(179); // 53 SpellCastDirected
+                    creature->SendPlaySpellImpact(player->GetGUID(), 362); // 113 EmoteSalute
+                    player->learnSpell(18260);
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_dirge_quikcleaveAI(creature);
     }
 };
 
@@ -2569,4 +2715,7 @@ void AddSC_npcs_special()
     new npc_firework();
     new npc_spring_rabbit();
     new npc_stable_master();
+
+    // lfm scripts
+    new npc_dirge_quikcleave();
 }

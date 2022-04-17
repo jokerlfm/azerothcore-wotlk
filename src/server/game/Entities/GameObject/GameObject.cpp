@@ -1709,10 +1709,10 @@ void GameObject::Use(Unit* user)
             if (!zone_skill)
                 LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
 
-            // lfm zone fishing skill will be 50% higher, min 50,
-            if (zone_skill < 50)
+            // lfm zone fishing skill will be higher 
+            if (zone_skill < 25)
             {
-                zone_skill = 50;
+                zone_skill = 25;
             }
             else if (zone_skill < 100)
             {
@@ -1720,7 +1720,7 @@ void GameObject::Use(Unit* user)
             }
             else
             {
-                zone_skill = zone_skill * 150 / 100;
+                zone_skill = zone_skill + 50;
             }
 
             int32 skill = player->GetSkillValue(SKILL_FISHING);
@@ -1744,7 +1744,7 @@ void GameObject::Use(Unit* user)
             }
             else
             {
-                chance = skill - zone_skill + 5;
+                chance = skill - zone_skill + 10;
             }            
 
             int32 roll = irand(1, 100);

@@ -32,5 +32,7 @@ private:
     uint32 spell_PowerWord_Shield;
     uint32 spell_Penance;
     uint32 spell_Weakened_Soul;
+    uint32 spell_Prayer_of_Spirit;
+    uint32 spell_Prayer_of_Fortitude;
 };
 #endif

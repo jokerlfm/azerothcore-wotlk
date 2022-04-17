@@ -164,39 +164,6 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket& recvData)
             data << uint32(0);                                      // unk
             player->GetSession()->SendPacket(&data);
         }
-
-        // lfm ninger group recheck
-        if (player->GetSession()->isNinger)
-        {
-            if (Group* checkGroup = player->GetGroup())
-            {
-                if (Player* leader = ObjectAccessor::FindPlayer(checkGroup->GetLeaderGUID()))
-                {
-                    if (leader->GetSession()->isNinger)
-                    {
-                        player->RemoveFromGroup();
-                    }
-                }
-                else
-                {
-                    player->RemoveFromGroup();
-                }
-            }
-            else if (Group* groupInvite = player->GetGroupInvite())
-            {
-                if (Player* leader = ObjectAccessor::FindPlayer(groupInvite->GetLeaderGUID()))
-                {
-                    if (leader->GetSession()->isNinger)
-                    {
-                        player->RemoveFromGroup();
-                    }
-                }
-                else
-                {
-                    player->RemoveFromGroup();
-                }
-            }
-        }
         return;
     }
 

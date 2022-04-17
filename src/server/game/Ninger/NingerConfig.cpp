@@ -467,10 +467,10 @@ bool NingerConfig::StartNinger()
 
     Enable = GetIntDefault("Enable", 0);
     Reset = GetIntDefault("Reset", 0);
+    ReviveDelay = GetIntDefault("ReviveDelay", 900000);
     DPSDelay = GetIntDefault("DPSDelay", 2000);
     ManagerCheckDelay = GetIntDefault("ManagerCheckDelay", 60000);
     NingerCountEachLevel = GetIntDefault("NingerCountEachLevel", 20);
-    UpdateDelay = GetIntDefault("UpdateDelay", 500);
     TeleportDelay = GetIntDefault("TeleportDelay", 60000);
     CorpseRunDelay = GetIntDefault("CorpseRunDelay", 120000);
 

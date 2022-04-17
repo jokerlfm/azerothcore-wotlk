@@ -5,18 +5,16 @@
 #include "MotionMaster.h"
 #include "Map.h"
 #include "Pet.h"
+#include "GridNotifiers.h"
 
 NingerStrategy_Base::NingerStrategy_Base()
 {
     me = nullptr;
     initialized = false;
 
-    updateDelay = sNingerConfig->UpdateDelay;
     dpsDelay = sNingerConfig->DPSDelay;
     randomTeleportDelay = 0;
 
-    assembleDelay = 0;
-    gatherDelay = 0;
     corpseRunDelay = 0;
 
     restLimit = 0;
@@ -24,20 +22,22 @@ NingerStrategy_Base::NingerStrategy_Base()
 
     wanderDuration = 0;
     combatDuration = 0;
+    pvpDelay = 0;
 
     freeze = false;
     cure = true;
     aoe = true;
     petting = true;
+    following = true;
+
+    combatAngle = 0.0f;
 
     actionLimit = 0;
     ogActionTarget = ObjectGuid::Empty;
     actionType = ActionType::ActionType_None;
 
-    chaseDistanceMin = MELEE_MIN_DISTANCE;
-    chaseDistanceMax = MELEE_MAX_DISTANCE;
-    followDistanceMin = 0;
-    followDistanceMax = MELEE_MAX_DISTANCE;
+    dpsDistance = MELEE_MIN_DISTANCE;
+    followDistance = MELEE_MAX_DISTANCE;
 }
 
 void NingerStrategy_Base::Report()
@@ -56,8 +56,6 @@ void NingerStrategy_Base::Report()
 
 void NingerStrategy_Base::Reset()
 {
-    assembleDelay = 0;
-    gatherDelay = 0;
     corpseRunDelay = 0;
 
     restLimit = 0;
@@ -65,20 +63,23 @@ void NingerStrategy_Base::Reset()
 
     wanderDuration = 0;
     combatDuration = 0;
+    pvpDelay = 0;
 
     freeze = false;
     cure = true;
     aoe = true;
     petting = true;
+    following = true;
+
+    combatAngle = 0.0f;
 
     actionLimit = 0;
     ogActionTarget = ObjectGuid::Empty;
     actionType = ActionType::ActionType_None;
 
-    chaseDistanceMin = MELEE_MIN_DISTANCE;
-    chaseDistanceMax = MELEE_MAX_DISTANCE;
-    followDistanceMin = 0;
-    followDistanceMax = MELEE_MAX_DISTANCE;
+    dpsDistance = MELEE_MIN_DISTANCE;
+    followDistance = MELEE_MIN_DISTANCE;
+
     switch (me->getClass())
     {
     case Classes::CLASS_WARRIOR:
@@ -88,9 +89,8 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_HUNTER:
     {
-        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
-        chaseDistanceMin = RANGE_MIN_DISTANCE;
-        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        followDistance = FOLLOW_NEAR_DISTANCE;
+        dpsDistance = RANGE_MIN_DISTANCE;
         break;
     }
     case Classes::CLASS_SHAMAN:
@@ -103,17 +103,15 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_WARLOCK:
     {
-        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
-        chaseDistanceMin = RANGE_MIN_DISTANCE;
-        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        followDistance = FOLLOW_NEAR_DISTANCE;
+        dpsDistance = RANGE_MIN_DISTANCE;
         break;
     }
     case Classes::CLASS_PRIEST:
     {
         me->groupRole = GroupRole::GroupRole_Healer;
-        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
-        chaseDistanceMin = RANGE_MIN_DISTANCE;
-        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        followDistance = FOLLOW_NEAR_DISTANCE;
+        dpsDistance = RANGE_MIN_DISTANCE;
         break;
     }
     case Classes::CLASS_ROGUE:
@@ -122,9 +120,8 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_MAGE:
     {
-        followDistanceMax = FOLLOW_NORMAL_DISTANCE;
-        chaseDistanceMin = RANGE_MIN_DISTANCE;
-        chaseDistanceMax = RANGE_NORMAL_DISTANCE;
+        followDistance = FOLLOW_NEAR_DISTANCE;
+        dpsDistance = RANGE_MIN_DISTANCE;
         break;
     }
     case Classes::CLASS_DRUID:
@@ -152,6 +149,7 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
     {
         return;
     }
+    me->ningerMovement->Update(pmDiff);
     me->ningerAction->Update(pmDiff);
     if (actionLimit > 0)
     {
@@ -160,87 +158,46 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
         {
             actionLimit = 0;
         }
-        if (Unit* actionTarget = ObjectAccessor::GetUnit(*me, ogActionTarget))
+        switch (actionType)
         {
-            switch (actionType)
-            {
-            case ActionType_None:
-            {
-                break;
-            }
-            case ActionType_Engage:
+        case ActionType_None:
+        {
+            break;
+        }
+        case ActionType_Engage:
+        {
+            if (Unit* actionTarget = ObjectAccessor::GetUnit(*me, ogActionTarget))
             {
                 if (Engage(actionTarget))
                 {
                     return;
                 }
-                break;
             }
-            case ActionType_Revive:
+            break;
+        }
+        case ActionType_Revive:
+        {
+            if (Unit* actionTarget = ObjectAccessor::GetUnit(*me, ogActionTarget))
             {
                 if (Revive(actionTarget))
                 {
                     return;
                 }
-                break;
-            }                
-            default:
-                break;
             }
+            break;
+        }
+        case ActionType::ActionType_Move:
+        {
+            return;
+        }
+        default:
+            break;
         }
         actionLimit = 0;
         ogActionTarget.Clear();
     }
     if (Group* myGroup = me->GetGroup())
     {
-        if (assembleDelay > 0)
-        {
-            assembleDelay -= pmDiff;
-            if (assembleDelay <= 0)
-            {
-                if (me->IsAlive())
-                {
-                    if (me->IsBeingTeleported())
-                    {
-                        assembleDelay = 1000;
-                    }
-                    else
-                    {
-                        me->ClearInCombat();
-                        me->ningerAction->ClearTarget();
-                        if (NingerMovement* nm = me->ningerAction->rm)
-                        {
-                            nm->ResetMovement();
-                        }
-                        for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                        {
-                            if (Player* member = groupRef->GetSource())
-                            {
-                                if (member->GetGUID() == myGroup->GetLeaderGUID())
-                                {
-                                    me->Whisper("I am coming.", Language::LANG_UNIVERSAL, member);
-                                    me->TeleportTo(member->GetWorldLocation());
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    assembleDelay = 0;
-                }
-            }
-        }
-        if (gatherDelay > 0)
-        {
-            gatherDelay -= pmDiff;
-            if (gatherDelay <= 0)
-            {
-                gatherDelay = 0;
-            }
-            return;
-        }
         if (GroupInCombat())
         {
             restLimit = 0;
@@ -287,6 +244,7 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
         }
         else
         {
+            combatAngle = 0.0f;
             combatDuration = 0;
             if (restLimit > 0)
             {
@@ -324,10 +282,11 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
     {
         if (!me->IsAlive())
         {
-            if (me->GetDeathTimer() > 60000)
+            if (me->GetDeathTimer() > sNingerConfig->ReviveDelay)
             {
                 me->ClearInCombat();
                 me->ningerAction->ClearTarget();
+                me->ningerMovement->ResetMovement();
                 float nearX = 0.0f;
                 float nearY = 0.0f;
                 float nearZ = 0.0f;
@@ -360,6 +319,10 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
         }
         else
         {
+            if (Buff())
+            {
+                return;
+            }
             combatDuration = 0;
             if (randomTeleportDelay > 0)
             {
@@ -367,9 +330,14 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
                 if (randomTeleportDelay <= 0)
                 {
                     randomTeleportDelay = urand(20 * MINUTE * IN_MILLISECONDS, 40 * MINUTE * IN_MILLISECONDS);
-                    me->ClearInCombat();
-                    me->ningerAction->ClearTarget();
-                    me->ningerAction->RandomTeleport();
+                    int myClass = me->getClass();
+                    if (myClass == Classes::CLASS_HUNTER || myClass == Classes::CLASS_ROGUE)
+                    {
+                        me->ClearInCombat();
+                        me->ningerAction->ClearTarget();
+                        me->ningerMovement->ResetMovement();
+                        me->ningerAction->RandomTeleport();
+                    }
                 }
             }
             if (wanderDuration > 0)
@@ -380,6 +348,34 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
                     if (Wander())
                     {
                         return;
+                    }
+                }
+            }
+            if (pvpDelay >= 0)
+            {
+                pvpDelay -= pmDiff;
+                if (pvpDelay <= 0)
+                {
+                    pvpDelay = 5000;
+                    std::list<Player*> targets;
+                    Acore::AnyPlayerInObjectRangeCheck check(me, VISIBILITY_DISTANCE_NORMAL, true);
+                    Acore::PlayerListSearcherWithSharedVision<Acore::AnyPlayerInObjectRangeCheck> searcher(me, targets, check);
+                    Cell::VisitWorldObjects(me, searcher, VISIBILITY_DISTANCE_NORMAL);
+                    for (std::list<Player*>::const_iterator iter = targets.begin(); iter != targets.end(); ++iter)
+                    {
+                        if (Player* player = (*iter))
+                        {
+                            if (player->IsHostileTo(me))
+                            {
+                                if (Engage(player))
+                                {
+                                    actionLimit = 30 * IN_MILLISECONDS;
+                                    ogActionTarget = player->GetGUID();
+                                    actionType = ActionType::ActionType_Engage;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -440,11 +436,21 @@ bool NingerStrategy_Base::Engage(Unit* pmTarget)
         {
         case GroupRole::GroupRole_Tank:
         {
-            return me->ningerAction->Tank(pmTarget, aoe);
+            if (me->ningerAction->Tank(pmTarget, aoe))
+            {
+                if (Group* myGroup = me->GetGroup())
+                {
+                    if (myGroup->GetGuidByTargetIcon(7) != pmTarget->GetGUID())
+                    {
+                        myGroup->SetTargetIcon(7, me->GetGUID(), pmTarget->GetGUID());
+                    }
+                }
+                return true;
+            }
         }
         case GroupRole::GroupRole_DPS:
         {
-            return me->ningerAction->DPS(pmTarget, aoe, chaseDistanceMin, chaseDistanceMax);
+            return me->ningerAction->DPS(pmTarget, aoe);
         }
         default:
         {
@@ -466,9 +472,12 @@ bool NingerStrategy_Base::Tank(Unit* pmTarget)
     {
         if (me->groupRole == GroupRole::GroupRole_Tank)
         {
-            if (Engage(pmTarget))
+            if (me->ningerAction->Tank(pmTarget, aoe))
             {
-                myGroup->SetTargetIcon(7, me->GetGUID(), pmTarget->GetGUID());
+                if (myGroup->GetGuidByTargetIcon(7) != pmTarget->GetGUID())
+                {
+                    myGroup->SetTargetIcon(7, me->GetGUID(), pmTarget->GetGUID());
+                }
                 return true;
             }
         }
@@ -502,7 +511,7 @@ bool NingerStrategy_Base::DPS(bool pmDelay)
         {
             if (Unit* tankTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
             {
-                if (me->ningerAction->DPS(tankTarget, aoe, chaseDistanceMin, chaseDistanceMax))
+                if (me->ningerAction->DPS(tankTarget, aoe))
                 {
                     return true;
                 }
@@ -513,10 +522,51 @@ bool NingerStrategy_Base::DPS(bool pmDelay)
         {
             if (Unit* leaderTarget = leader->GetSelectedUnit())
             {
-                if (me->ningerAction->DPS(leaderTarget, aoe, chaseDistanceMin, chaseDistanceMax))
+                if (leaderTarget->IsInCombat())
                 {
-                    return true;
+                    if (me->ningerAction->DPS(leaderTarget, aoe))
+                    {
+                        return true;
+                    }
                 }
+            }
+        }
+    }
+    else
+    {
+        if (Unit* myTarget = me->GetSelectedUnit())
+        {
+            if (me->ningerAction->DPS(myTarget, aoe))
+            {
+                return true;
+            }
+        }
+        Unit* nearestAttacker = nullptr;
+        float nearestDistance = VISIBILITY_DISTANCE_NORMAL;
+        std::unordered_set<Unit*> myAttackers = me->getAttackers();
+        for (std::unordered_set<Unit*>::iterator ait = myAttackers.begin(); ait != myAttackers.end(); ++ait)
+        {
+            if (Unit* eachAttacker = *ait)
+            {
+                if (me->IsValidAttackTarget(eachAttacker))
+                {
+                    float eachDistance = me->GetDistance(eachAttacker);
+                    if (eachDistance < nearestDistance)
+                    {
+                        if (!eachAttacker->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
+                        {
+                            nearestDistance = eachDistance;
+                            nearestAttacker = eachAttacker;
+                        }
+                    }
+                }
+            }
+        }
+        if (nearestAttacker)
+        {
+            if (me->ningerAction->DPS(nearestAttacker, aoe))
+            {
+                return true;
             }
         }
     }
@@ -595,8 +645,11 @@ bool NingerStrategy_Base::Tank()
                                                 {
                                                     if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
                                                     {
-                                                        nearestDistance = eachDistance;
-                                                        nearestOTUnit = eachAttacker;
+                                                        if (!eachAttacker->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
+                                                        {
+                                                            nearestDistance = eachDistance;
+                                                            nearestOTUnit = eachAttacker;
+                                                        }
                                                     }
                                                 }
                                             }
@@ -643,8 +696,11 @@ bool NingerStrategy_Base::Tank()
                     {
                         if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
                         {
-                            nearestDistance = eachDistance;
-                            nearestAttacker = eachAttacker;
+                            if (!eachAttacker->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
+                            {
+                                nearestDistance = eachDistance;
+                                nearestAttacker = eachAttacker;
+                            }
                         }
                     }
                 }
@@ -898,6 +954,10 @@ bool NingerStrategy_Base::Cure()
 
 bool NingerStrategy_Base::Follow()
 {
+    if (!following)
+    {
+        return false;
+    }
     if (!me)
     {
         return false;
@@ -910,7 +970,7 @@ bool NingerStrategy_Base::Follow()
     {
         if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
         {
-            if (me->ningerAction->Follow(leader, followDistanceMin, followDistanceMax))
+            if (me->ningerMovement->Follow(leader))
             {
                 ogActionTarget = leader->GetGUID();
                 return true;
@@ -938,10 +998,10 @@ bool NingerStrategy_Base::Wander()
 
     float angle = frand(0, 2 * M_PI);
     float distance = frand(10.0f, 30.0f);
-    float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-    me->GetNearPoint(me, destX, destY, destZ, me->GetCombatReach(), distance, angle);
+    Position dest;
+    me->GetNearPoint(me, dest.m_positionX, dest.m_positionY, dest.m_positionZ, me->GetCombatReach(), distance, angle);
     wanderDuration = urand(20 * IN_MILLISECONDS, 40 * IN_MILLISECONDS);
-    me->ningerAction->rm->MovePoint(destX, destY, destZ, wanderDuration);
+    me->ningerMovement->Point(dest, wanderDuration);
     return true;
 }
 

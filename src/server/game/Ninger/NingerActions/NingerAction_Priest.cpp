@@ -19,6 +19,8 @@ NingerAction_Priest::NingerAction_Priest() :NingerAction_Base()
     spell_PowerWord_Shield = 0;
     spell_Penance = 0;
     spell_Weakened_Soul = 6788;
+    spell_Prayer_of_Spirit = 0;
+    spell_Prayer_of_Fortitude = 0;
 }
 
 void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex)
@@ -152,6 +154,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     {
         spell_PowerWord_Fortitude = 10937;
         spell_PowerWord_Shield = 10899;
+        spell_Prayer_of_Fortitude = 21562;
     }
     if (myLevel >= 50)
     {
@@ -185,6 +188,8 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_PowerWord_Fortitude = 10938;
         spell_Penance = 47540;
         spell_PowerWord_Shield = 10901;
+        spell_Prayer_of_Spirit = 27681;
+        spell_Prayer_of_Fortitude = 21564;
     }
     if (myLevel >= 61)
     {
@@ -215,6 +220,8 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_PowerWord_Fortitude = 25389;
         spell_Penance = 53005;
         spell_PowerWord_Shield = 25218;
+        spell_Prayer_of_Spirit = 32999;
+        spell_Prayer_of_Fortitude = 25392;
     }
     if (myLevel >= 73)
     {
@@ -243,6 +250,8 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_PowerWord_Fortitude = 48161;
         spell_Penance = 53007;
         spell_PowerWord_Shield = 48066;
+        spell_Prayer_of_Spirit = 48074;
+        spell_Prayer_of_Fortitude = 48162;
     }
     me->UpdateSkillsToMaxSkillsForLevel();
     std::ostringstream msgStream;
@@ -454,6 +463,7 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
 
 void NingerAction_Priest::Prepare()
 {
+    NingerAction_Base::Prepare();
     if (!me)
     {
         return;
@@ -527,6 +537,13 @@ bool NingerAction_Priest::Heal(Unit* pmTarget)
                 {
                     return true;
                 }
+            }
+        }
+        if (spell_Penance > 0)
+        {
+            if (CastSpell(pmTarget, spell_Penance))
+            {
+                return true;
             }
         }
         if (spell_GreaterHeal > 0)
@@ -711,18 +728,74 @@ bool NingerAction_Priest::Buff(Unit* pmTarget)
         return false;
     }
 
-    if (spell_DivineSpirit > 0)
+    bool doBuff = true;
+    if (spell_Prayer_of_Spirit > 0)
     {
-        if (CastSpell(pmTarget, spell_DivineSpirit, true))
+        if (pmTarget->HasAura(spell_Prayer_of_Spirit))
         {
-            return true;
+            doBuff = false;
         }
     }
-    if (spell_PowerWord_Fortitude > 0)
+    if (doBuff)
     {
-        if (CastSpell(pmTarget, spell_PowerWord_Fortitude, true))
+        if (spell_DivineSpirit > 0)
         {
-            return true;
+            if (pmTarget->HasAura(spell_DivineSpirit))
+            {
+                doBuff = false;
+            }
+        }
+    }
+    if (doBuff)
+    {
+        if (spell_Prayer_of_Spirit > 0)
+        {
+            if (CastSpell(pmTarget, spell_Prayer_of_Spirit))
+            {
+                return true;
+            }
+        }
+        else if (spell_DivineSpirit > 0)
+        {
+            if (CastSpell(pmTarget, spell_DivineSpirit))
+            {
+                return true;
+            }
+        }
+    }
+    doBuff = true;
+    if (spell_Prayer_of_Fortitude > 0)
+    {
+        if (pmTarget->HasAura(spell_Prayer_of_Fortitude))
+        {
+            doBuff = false;
+        }
+    }
+    if (doBuff)
+    {
+        if (spell_PowerWord_Fortitude > 0)
+        {
+            if (pmTarget->HasAura(spell_PowerWord_Fortitude))
+            {
+                doBuff = false;
+            }
+        }
+    }
+    if (doBuff)
+    {
+        if (spell_Prayer_of_Fortitude > 0)
+        {
+            if (CastSpell(pmTarget, spell_Prayer_of_Fortitude))
+            {
+                return true;
+            }
+        }
+        else if (spell_PowerWord_Fortitude > 0)
+        {
+            if (CastSpell(pmTarget, spell_PowerWord_Fortitude))
+            {
+                return true;
+            }
         }
     }
 

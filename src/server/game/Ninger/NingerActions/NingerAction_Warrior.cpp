@@ -42,6 +42,7 @@ NingerAction_Warrior::NingerAction_Warrior() :NingerAction_Base()
 
     spellDelay_DemoralizingShout = DEFAULT_WARRIOR_SPELL_DELAY;
     spellDelay_BattleShout = DEFAULT_WARRIOR_SPELL_DELAY;
+    spellDelay_Revenge = 0;
 }
 
 void NingerAction_Warrior::Update(uint32 pmDiff)
@@ -53,6 +54,10 @@ void NingerAction_Warrior::Update(uint32 pmDiff)
     if (spellDelay_BattleShout >= 0)
     {
         spellDelay_BattleShout -= pmDiff;
+    }
+    if (spellDelay_Revenge >= 0)
+    {
+        spellDelay_Revenge -= pmDiff;
     }
     NingerAction_Base::Update(pmDiff);
 }
@@ -352,7 +357,7 @@ void NingerAction_Warrior::ResetTalent()
     LearnTalent(1872);
 
     LearnTalent(1893);
-    
+
     LearnTalent(130);
 
     LearnTalent(702);
@@ -500,7 +505,7 @@ void NingerAction_Warrior::InitializeEquipments(bool pmReset)
         }
         else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_MAINHAND)
         {
-            equipItemClass = 2;            
+            equipItemClass = 2;
             equipItemSubClass = 7;
             inventoryTypeSet.insert(InventoryType::INVTYPE_WEAPON);
             inventoryTypeSet.insert(InventoryType::INVTYPE_WEAPONMAINHAND);
@@ -546,6 +551,7 @@ void NingerAction_Warrior::InitializeEquipments(bool pmReset)
 
 void NingerAction_Warrior::Prepare()
 {
+    NingerAction_Base::Prepare();
     if (!me)
     {
         return;
@@ -585,7 +591,7 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
     {
         return false;
     }
-    rm->Chase(pmTarget, MELEE_MIN_DISTANCE, MELEE_MAX_DISTANCE);
+    me->ningerMovement->Tank(pmTarget);
     me->Attack(pmTarget, true);
     float myHealthPCT = me->GetHealthPct();
     if (targetDistance < RANGE_NORMAL_DISTANCE)
@@ -616,7 +622,7 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
         }
     }
     uint32 myRage = me->GetPower(Powers::POWER_RAGE);
-    if (targetDistance < FOLLOW_NORMAL_DISTANCE)
+    if (targetDistance < FOLLOW_FAR_DISTANCE)
     {
         if (myRage < 100)
         {
@@ -629,21 +635,24 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
         {
             if (pmTarget->GetTarget() != me->GetGUID())
             {
-                if (spell_Warbringer > 0)
+                if (targetDistance > RANGE_MIN_DISTANCE)
                 {
-                    if (CastSpell(pmTarget, spell_Charge))
+                    if (spell_Warbringer > 0)
                     {
-                        return true;
-                    }
-                    if (CastSpell(pmTarget, spell_intercept))
-                    {
-                        return true;
-                    }
-                    if (spell_Intervene > 0)
-                    {
-                        if (CastSpell(pmTarget, spell_Intervene))
+                        if (CastSpell(pmTarget, spell_Charge))
                         {
                             return true;
+                        }
+                        if (CastSpell(pmTarget, spell_intercept))
+                        {
+                            return true;
+                        }
+                        if (spell_Intervene > 0)
+                        {
+                            if (CastSpell(pmTarget, spell_Intervene))
+                            {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -679,10 +688,13 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
             {
                 if (spellDelay_DemoralizingShout < 0)
                 {
-                    if (CastSpell(pmTarget, spell_DemoralizingShout, true))
+                    if (targetDistance < FOLLOW_NEAR_DISTANCE)
                     {
-                        spellDelay_DemoralizingShout = DEFAULT_WARRIOR_SPELL_DELAY;
-                        return true;
+                        if (CastSpell(pmTarget, spell_DemoralizingShout, true))
+                        {
+                            spellDelay_DemoralizingShout = DEFAULT_WARRIOR_SPELL_DELAY;
+                            return true;
+                        }
                     }
                 }
             }
@@ -762,9 +774,13 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
         }
         if (spell_Revenge > 0)
         {
-            if (CastSpell(pmTarget, spell_Revenge))
+            if (spellDelay_Revenge < 0)
             {
-                return true;
+                if (CastSpell(pmTarget, spell_Revenge))
+                {
+                    spellDelay_Revenge = 10000;
+                    return true;
+                }
             }
         }
         if (spell_Rend > 0)
