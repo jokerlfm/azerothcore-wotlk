@@ -184,6 +184,10 @@ uint32 LootStore::LoadLootTable()
         {
             continue;
         }
+        if (entry == 17084 && item == 23580)
+        {
+            chance = 100.0f;
+        }
 
         LootStoreItem* storeitem = new LootStoreItem(item, reference, chance, needsquest, lootmode, groupid, mincount, maxcount);
 

@@ -165,6 +165,18 @@ void NingerManager::InitializeManager()
         } while (ningerNameQR->NextRow());
     }
 
+    instanceEncounterEntrySet.clear();
+    QueryResult icQR = WorldDatabase.Query("SELECT distinct creditEntry FROM instance_encounters");
+    if (icQR)
+    {
+        do
+        {
+            Field* fields = icQR->Fetch();
+            uint32 eachEntry = fields[0].Get<uint32>();
+            instanceEncounterEntrySet.insert(eachEntry);
+        } while (icQR->NextRow());
+    }
+
     sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "ninger initialized");
 }
 
@@ -172,6 +184,15 @@ NingerManager* NingerManager::instance()
 {
     static NingerManager instance;
     return &instance;
+}
+
+bool NingerManager::IsInstanceEncounter(uint32 pmEntry)
+{
+    if (instanceEncounterEntrySet.find(pmEntry) != instanceEncounterEntrySet.end())
+    {
+        return true;
+    }
+    return false;
 }
 
 void NingerManager::UpdateNingerManager(uint32 pmDiff)
@@ -466,9 +487,9 @@ void NingerManager::CreateNinger(uint32 pmLevel, bool pmAlliance, uint32 pmGroup
     }
 }
 
-void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, Player* pmTargetPlayer, Group* pmTargetGroup)
+void NingerManager::HandleChatCommand(Player* pmCommander, std::string pmContent, Player* pmTargetPlayer, Group* pmTargetGroup)
 {
-    if (!pmPlayer)
+    if (!pmCommander)
     {
         return;
     }
@@ -483,9 +504,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -495,7 +516,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             Player* targetPlayer = pmTargetPlayer;
             if (!targetPlayer)
             {
-                targetPlayer = pmPlayer;
+                targetPlayer = pmCommander;
             }
             std::ostringstream replyStream;
             if (commandVector.size() > 1)
@@ -528,11 +549,11 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             }
             if (pmTargetPlayer)
             {
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
             else
             {
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
             }
         }
     }
@@ -545,9 +566,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -556,7 +577,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
         {
             std::ostringstream replyStream;
             replyStream << characterTalentTabNameMap[pmTargetPlayer->getClass()][pmTargetPlayer->ningerAction->specialty];
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
         }
     }
     else if (commandName == "arrangement")
@@ -564,34 +585,24 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
         std::ostringstream replyStream;
         if (pmTargetGroup)
         {
-            if (pmTargetGroup->GetLeaderGUID() == pmPlayer->GetGUID())
+            if (pmTargetGroup->GetLeaderGUID() == pmCommander->GetGUID())
             {
+                ObjectGuid ogTank = ObjectGuid::Empty;
+                ObjectGuid ogHealer = ObjectGuid::Empty;
                 for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
                 {
                     if (Player* member = groupRef->GetSource())
                     {
-                        if (member->GetGUID() == pmPlayer->GetGUID())
+                        if (member->GetGUID() == pmCommander->GetGUID())
                         {
                             continue;
                         }
+                        if (member->GetMapId() == STRATEGY_THE_UNDERBOG)
+                        {
+                            member->activeStrategyIndex = STRATEGY_THE_UNDERBOG;
+                        }
                         if (NingerStrategy_Base* ns = member->strategyMap[member->activeStrategyIndex])
                         {
-                            //if (member->GetMapId() == 619)
-                            //{
-                            //    member->activeStrategyIndex = 619;
-                            //}
-                            //else if (member->GetMapId() == 555)
-                            //{
-                            //    member->activeStrategyIndex = 555;
-                            //}
-                            //else if (member->GetMapId() == 585)
-                            //{
-                            //    member->activeStrategyIndex = 585;
-                            //}
-                            //else
-                            //{
-                            //    member->activeStrategyIndex = 0;
-                            //}
                             ns->Reset();
                             member->groupRole = GroupRole::GroupRole_DPS;
                             switch (member->getClass())
@@ -599,14 +610,15 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                             case Classes::CLASS_WARRIOR:
                             {
                                 member->groupRole = GroupRole::GroupRole_Tank;
+                                ogTank = member->GetGUID();
                                 ns->followDistance = MELEE_MIN_DISTANCE;
                                 ns->dpsDistance = MELEE_MIN_DISTANCE;
                                 break;
                             }
                             case Classes::CLASS_HUNTER:
                             {
-                                ns->followDistance = FOLLOW_NEAR_DISTANCE;
-                                ns->dpsDistance = FOLLOW_NORMAL_DISTANCE;
+                                ns->followDistance = FOLLOW_FAR_DISTANCE;
+                                ns->dpsDistance = RANGE_MAX_DISTANCE;
                                 //rangeAngle += rangeAngleGap;
                                 break;
                             }
@@ -614,13 +626,15 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                             {
                                 ns->followDistance = MELEE_MIN_DISTANCE;
                                 ns->dpsDistance = MELEE_MIN_DISTANCE;
+                                ns->forceBack = true;
                                 break;
                             }
                             case Classes::CLASS_PRIEST:
                             {
                                 member->groupRole = GroupRole::GroupRole_Healer;
-                                ns->followDistance = FOLLOW_NEAR_DISTANCE;
-                                ns->dpsDistance = FOLLOW_NORMAL_DISTANCE;
+                                ogHealer = member->GetGUID();
+                                ns->followDistance = FOLLOW_FAR_DISTANCE;
+                                ns->dpsDistance = RANGE_MAX_DISTANCE;
                                 //rangeAngle += rangeAngleGap;
                                 break;
                             }
@@ -629,6 +643,23 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                                 break;
                             }
                             }
+                        }
+                        member->ningerAction->Prepare();
+                    }
+                }
+                for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                {
+                    if (Player* member = groupRef->GetSource())
+                    {
+                        if (member->GetGUID() == pmCommander->GetGUID())
+                        {
+                            continue;
+                        }
+                        if (NingerStrategy_Base* ns = member->strategyMap[member->activeStrategyIndex])
+                        {
+                            ns->ogTank = ogTank;
+                            ns->ogHealer = ogHealer;
+                            ns->Report();
                         }
                     }
                 }
@@ -643,12 +674,12 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
         {
             replyStream << "Not in a group";
         }
-        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
     }
     else if (commandName == "assemble")
     {
         std::ostringstream replyStream;
-        if (Player* teleportTarget = ObjectAccessor::FindPlayer(pmPlayer->GetTarget()))
+        if (Player* teleportTarget = ObjectAccessor::FindPlayer(pmCommander->GetTarget()))
         {
             if (pmTargetPlayer)
             {
@@ -666,13 +697,13 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         pmTargetPlayer->teleportDelay = sNingerConfig->TeleportDelay;
                         replyStream << "Prepare to teleport to " << teleportTarget->GetName() << " in " << pmTargetPlayer->teleportDelay / 1000 << " seconds";
                     }
-                    if (pmTargetPlayer->GetGUID() == pmPlayer->GetGUID())
+                    if (pmTargetPlayer->GetGUID() == pmCommander->GetGUID())
                     {
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str(), pmPlayer);
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str(), pmCommander);
                     }
                     else
                     {
-                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
                     }
                 }
             }
@@ -685,26 +716,26 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                     {
                         if (member->GetGUID() != teleportTarget->GetGUID())
                         {
-                            HandleChatCommand(pmPlayer, pmContent, member, pmTargetGroup);
+                            HandleChatCommand(pmCommander, pmContent, member, pmTargetGroup);
                         }
                     }
                 }
             }
             else
             {
-                HandleChatCommand(pmPlayer, pmContent, pmPlayer);
+                HandleChatCommand(pmCommander, pmContent, pmCommander);
             }
         }
         else
         {
-            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "No target", pmPlayer);
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "No target", pmCommander);
         }
     }
     else if (commandName == "leader")
     {
         if (pmTargetGroup)
         {
-            if (pmTargetGroup->GetLeaderGUID() != pmPlayer->GetGUID())
+            if (pmTargetGroup->GetLeaderGUID() != pmCommander->GetGUID())
             {
                 bool change = true;
                 if (Player* leader = ObjectAccessor::FindPlayer(pmTargetGroup->GetLeaderGUID()))
@@ -719,21 +750,21 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 }
                 if (change)
                 {
-                    pmTargetGroup->ChangeLeader(pmPlayer->GetGUID());
+                    pmTargetGroup->ChangeLeader(pmCommander->GetGUID());
                 }
                 else
                 {
-                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Leader is valid", pmPlayer);
+                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Leader is valid", pmCommander);
                 }
             }
             else
             {
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are the leader", pmPlayer);
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are the leader", pmCommander);
             }
         }
         else
         {
-            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are not in a group", pmPlayer);
+            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are not in a group", pmCommander);
         }
     }
     else if (commandName == "ninger")
@@ -763,23 +794,23 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                     replyStream << "All ningers are offline. Ready to delete";
                     DeleteNingers();
                 }
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
             }
             else if (ningerAction == "offline")
             {
                 std::ostringstream replyStream;
                 replyStream << "All ningers are going offline";
                 LogoutNingers();
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
             }
             else if (ningerAction == "online")
             {
-                uint32 playerLevel = pmPlayer->getLevel();
+                uint32 playerLevel = pmCommander->getLevel();
                 if (playerLevel < 10)
                 {
                     std::ostringstream replyStream;
                     replyStream << "You level is too low";
-                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
+                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
                 }
                 else
                 {
@@ -792,7 +823,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                     {
                         std::ostringstream replyTitleStream;
                         replyTitleStream << "ninger count to go online : " << ningerCount;
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmCommander);
                         LoginNinger(playerLevel, ningerCount);
                     }
                 }
@@ -814,7 +845,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
 
                                     std::ostringstream replyTitleStream;
                                     replyTitleStream << "Teleport ninger to homebind : " << eachNinger->GetName();
-                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmPlayer);
+                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmCommander);
                                 }
                             }
                         }
@@ -830,7 +861,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
             {
                 ns->freeze = false;
-                if (Unit* target = pmPlayer->GetSelectedUnit())
+                if (Unit* target = pmCommander->GetSelectedUnit())
                 {
                     if (ns->Engage(target))
                     {
@@ -845,7 +876,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         ns->actionType = ActionType::ActionType_Engage;
                         std::ostringstream replyStream;
                         replyStream << "Try to engage " << target->GetName();
-                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
                     }
                 }
             }
@@ -857,9 +888,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -872,7 +903,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
             {
                 ns->freeze = false;
-                if (Unit* target = pmPlayer->GetSelectedUnit())
+                if (Unit* target = pmCommander->GetSelectedUnit())
                 {
                     if (ns->Tank(target))
                     {
@@ -885,9 +916,10 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         ns->actionLimit = engageLimit;
                         ns->ogActionTarget = target->GetGUID();
                         ns->actionType = ActionType::ActionType_Engage;
+                        ns->combatAngle = pmCommander->GetOrientation();
                         std::ostringstream replyStream;
                         replyStream << "Try to engage " << target->GetName();
-                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
                     }
                 }
             }
@@ -899,9 +931,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -913,7 +945,10 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
         {
             if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
             {
-                ns->combatAngle = pmPlayer->GetOrientation();
+                ns->combatAngle = pmCommander->GetOrientation();
+                std::ostringstream replyStream;
+                replyStream << "Combat angle : " << pmCommander->GetOrientation();
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -923,15 +958,12 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
-            std::ostringstream replyStream;
-            replyStream << "Combat angle : " << pmPlayer->GetOrientation();
-            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmPlayer);
         }
     }
     else if (commandName == "freeze")
@@ -947,7 +979,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 pmTargetPlayer->ningerAction->PetStop();
                 std::ostringstream replyStream;
                 replyStream << "Freezed";
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -957,9 +989,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -978,9 +1010,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -993,7 +1025,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
             {
                 ns->Rest(true);
-                pmTargetPlayer->Whisper("Resting", Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper("Resting", Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1003,9 +1035,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1018,7 +1050,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
             {
                 ns->freeze = false;
-                if (Player* target = pmPlayer->GetSelectedPlayer())
+                if (Player* target = pmCommander->GetSelectedPlayer())
                 {
                     if (ns->Revive(target))
                     {
@@ -1027,14 +1059,14 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         ns->actionType = ActionType::ActionType_Revive;
                         std::ostringstream replyStream;
                         replyStream << "Try to do reviving";
-                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
                     }
                 }
                 else if (ns->Revive())
                 {
                     std::ostringstream replyStream;
                     replyStream << "Try to do reviving";
-                    pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                    pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
                 }
             }
         }
@@ -1045,9 +1077,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1089,7 +1121,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                         replyStream << "can not follow";
                     }
                 }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1099,9 +1131,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1128,7 +1160,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                     }
                 }
                 replyStream << "Chase distance - " << ns->dpsDistance;
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1138,9 +1170,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1155,12 +1187,12 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 std::ostringstream replyStream;
                 if (pmTargetPlayer->IsAlive())
                 {
-                    if (pmPlayer->GetDistance(pmTargetPlayer) < FOLLOW_MAX_DISTANCE)
+                    if (pmCommander->GetDistance(pmTargetPlayer) < FOLLOW_MAX_DISTANCE)
                     {
                         ns->restLimit = 0;
                         ns->actionType = ActionType::ActionType_Move;
                         ns->actionLimit = 3 * IN_MILLISECONDS;
-                        pmTargetPlayer->ningerMovement->Point(pmPlayer->GetPosition(), ns->actionLimit);
+                        pmTargetPlayer->ningerMovement->Point(pmCommander->GetPosition(), ns->actionLimit);
                         replyStream << "I will move to you";
                     }
                     else
@@ -1172,7 +1204,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     replyStream << "I am dead";
                 }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1182,9 +1214,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1249,13 +1281,21 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                                     doAction = false;
                                 }
                             }
+                            else if (role == "melee")
+                            {
+                                uint32 myClass = pmTargetPlayer->getClass();
+                                if (myClass != Classes::CLASS_WARRIOR && myClass != Classes::CLASS_ROGUE && myClass != Classes::CLASS_PALADIN)
+                                {
+                                    doAction = false;
+                                }
+                            }
                         }
                         if (doAction)
                         {
                             if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
                             {
                                 uint32 actionLimit = 2 * IN_MILLISECONDS;
-                                if (pmTargetPlayer->ningerMovement->Direction(pmPlayer, directionType, actionLimit))
+                                if (pmTargetPlayer->ningerMovement->Direction(pmCommander, directionType, actionLimit))
                                 {
                                     ns->combatAngle = 0.0f;
                                     ns->following = false;
@@ -1264,7 +1304,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                                     ns->actionLimit = actionLimit;
                                     replyStream << direction;
                                 }
-                                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
                             }
                         }
                     }
@@ -1286,9 +1326,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1299,7 +1339,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
         if (pmTargetPlayer)
         {
             std::ostringstream replyStream;
-            if (Unit* targetU = pmPlayer->GetSelectedUnit())
+            if (Unit* targetU = pmCommander->GetSelectedUnit())
             {
                 if (commandVector.size() > 1)
                 {
@@ -1320,7 +1360,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             {
                 replyStream << "No target";
             }
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
         }
         else if (pmTargetGroup)
         {
@@ -1329,9 +1369,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1340,6 +1380,28 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
     else if (commandName == "unaura")
     {
 
+    }
+    else if (commandName == "tcast")
+    {
+        std::ostringstream replyStream;
+        if (Unit* targetU = pmCommander->GetSelectedUnit())
+        {
+            if (commandVector.size() > 1)
+            {
+                uint32 spellId = std::stoi(commandVector.at(1));
+                SpellCastResult scr = targetU->CastSpell(targetU, spellId);
+                replyStream << "Cast result : " << scr;
+            }
+            else
+            {
+                replyStream << "No spell";
+            }
+        }
+        else
+        {
+            replyStream << "No t";
+        }
+        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
     }
     else if (commandName == "delay")
     {
@@ -1358,7 +1420,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     replyStream << "DPS delay is : " << ns->dpsDelay;
                 }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1368,9 +1430,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1407,7 +1469,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     replyStream << "auto cure is off";
                 }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1417,9 +1479,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1473,7 +1535,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     replyStream << "Petting is off";
                 }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1483,9 +1545,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1522,7 +1584,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 {
                     replyStream << "AOE is off";
                 }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1532,9 +1594,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1558,7 +1620,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                     pmTargetPlayer->ningerAction->rti = targetIcon;
                 }
                 replyStream << "RTI is " << pmTargetPlayer->ningerAction->rti;
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
         }
         else if (pmTargetGroup)
@@ -1568,9 +1630,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
@@ -1580,10 +1642,22 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
     {
         if (pmTargetPlayer)
         {
-            std::ostringstream replyStream;
-            pmTargetPlayer->ningerAction->InitializeEquipments(true);
-            replyStream << "Equipments reset";
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            for (std::unordered_set<NingerEntity*>::iterator reIT = ningerEntitySet.begin(); reIT != ningerEntitySet.end(); reIT++)
+            {
+                if (NingerEntity* eachNinger = *reIT)
+                {
+                    if (eachNinger->character_id==pmTargetPlayer->GetGUID().GetCounter())
+                    {
+                        std::ostringstream replyStream;
+                        pmTargetPlayer->ningerAction->InitializeEquipments(true);
+                        eachNinger->entityState = NingerEntityState::NingerEntityState_Equip;
+                        eachNinger->checkDelay = 100;
+                        replyStream << "Equipments reset";
+                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
+                        break;
+                    }
+                }
+            }
         }
         else if (pmTargetGroup)
         {
@@ -1592,13 +1666,56 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }
         }
+    }
+    else if (commandName == "rush")
+    {
+    if (pmTargetPlayer)
+    {
+        if (NingerStrategy_Base* ns = pmTargetPlayer->strategyMap[pmTargetPlayer->activeStrategyIndex])
+        {
+            ns->freeze = false;
+            if (Unit* target = pmCommander->GetSelectedUnit())
+            {
+                if (ns->Engage(target))
+                {
+                    int engageLimit = DEFAULT_ACTION_LIMIT_DELAY;
+                    if (commandVector.size() > 1)
+                    {
+                        std::string checkStr = commandVector.at(1);
+                        engageLimit = atoi(checkStr.c_str());
+                    }
+                    ns->rushing = true;
+                    ns->actionLimit = engageLimit;
+                    ns->ogActionTarget = target->GetGUID();
+                    ns->actionType = ActionType::ActionType_Engage;
+                    std::ostringstream replyStream;
+                    replyStream << "Rush " << target->GetName();
+                    pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
+                }
+            }
+        }
+    }
+    else if (pmTargetGroup)
+    {
+        for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+        {
+            Player* member = groupRef->GetSource();
+            if (member)
+            {
+                if (member->GetGUID() != pmCommander->GetGUID())
+                {
+                    HandleChatCommand(pmCommander, pmContent, member);
+                }
+            }
+        }
+    }
     }
     else if (commandName == "talent")
     {
@@ -1607,7 +1724,7 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
             std::ostringstream replyStream;
             pmTargetPlayer->ningerAction->ResetTalent();
             replyStream << "Talents reset";
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmPlayer);
+            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
         }
         else if (pmTargetGroup)
         {
@@ -1616,9 +1733,9 @@ void NingerManager::HandleChatCommand(Player* pmPlayer, std::string pmContent, P
                 Player* member = groupRef->GetSource();
                 if (member)
                 {
-                    if (member->GetGUID() != pmPlayer->GetGUID())
+                    if (member->GetGUID() != pmCommander->GetGUID())
                     {
-                        HandleChatCommand(pmPlayer, pmContent, member);
+                        HandleChatCommand(pmCommander, pmContent, member);
                     }
                 }
             }

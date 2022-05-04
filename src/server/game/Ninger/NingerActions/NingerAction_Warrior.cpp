@@ -371,11 +371,11 @@ void NingerAction_Warrior::ResetTalent()
     TrainSpells(4087);
 }
 
-void NingerAction_Warrior::InitializeEquipments(bool pmReset)
+bool NingerAction_Warrior::InitializeEquipments(bool pmReset)
 {
     if (!me)
     {
-        return;
+        return true;
     }
     if (pmReset)
     {
@@ -400,6 +400,7 @@ void NingerAction_Warrior::InitializeEquipments(bool pmReset)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
+    bool allEquiped = true;
     for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
     {
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
@@ -541,12 +542,12 @@ void NingerAction_Warrior::InitializeEquipments(bool pmReset)
                 }
             }
         }
-        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, me->getLevel(), modType, inventoryTypeSet);
+        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, modType, inventoryTypeSet);
+        allEquiped = false;
+        //break;
     }
 
-    std::ostringstream msgStream;
-    msgStream << me->GetName() << " Equiped";
-    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+    return allEquiped;
 }
 
 void NingerAction_Warrior::Prepare()

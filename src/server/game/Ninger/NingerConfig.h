@@ -59,6 +59,10 @@
 # define RANGE_NORMAL_DISTANCE 25.0f
 #endif
 
+#ifndef RANGE_FAR_DISTANCE
+# define RANGE_FAR_DISTANCE 30.0f
+#endif
+
 #ifndef RANGE_MAX_DISTANCE
 # define RANGE_MAX_DISTANCE 38.0f
 #endif

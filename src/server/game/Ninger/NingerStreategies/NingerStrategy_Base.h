@@ -1,6 +1,26 @@
 #ifndef NINGER_STRATEGY_H
 #define NINGER_STRATEGY_H
 
+#ifndef STRATEGY_THE_UNDERBOG
+#define STRATEGY_THE_UNDERBOG 546
+#endif
+
+#ifndef ENTRY_HUNGARFEN
+#define ENTRY_HUNGARFEN 17770
+#endif
+
+#ifndef ENTRY_HUNGARFEN_1
+#define ENTRY_HUNGARFEN_1 20169
+#endif
+
+#ifndef ENTRY_UNDERBOG_MUSHROOM
+#define ENTRY_UNDERBOG_MUSHROOM 17990
+#endif
+
+#ifndef ENTRY_UNDERBOG_MUSHROOM_1
+#define ENTRY_UNDERBOG_MUSHROOM_1 20189
+#endif
+
 #include "NingerAction_Base.h"
 
 class NingerAction_Base;
@@ -42,13 +62,16 @@ public:
     virtual bool Follow();
     virtual bool Wander();
     virtual std::string GetGroupRole();
-    virtual void SetGroupRole(std::string pmRoleName);    
+    virtual void SetGroupRole(std::string pmRoleName);
+
+    bool GroupInCombat();
 
 public:
-    Player* me;        
+    Player* me;
     bool initialized;
 
     float dpsDistance;
+    float dpsDistanceMin;
     float followDistance;
 
     int randomTeleportDelay;
@@ -66,16 +89,30 @@ public:
     bool freeze;
     bool cure;
     bool aoe;
+    bool rushing;
     bool petting;
     bool following;
     float combatAngle;
+    bool forceBack;
 
     uint32 actionType;
     int actionLimit;
     ObjectGuid ogActionTarget;
+    ObjectGuid ogTank;
+    ObjectGuid ogHealer;
+};
 
-private:
-    bool GroupInCombat();
 
+class NingerStrategy_The_Underbog :public NingerStrategy_Base
+{
+public:
+    NingerStrategy_The_Underbog();
+
+    void Report();
+    bool Tank(Unit* pmTarget);
+    bool DPS(bool pmDelay = true);
+
+public:
+    bool hungarfen;
 };
 #endif

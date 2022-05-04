@@ -2,6 +2,7 @@
 #include "Pet.h"
 #include "Group.h"
 #include "Spell.h"
+#include "GridNotifiers.h"
 
 NingerAction_Hunter::NingerAction_Hunter() :NingerAction_Base()
 {
@@ -303,11 +304,11 @@ void NingerAction_Hunter::ResetTalent()
     TrainSpells(4138);
 }
 
-void NingerAction_Hunter::InitializeEquipments(bool pmReset)
+bool NingerAction_Hunter::InitializeEquipments(bool pmReset)
 {
     if (!me)
     {
-        return;
+        return true;
     }
     if (pmReset)
     {
@@ -332,6 +333,7 @@ void NingerAction_Hunter::InitializeEquipments(bool pmReset)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
+    bool allEquiped = true;
     for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
     {
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
@@ -518,12 +520,12 @@ void NingerAction_Hunter::InitializeEquipments(bool pmReset)
                 }
             }
         }
-        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, me->getLevel(), modType);
+        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, modType);
+        allEquiped = false;
+        //break;
     }
 
-    std::ostringstream msgStream;
-    msgStream << me->GetName() << " Equiped";
-    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+    return allEquiped;
 }
 
 void NingerAction_Hunter::Prepare()
@@ -561,7 +563,7 @@ void NingerAction_Hunter::Prepare()
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
 
-bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE)
+bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
 {
     if (!me)
     {
@@ -628,6 +630,46 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE)
     {
         CastSpell(pmTarget, spell_AutoShot);
     }
+    if (pmAOE)
+    {
+        if (spell_Volley > 0)
+        {
+            int attackerInRangeCount = 0;
+            std::list<Creature*> creatureList;
+            Acore::AnyUnitInObjectRangeCheck go_check(pmTarget, INTERACTION_DISTANCE);
+            Acore::CreatureListSearcher<Acore::AnyUnitInObjectRangeCheck> go_search(pmTarget, creatureList, go_check);
+            Cell::VisitGridObjects(pmTarget, go_search, INTERACTION_DISTANCE);
+            if (!creatureList.empty())
+            {
+                for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
+                {
+                    if (Unit* eachUnit = *itr)
+                    {
+                        if (eachUnit->IsAlive())
+                        {
+                            if (Creature* hostileCreature = eachUnit->ToCreature())
+                            {
+                                if (!hostileCreature->IsSummon() && !hostileCreature->IsPet())
+                                {
+                                    if (me->IsValidAttackTarget(hostileCreature))
+                                    {
+                                        attackerInRangeCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (attackerInRangeCount > 2)
+            {
+                if (CastSpell(pmTarget, spell_Volley))
+                {
+                    return true;
+                }
+            }
+        }
+    }
     if (pmTarget->isMoving())
     {
         if (CastSpell(pmTarget, spell_ConcussiveShot, true))
@@ -639,17 +681,24 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE)
     {
         return true;
     }
-    if (CastSpell(pmTarget, spell_ChimeraShot))
+    if (pmRush)
     {
-        return true;
-    }
-    if (CastSpell(pmTarget, spell_ArcaneShot))
-    {
-        return true;
-    }
-    if (CastSpell(pmTarget, spell_SteadyShot))
-    {
-        return true;
+        if (CastSpell(me, spell_RapidFire, true))
+        {
+            return true;
+        }
+        if (CastSpell(pmTarget, spell_ChimeraShot))
+        {
+            return true;
+        }
+        if (CastSpell(pmTarget, spell_ArcaneShot))
+        {
+            return true;
+        }
+        if (CastSpell(pmTarget, spell_SteadyShot))
+        {
+            return true;
+        }
     }
 
     return true;

@@ -321,7 +321,6 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                 else if (_player->IsBeingTeleportedFar())
                 {
                     HandleMoveWorldportAck();
-                    _player->strategyMap[_player->activeStrategyIndex]->Report();
                 }
             }
         }
@@ -1717,26 +1716,12 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
         }
         if (Group* myGroup = _player->GetGroup())
         {
-            if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
-            {
-                if (leader->GetSession()->isNinger)
-                {
-                    _player->RemoveFromGroup();
-                }
-                else
-                {
-                    HandleGroupInviteOpcode(pmPacket);
-                }
-            }
+            _player->RemoveFromGroup();
+            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, false);
+            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, true);
         }
         if (Group* grp = _player->GetGroupInvite())
         {
-            Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID());
-            if (!inviter)
-            {
-                _player->RemoveFromGroup();
-                break;
-            }
             _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, false);
             _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, true);
             WorldPacket wpAccept(CMSG_GROUP_ACCEPT, 4);
@@ -1745,7 +1730,10 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
             std::ostringstream replyStream_Talent;
             _player->ningerAction->Reset();
             replyStream_Talent << sNingerManager->characterTalentTabNameMap[_player->getClass()][_player->ningerAction->specialty];
-            _player->Whisper(replyStream_Talent.str(), Language::LANG_UNIVERSAL, inviter);
+            if (Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID()))
+            {
+                _player->Whisper(replyStream_Talent.str(), Language::LANG_UNIVERSAL, inviter);
+            }            
             if (_player->getClass() == Classes::CLASS_ROGUE)
             {
                 if (NingerAction_Rogue* nar = (NingerAction_Rogue*)_player->ningerAction)

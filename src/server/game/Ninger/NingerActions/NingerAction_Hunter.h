@@ -17,9 +17,9 @@ public:
     NingerAction_Hunter();
     void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
     void ResetTalent();
-    void InitializeEquipments(bool pmReset);
+    bool InitializeEquipments(bool pmReset);
     void Prepare();
-    bool DPS(Unit* pmTarget, bool pmAOE);
+    bool DPS(Unit* pmTarget, bool pmAOE, bool pmRush = false);
     bool Buff(Unit* pmTarget);
     bool Petting(bool pmSummon = true, bool pmReset = false);
     void PetStop();

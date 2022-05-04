@@ -196,6 +196,7 @@ void NingerAction_Rogue::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpec
         item_InstantPoison = 8928;
         spell_Eviscerate = 31016;
         spell_Feint = 25302;
+        spell_KillingSpree = 51690;
     }
     if (myLevel >= 62)
     {
@@ -316,11 +317,11 @@ void NingerAction_Rogue::ResetTalent()
     TrainSpells(4214);
 }
 
-void NingerAction_Rogue::InitializeEquipments(bool pmReset)
+bool NingerAction_Rogue::InitializeEquipments(bool pmReset)
 {
     if (!me)
     {
-        return;
+        return true;
     }
     if (pmReset)
     {
@@ -345,6 +346,7 @@ void NingerAction_Rogue::InitializeEquipments(bool pmReset)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
+    bool allEquiped = true;
     for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
     {
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
@@ -488,12 +490,12 @@ void NingerAction_Rogue::InitializeEquipments(bool pmReset)
                 }
             }
         }
-        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, me->getLevel(), modType, inventoryTypeSet);
+        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, modType, inventoryTypeSet);
+        allEquiped = false;
+        //break;
     }
 
-    std::ostringstream msgStream;
-    msgStream << me->GetName() << " Equiped";
-    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+    return allEquiped;
 }
 
 void NingerAction_Rogue::Prepare()
@@ -511,7 +513,7 @@ void NingerAction_Rogue::Prepare()
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
 
-bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE)
+bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
 {
     if (!me)
     {
@@ -554,7 +556,7 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE)
     {
         return false;
     }
-    me->ningerMovement->Chase(pmTarget, true);
+    me->ningerMovement->Chase(pmTarget);
     if (targetDistance > FOLLOW_NORMAL_DISTANCE)
     {
         if (CastSpell(me, spell_Sprint))
@@ -634,9 +636,23 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE)
                 }
             }
             me->Attack(pmTarget, true);
-            if (CastSpell(me, spell_AdrenalineRush))
+            if (pmRush)
             {
-                return true;
+                if (myEnergy >= 25)
+                {
+                    if (CastSpell(me, spell_BladeFlurry))
+                    {
+                        return true;
+                    }
+                }
+                if (CastSpell(pmTarget, spell_KillingSpree))
+                {
+                    return true;
+                }
+                if (CastSpell(me, spell_AdrenalineRush))
+                {
+                    return true;
+                }
             }
             if (myEnergy >= 25)
             {
@@ -723,10 +739,6 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE)
                     {
                         return true;
                     }
-                }
-                if (CastSpell(me, spell_BladeFlurry))
-                {
-                    return true;
                 }
             }
             if (myEnergy >= 45)

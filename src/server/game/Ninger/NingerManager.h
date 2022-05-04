@@ -53,9 +53,10 @@ public:
     void LogoutNingers(bool pmInstant=false);
     void DeleteNingers();
     bool LoginNinger(uint32 pmLevel, uint32 pmCount);
-    void HandleChatCommand(Player* pmPlayer, std::string pmContent, Player* pmTargetPlayer = nullptr, Group* pmTargetGroup = nullptr);
+    void HandleChatCommand(Player* pmCommander, std::string pmContent, Player* pmTargetPlayer = nullptr, Group* pmTargetGroup = nullptr);
     bool StringEndWith(const std::string& str, const std::string& tail);
     bool StringStartWith(const std::string& str, const std::string& head);
+    bool IsInstanceEncounter(uint32 pmEntry);
     std::vector<std::string> SplitString(std::string srcStr, std::string delimStr, bool repeatedCharIgnored);
     std::string TrimString(std::string srcStr);
     static NingerManager* instance();    
@@ -66,7 +67,8 @@ public:
     uint32 nameIndex;
     std::unordered_map<uint32, std::string> ningerNameMap;
     std::unordered_set<NingerEntity*> ningerEntitySet;
-    std::unordered_map<uint32, std::unordered_map<uint32, std::string>> characterTalentTabNameMap;   
+    std::unordered_map<uint32, std::unordered_map<uint32, std::string>> characterTalentTabNameMap;
+    std::unordered_set<uint32> instanceEncounterEntrySet;
 
 private:
     void CreateNinger(uint32 pmLevel, bool pmAlliance, uint32 pmGroupRole);

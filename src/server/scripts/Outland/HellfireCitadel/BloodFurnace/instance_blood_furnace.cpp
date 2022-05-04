@@ -50,18 +50,18 @@ public:
         {
             switch (creature->GetEntry())
             {
-                case NPC_THE_MAKER:
-                    _bossGUIDs[DATA_THE_MAKER] = creature->GetGUID();
-                    break;
-                case NPC_BROGGOK:
-                    _bossGUIDs[DATA_BROGGOK] = creature->GetGUID();
-                    break;
-                case NPC_KELIDAN:
-                    _bossGUIDs[DATA_KELIDAN] = creature->GetGUID();
-                    break;
-                case NPC_NASCENT_FEL_ORC:
-                    StorePrisoner(creature);
-                    break;
+            case NPC_THE_MAKER:
+                _bossGUIDs[DATA_THE_MAKER] = creature->GetGUID();
+                break;
+            case NPC_BROGGOK:
+                _bossGUIDs[DATA_BROGGOK] = creature->GetGUID();
+                break;
+            case NPC_KELIDAN:
+                _bossGUIDs[DATA_KELIDAN] = creature->GetGUID();
+                break;
+            case NPC_NASCENT_FEL_ORC:
+                StorePrisoner(creature);
+                break;
             }
         }
 
@@ -111,24 +111,24 @@ public:
         {
             switch (data)
             {
-                case DATA_THE_MAKER:
-                case DATA_BROGGOK:
-                case DATA_KELIDAN:
-                    return _bossGUIDs[data];
+            case DATA_THE_MAKER:
+            case DATA_BROGGOK:
+            case DATA_KELIDAN:
+                return _bossGUIDs[data];
 
-                case DATA_DOOR1:
-                case DATA_DOOR2:
-                case DATA_DOOR3:
-                case DATA_DOOR4:
-                case DATA_DOOR5:
-                case DATA_DOOR6:
-                    return _doorGUIDs[data - DATA_DOOR1];
+            case DATA_DOOR1:
+            case DATA_DOOR2:
+            case DATA_DOOR3:
+            case DATA_DOOR4:
+            case DATA_DOOR5:
+            case DATA_DOOR6:
+                return _doorGUIDs[data - DATA_DOOR1];
 
-                case DATA_PRISON_CELL1:
-                case DATA_PRISON_CELL2:
-                case DATA_PRISON_CELL3:
-                case DATA_PRISON_CELL4:
-                    return _prisonGUIDs[data - DATA_PRISON_CELL1];
+            case DATA_PRISON_CELL1:
+            case DATA_PRISON_CELL2:
+            case DATA_PRISON_CELL3:
+            case DATA_PRISON_CELL4:
+                return _prisonGUIDs[data - DATA_PRISON_CELL1];
             }
 
             return ObjectGuid::Empty;
@@ -138,13 +138,13 @@ public:
         {
             switch (type)
             {
-                case DATA_THE_MAKER:
-                case DATA_BROGGOK:
-                case DATA_KELIDAN:
-                    _auiEncounter[type] = data;
-                    if (type == DATA_BROGGOK)
-                        UpdateBroggokEvent(data);
-                    break;
+            case DATA_THE_MAKER:
+            case DATA_BROGGOK:
+            case DATA_KELIDAN:
+                _auiEncounter[type] = data;
+                if (type == DATA_BROGGOK)
+                    UpdateBroggokEvent(data);
+                break;
             }
 
             if (data == DONE)
@@ -166,10 +166,10 @@ public:
         {
             switch (type)
             {
-                case DATA_THE_MAKER:
-                case DATA_BROGGOK:
-                case DATA_KELIDAN:
-                    return _auiEncounter[type];
+            case DATA_THE_MAKER:
+            case DATA_BROGGOK:
+            case DATA_KELIDAN:
+                return _auiEncounter[type];
             }
             return 0;
         }
@@ -205,17 +205,17 @@ public:
         {
             switch (data)
             {
-                case IN_PROGRESS:
-                    ActivateCell(DATA_PRISON_CELL1);
-                    HandleGameObject(_doorGUIDs[3], false);
-                    break;
-                case NOT_STARTED:
-                    ResetPrisons();
-                    HandleGameObject(_doorGUIDs[4], false);
-                    HandleGameObject(_doorGUIDs[3], true);
-                    if (GameObject* lever = instance->GetGameObject(_broggokLeverGUID))
-                        lever->Respawn();
-                    break;
+            case IN_PROGRESS:
+                ActivateCell(DATA_PRISON_CELL1);
+                HandleGameObject(_doorGUIDs[3], false);
+                break;
+            case NOT_STARTED:
+                ResetPrisons();
+                HandleGameObject(_doorGUIDs[4], false);
+                HandleGameObject(_doorGUIDs[3], true);
+                if (GameObject* lever = instance->GetGameObject(_broggokLeverGUID))
+                    lever->Respawn();
+                break;
             }
         }
 
@@ -252,30 +252,59 @@ public:
             {
                 if (posY >= 106.0f && posY <= 123.0f)
                 {
-                    _prisonersCell[0].insert(creature->GetGUID());
-                    ++_prisonerCounter[0];
-                    ResetPrisoner(creature);
+                    // lfm prisoner count
+                    if (_prisonersCell[0].size() < 3)
+                    {
+                        _prisonersCell[0].insert(creature->GetGUID());
+                        ++_prisonerCounter[0];
+                        ResetPrisoner(creature);
+                    }
+                    else
+                    {
+                        creature->DisappearAndDie();
+                    }
                 }
                 else if (posY >= 76.0f && posY <= 91.0f)
                 {
-                    _prisonersCell[1].insert(creature->GetGUID());
-                    ++_prisonerCounter[1];
-                    ResetPrisoner(creature);
+                    if (_prisonersCell[1].size() < 3)
+                    {
+                        _prisonersCell[1].insert(creature->GetGUID());
+                        ++_prisonerCounter[1];
+                        ResetPrisoner(creature);
+                    }
+                    else
+                    {
+                        creature->DisappearAndDie();
+                    }
                 }
             }
             else if (posX >= 490.0f && posX <= 506.0f)
             {
                 if (posY >= 106.0f && posY <= 123.0f)
                 {
-                    _prisonersCell[2].insert(creature->GetGUID());
-                    ++_prisonerCounter[2];
-                    ResetPrisoner(creature);
+                    if (_prisonersCell[2].size() < 3)
+                    {
+                        _prisonersCell[2].insert(creature->GetGUID());
+                        ++_prisonerCounter[2];
+                        ResetPrisoner(creature);
+                    }
+                    else
+                    {
+                        creature->DisappearAndDie();
+                    }
                 }
                 else if (posY >= 76.0f && posY <= 91.0f)
                 {
-                    _prisonersCell[3].insert(creature->GetGUID());
-                    ++_prisonerCounter[3];
-                    ResetPrisoner(creature);
+                    if (_prisonersCell[3].size() < 3)
+                    {
+                        _prisonersCell[3].insert(creature->GetGUID());
+                        ++_prisonerCounter[3];
+                        ResetPrisoner(creature);
+                    }
+                    else
+                    {
+                        creature->DisappearAndDie();
+                    }
                 }
             }
         }
@@ -296,18 +325,18 @@ public:
         {
             switch (id)
             {
-                case DATA_PRISON_CELL1:
-                case DATA_PRISON_CELL2:
-                case DATA_PRISON_CELL3:
-                case DATA_PRISON_CELL4:
-                    HandleGameObject(_prisonGUIDs[id - DATA_PRISON_CELL1], true);
-                    ActivatePrisoners(_prisonersCell[id - DATA_PRISON_CELL1]);
-                    break;
-                case DATA_DOOR5:
-                    HandleGameObject(_doorGUIDs[4], true);
-                    if (Creature* broggok = instance->GetCreature(GetGuidData(DATA_BROGGOK)))
-                        broggok->AI()->DoAction(ACTION_ACTIVATE_BROGGOK);
-                    break;
+            case DATA_PRISON_CELL1:
+            case DATA_PRISON_CELL2:
+            case DATA_PRISON_CELL3:
+            case DATA_PRISON_CELL4:
+                HandleGameObject(_prisonGUIDs[id - DATA_PRISON_CELL1], true);
+                ActivatePrisoners(_prisonersCell[id - DATA_PRISON_CELL1]);
+                break;
+            case DATA_DOOR5:
+                HandleGameObject(_doorGUIDs[4], true);
+                if (Creature* broggok = instance->GetCreature(GetGuidData(DATA_BROGGOK)))
+                    broggok->AI()->DoAction(ACTION_ACTIVATE_BROGGOK);
+                break;
             }
         }
 

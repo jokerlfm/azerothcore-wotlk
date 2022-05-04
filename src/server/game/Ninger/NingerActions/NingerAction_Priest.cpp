@@ -19,6 +19,7 @@ NingerAction_Priest::NingerAction_Priest() :NingerAction_Base()
     spell_PowerWord_Shield = 0;
     spell_Penance = 0;
     spell_Weakened_Soul = 6788;
+    spell_Prayer_of_Healing = 0;
     spell_Prayer_of_Spirit = 0;
     spell_Prayer_of_Fortitude = 0;
 }
@@ -110,6 +111,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     {
         spell_DivineSpirit = 14752;
         spell_PowerWord_Shield = 6065;
+        spell_Prayer_of_Healing = 596;
     }
     if (myLevel >= 32)
     {
@@ -135,6 +137,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     {
         spell_GreaterHeal = 2060;
         spell_DivineSpirit = 14818;
+        spell_Prayer_of_Healing = 996;
     }
     if (myLevel >= 42)
     {
@@ -161,6 +164,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_Renew = 10928;
         spell_FlashHeal = 10916;
         spell_DivineSpirit = 14819;
+        spell_Prayer_of_Healing = 10960;
     }
     if (myLevel >= 52)
     {
@@ -190,6 +194,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_PowerWord_Shield = 10901;
         spell_Prayer_of_Spirit = 27681;
         spell_Prayer_of_Fortitude = 21564;
+        spell_Prayer_of_Healing = 10961;
     }
     if (myLevel >= 61)
     {
@@ -212,6 +217,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     {
         spell_GreaterHeal = 25213;
         spell_Resurrection = 25435;
+        spell_Prayer_of_Healing = 25308;
     }
     if (myLevel >= 70)
     {
@@ -233,6 +239,10 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         spell_Renew = 48067;
         spell_Penance = 53006;
         spell_PowerWord_Shield = 48065;
+    }
+    if (myLevel >= 76)
+    {
+        spell_Prayer_of_Healing = 48072;
     }
     if (myLevel >= 78)
     {
@@ -303,11 +313,11 @@ void NingerAction_Priest::ResetTalent()
     TrainSpells(4090);
 }
 
-void NingerAction_Priest::InitializeEquipments(bool pmReset)
+bool NingerAction_Priest::InitializeEquipments(bool pmReset)
 {
     if (!me)
     {
-        return;
+        return true;
     }
     if (pmReset)
     {
@@ -332,6 +342,7 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
+    bool allEquiped = true;
     for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
     {
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
@@ -362,6 +373,7 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
                 continue;
             }
         }
+        std::unordered_set<uint32> inventoryTypeSet;
         uint32 modType = ItemModType::ITEM_MOD_INTELLECT;
         uint32 equipItemClass = 0;
         uint32 equipItemSubClass = 0;
@@ -434,6 +446,7 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
         {
             equipItemClass = 2;
             equipItemSubClass = 19;
+            inventoryTypeSet.insert(InventoryType::INVTYPE_RANGEDRIGHT);
         }
         else
         {
@@ -453,12 +466,12 @@ void NingerAction_Priest::InitializeEquipments(bool pmReset)
                 }
             }
         }
-        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, me->getLevel(), modType);
+        EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, modType, inventoryTypeSet);
+        allEquiped = false;
+        //break;
     }
 
-    std::ostringstream msgStream;
-    msgStream << me->GetName() << " Equiped";
-    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+    return allEquiped;
 }
 
 void NingerAction_Priest::Prepare()
@@ -582,6 +595,44 @@ bool NingerAction_Priest::Heal(Unit* pmTarget)
     return false;
 }
 
+bool NingerAction_Priest::GroupHeal(Unit* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        return false;
+    }
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance > RANGE_FAR_DISTANCE)
+    {
+        return false;
+    }
+    float targetHealthPct = pmTarget->GetHealthPct();
+    if (targetHealthPct < 60.0f)
+    {
+        if (spell_Prayer_of_Healing > 0)
+        {
+            if (CastSpell(pmTarget, spell_Prayer_of_Healing))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 bool NingerAction_Priest::SimpleHeal(Unit* pmTarget)
 {
     if (!me)
@@ -606,7 +657,7 @@ bool NingerAction_Priest::SimpleHeal(Unit* pmTarget)
         return false;
     }
     float targetHealthPct = pmTarget->GetHealthPct();
-    if (targetHealthPct < 50.0f)
+    if (targetHealthPct < 60.0f)
     {
         if (spell_GreaterHeal > 0)
         {
@@ -832,7 +883,7 @@ bool NingerAction_Priest::Revive(Player* pmTarget)
     }
 
     if (spell_Resurrection > 0)
-    {        
+    {
         if (CastSpell(pmTarget, spell_Resurrection))
         {
             return true;

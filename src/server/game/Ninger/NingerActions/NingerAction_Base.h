@@ -40,10 +40,11 @@ public:
     void Update(uint32 pmDiff);
 
     bool Tank(Unit* pmTankTarget);
-    bool Chase(Unit* pmChaseTarget, bool pmForceBack = false);
+    bool Chase(Unit* pmChaseTarget);
     bool Follow(Unit* pmFollowTarget);
     void Point(Position pmPosTarget, uint32 pmLimit = DEFAULT_ACTION_LIMIT_DELAY);
-    bool Direction(Player* pmCommander, uint32 pmDirection, uint32 pmLimit = DEFAULT_ACTION_LIMIT_DELAY);
+    bool Direction(Unit* pmCommander, uint32 pmDirection, uint32 pmLimit = DEFAULT_ACTION_LIMIT_DELAY, float pmDistance = RANGE_MIN_DISTANCE);
+    bool Direction(float pmAngle, uint32 pmLimit = DEFAULT_ACTION_LIMIT_DELAY, float pmDistance = RANGE_MIN_DISTANCE);
     Position PredictPosition(Unit* target);
 
 public:
@@ -53,7 +54,6 @@ public:
     ObjectGuid ogFollowTarget;
     Position positionTarget;
     bool positionOK;
-    bool forceBack;
     uint32 activeMovementType;
     int movingDelay;
 };
@@ -65,9 +65,10 @@ public:
     virtual void Reset();
     virtual void Prepare();
     virtual void Update(uint32 pmDiff);
-    virtual bool DPS(Unit* pmTarget, bool pmAOE);
+    virtual bool DPS(Unit* pmTarget, bool pmAOE, bool pmRush = false);
     virtual bool Tank(Unit* pmTarget, bool pmAOE);
     virtual bool Heal(Unit* pmTarget);
+    virtual bool GroupHeal(Unit* pmTarget);
     virtual bool SimpleHeal(Unit* pmTarget);
     virtual bool Cure(Unit* pmTarget);
     virtual bool Buff(Unit* pmTarget);
@@ -76,12 +77,12 @@ public:
     virtual bool Petting(bool pmSummon = true, bool pmReset = false);
     virtual void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
     virtual void ResetTalent();
-    virtual void InitializeEquipments(bool pmReset = false);
+    virtual bool InitializeEquipments(bool pmReset = false);
 
     void RemoveEquipments();
     void LearnTalent(uint32 pmTalentId, uint32 pmMaxRank = MAX_TALENT_RANK);
     void TrainSpells(uint32 pmTrainerEntry);
-    void EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, uint32 pmMaxRequiredLevel, int pmModType, std::unordered_set<uint32> pmInventoryTypeSet = std::unordered_set<uint32>());
+    void EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, int pmModType, std::unordered_set<uint32> pmInventoryTypeSet = std::unordered_set<uint32>());
     void PetAttack(Unit* pmTarget);
     void PetStop();
     bool UseItem(Item* pmItem, Unit* pmTarget);

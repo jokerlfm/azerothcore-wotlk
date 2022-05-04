@@ -686,6 +686,27 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     {
         creatureTemplate.npcflag = 80;
     }
+    else if (creatureTemplate.Entry == 22482)
+    {
+        creatureTemplate.Modelid1 = 20617;
+        creatureTemplate.ScriptID = GetScriptId("npc_worm");
+    }
+    else if (creatureTemplate.Entry == 22038)
+    {
+        creatureTemplate.Modelid1 = 20746;
+        creatureTemplate.ScriptID = GetScriptId("npc_worm");
+    }
+    else if (creatureTemplate.Entry == 21796)
+    {
+        creatureTemplate.Modelid1 = 20476;
+    }
+    else if (creatureTemplate.Entry == 22441)
+    {
+        if (creatureTemplate.unit_flags & 768)
+        {
+            creatureTemplate.unit_flags = creatureTemplate.unit_flags - 768;
+        }
+    }
 }
 
 void ObjectMgr::LoadCreatureTemplateResistances()
@@ -9636,6 +9657,7 @@ void ObjectMgr::LoadScriptNames()
 
     // lfm script names
     _scriptNamesStore.push_back("npc_dirge_quikcleave");
+    _scriptNamesStore.push_back("npc_worm"); 
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
     LOG_INFO("server.loading", ">> Loaded {} ScriptNames in {} ms", _scriptNamesStore.size(), GetMSTimeDiffToNow(oldMSTime));

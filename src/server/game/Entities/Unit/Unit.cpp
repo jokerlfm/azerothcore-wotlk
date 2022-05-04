@@ -11294,7 +11294,10 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 }
                 case CreatureEliteType::CREATURE_ELITE_ELITE:
                 {
-                    tmpDamage = tmpDamage * 1.5f;
+                    if (!sNingerManager->IsInstanceEncounter(GetEntry()))
+                    {
+                        tmpDamage = tmpDamage * 1.5f;
+                    }
                     break;
                 }
                 case CreatureEliteType::CREATURE_ELITE_RARE:

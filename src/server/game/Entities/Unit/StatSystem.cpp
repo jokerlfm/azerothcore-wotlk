@@ -1127,7 +1127,10 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:
         {
-            lfmMultiplier = 1.5f;
+            if (!sNingerManager->IsInstanceEncounter(GetEntry()))
+            {
+                lfmMultiplier = 1.5f;
+            }
             break;
         }
         case CreatureEliteType::CREATURE_ELITE_RARE:

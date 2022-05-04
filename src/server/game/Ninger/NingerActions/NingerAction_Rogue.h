@@ -9,9 +9,9 @@ public:
     NingerAction_Rogue();
     void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
     void ResetTalent();
-    void InitializeEquipments(bool pmReset);
+    bool InitializeEquipments(bool pmReset);
     void Prepare();
-    bool DPS(Unit* pmTarget, bool pmAOE);
+    bool DPS(Unit* pmTarget, bool pmAOE, bool pmRush = false);
     bool Buff(Unit* pmTarget);
 
 public:
@@ -34,6 +34,7 @@ public:
 
     uint32 spell_BladeFlurry;
     uint32 spell_AdrenalineRush;
+    uint32 spell_KillingSpree;
 
     uint32 item_InstantPoison;
 };

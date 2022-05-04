@@ -29,14 +29,19 @@ NingerStrategy_Base::NingerStrategy_Base()
     aoe = true;
     petting = true;
     following = true;
+    rushing = false;
 
     combatAngle = 0.0f;
+    forceBack = false;
 
     actionLimit = 0;
     ogActionTarget = ObjectGuid::Empty;
+    ogTank = ObjectGuid::Empty;
+    ogHealer = ObjectGuid::Empty;
     actionType = ActionType::ActionType_None;
 
     dpsDistance = MELEE_MIN_DISTANCE;
+    dpsDistanceMin = 0.0f;
     followDistance = MELEE_MAX_DISTANCE;
 }
 
@@ -70,14 +75,19 @@ void NingerStrategy_Base::Reset()
     aoe = true;
     petting = true;
     following = true;
+    rushing = false;
 
     combatAngle = 0.0f;
+    forceBack = false;
 
     actionLimit = 0;
     ogActionTarget = ObjectGuid::Empty;
+    ogTank = ObjectGuid::Empty;
+    ogHealer = ObjectGuid::Empty;
     actionType = ActionType::ActionType_None;
 
     dpsDistance = MELEE_MIN_DISTANCE;
+    dpsDistanceMin = 0.0f;
     followDistance = MELEE_MIN_DISTANCE;
 
     switch (me->getClass())
@@ -89,8 +99,9 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_HUNTER:
     {
-        followDistance = FOLLOW_NEAR_DISTANCE;
-        dpsDistance = RANGE_MIN_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        dpsDistance = RANGE_MAX_DISTANCE;
+        dpsDistanceMin = RANGE_MIN_DISTANCE;
         break;
     }
     case Classes::CLASS_SHAMAN:
@@ -103,15 +114,15 @@ void NingerStrategy_Base::Reset()
     }
     case Classes::CLASS_WARLOCK:
     {
-        followDistance = FOLLOW_NEAR_DISTANCE;
-        dpsDistance = RANGE_MIN_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        dpsDistance = RANGE_MAX_DISTANCE;
         break;
     }
     case Classes::CLASS_PRIEST:
     {
         me->groupRole = GroupRole::GroupRole_Healer;
-        followDistance = FOLLOW_NEAR_DISTANCE;
-        dpsDistance = RANGE_MIN_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        dpsDistance = RANGE_MAX_DISTANCE;
         break;
     }
     case Classes::CLASS_ROGUE:
@@ -244,6 +255,7 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
         }
         else
         {
+            rushing = false;
             combatAngle = 0.0f;
             combatDuration = 0;
             if (restLimit > 0)
@@ -450,7 +462,7 @@ bool NingerStrategy_Base::Engage(Unit* pmTarget)
         }
         case GroupRole::GroupRole_DPS:
         {
-            return me->ningerAction->DPS(pmTarget, aoe);
+            return me->ningerAction->DPS(pmTarget, aoe, rushing);
         }
         default:
         {
@@ -511,7 +523,7 @@ bool NingerStrategy_Base::DPS(bool pmDelay)
         {
             if (Unit* tankTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
             {
-                if (me->ningerAction->DPS(tankTarget, aoe))
+                if (me->ningerAction->DPS(tankTarget, aoe, rushing))
                 {
                     return true;
                 }
@@ -524,7 +536,7 @@ bool NingerStrategy_Base::DPS(bool pmDelay)
             {
                 if (leaderTarget->IsInCombat())
                 {
-                    if (me->ningerAction->DPS(leaderTarget, aoe))
+                    if (me->ningerAction->DPS(leaderTarget, aoe, rushing))
                     {
                         return true;
                     }
@@ -536,7 +548,7 @@ bool NingerStrategy_Base::DPS(bool pmDelay)
     {
         if (Unit* myTarget = me->GetSelectedUnit())
         {
-            if (me->ningerAction->DPS(myTarget, aoe))
+            if (me->ningerAction->DPS(myTarget, aoe, rushing))
             {
                 return true;
             }
@@ -553,18 +565,15 @@ bool NingerStrategy_Base::DPS(bool pmDelay)
                     float eachDistance = me->GetDistance(eachAttacker);
                     if (eachDistance < nearestDistance)
                     {
-                        if (!eachAttacker->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
-                        {
-                            nearestDistance = eachDistance;
-                            nearestAttacker = eachAttacker;
-                        }
+                        nearestDistance = eachDistance;
+                        nearestAttacker = eachAttacker;
                     }
                 }
             }
         }
         if (nearestAttacker)
         {
-            if (me->ningerAction->DPS(nearestAttacker, aoe))
+            if (me->ningerAction->DPS(nearestAttacker, aoe, rushing))
             {
                 return true;
             }
@@ -645,11 +654,8 @@ bool NingerStrategy_Base::Tank()
                                                 {
                                                     if (myGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) == -1)
                                                     {
-                                                        if (!eachAttacker->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
-                                                        {
-                                                            nearestDistance = eachDistance;
-                                                            nearestOTUnit = eachAttacker;
-                                                        }
+                                                        nearestDistance = eachDistance;
+                                                        nearestOTUnit = eachAttacker;
                                                     }
                                                 }
                                             }
@@ -779,15 +785,31 @@ bool NingerStrategy_Base::Heal()
     if (Group* myGroup = me->GetGroup())
     {
         Player* tank = nullptr;
+        Player* lowMember = nullptr;
+        uint32 lowMemberCount = 0;
         for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
         {
             if (Player* member = groupRef->GetSource())
             {
-                if (member->groupRole == GroupRole::GroupRole_Tank)
+                if (me->IsWithinDist(member, RANGE_FAR_DISTANCE))
                 {
-                    tank = member;
-                    break;
+                    if (member->GetHealthPct() < 60.0f)
+                    {
+                        lowMember = member;
+                        lowMemberCount++;
+                    }
+                    if (member->groupRole == GroupRole::GroupRole_Tank)
+                    {
+                        tank = member;                        
+                    }
                 }
+            }
+        }
+        if (lowMemberCount > 1)
+        {
+            if (me->ningerAction->GroupHeal(lowMember))
+            {
+                return true;
             }
         }
         if (tank)
@@ -810,7 +832,10 @@ bool NingerStrategy_Base::Heal()
     }
     else
     {
-        return me->ningerAction->Heal(me);
+        if (me->ningerAction->Heal(me))
+        {
+            return true;
+        }
     }
 
     return false;
@@ -968,6 +993,17 @@ bool NingerStrategy_Base::Follow()
     }
     if (Group* myGroup = me->GetGroup())
     {
+        if (me->groupRole != GroupRole::GroupRole_Tank)
+        {
+            if (Player* tank = ObjectAccessor::FindPlayer(ogTank))
+            {
+                if (me->ningerMovement->Follow(tank))
+                {
+                    ogActionTarget = tank->GetGUID();
+                    return true;
+                }
+            }
+        }
         if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
         {
             if (me->ningerMovement->Follow(leader))
@@ -1051,4 +1087,147 @@ void NingerStrategy_Base::SetGroupRole(std::string pmRoleName)
     {
         me->groupRole = GroupRole::GroupRole_Healer;
     }
+}
+
+NingerStrategy_The_Underbog::NingerStrategy_The_Underbog() :NingerStrategy_Base()
+{
+    hungarfen = false;
+}
+
+void NingerStrategy_The_Underbog::Report()
+{
+    if (Group* myGroup = me->GetGroup())
+    {
+        if (Player* leaderPlayer = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+        {
+            if (leaderPlayer->GetGUID() != me->GetGUID())
+            {
+                me->Whisper("My strategy set to the underbog.", Language::LANG_UNIVERSAL, leaderPlayer);
+            }
+        }
+    }
+}
+
+bool NingerStrategy_The_Underbog::DPS(bool pmDelay)
+{
+    if (pmDelay)
+    {
+        if (combatDuration < dpsDelay)
+        {
+            return false;
+        }
+    }
+
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+
+    if (Group* myGroup = me->GetGroup())
+    {
+        if (ObjectGuid ogTankTarget = myGroup->GetGuidByTargetIcon(7))
+        {
+            if (Unit* tankTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
+            {
+                if (tankTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM && tankTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM_1)
+                {
+                    if (me->ningerAction->DPS(tankTarget, aoe, rushing))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
+        {
+            if (Unit* leaderTarget = leader->GetSelectedUnit())
+            {
+                if (leaderTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM && leaderTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM_1)
+                {
+                    if (leaderTarget->IsInCombat())
+                    {
+                        if (me->ningerAction->DPS(leaderTarget, aoe, rushing))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        if (Unit* myTarget = me->GetSelectedUnit())
+        {
+            if (myTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM && myTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM_1)
+            {
+                if (me->ningerAction->DPS(myTarget, aoe, rushing))
+                {
+                    return true;
+                }
+            }
+        }
+        Unit* nearestAttacker = nullptr;
+        float nearestDistance = VISIBILITY_DISTANCE_NORMAL;
+        std::unordered_set<Unit*> myAttackers = me->getAttackers();
+        for (std::unordered_set<Unit*>::iterator ait = myAttackers.begin(); ait != myAttackers.end(); ++ait)
+        {
+            if (Unit* eachAttacker = *ait)
+            {
+                if (eachAttacker->GetEntry() != ENTRY_UNDERBOG_MUSHROOM && eachAttacker->GetEntry() != ENTRY_UNDERBOG_MUSHROOM_1)
+                {
+                    if (me->IsValidAttackTarget(eachAttacker))
+                    {
+                        float eachDistance = me->GetDistance(eachAttacker);
+                        if (eachDistance < nearestDistance)
+                        {
+                            nearestDistance = eachDistance;
+                            nearestAttacker = eachAttacker;
+                        }
+                    }
+                }
+            }
+        }
+        if (nearestAttacker)
+        {
+            if (me->ningerAction->DPS(nearestAttacker, aoe, rushing))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool NingerStrategy_The_Underbog::Tank(Unit* pmTarget)
+{
+    if (!me)
+    {
+        return false;
+    }
+    if (pmTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM && pmTarget->GetEntry() != ENTRY_UNDERBOG_MUSHROOM_1)
+    {
+        if (Group* myGroup = me->GetGroup())
+        {
+            if (me->groupRole == GroupRole::GroupRole_Tank)
+            {
+                if (me->ningerAction->Tank(pmTarget, aoe))
+                {
+                    if (myGroup->GetGuidByTargetIcon(7) != pmTarget->GetGUID())
+                    {
+                        myGroup->SetTargetIcon(7, me->GetGUID(), pmTarget->GetGUID());
+                    }
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }

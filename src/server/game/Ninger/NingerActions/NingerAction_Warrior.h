@@ -14,7 +14,7 @@ public:
     void Update(uint32 pmDiff);
     void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
     void ResetTalent();
-    void InitializeEquipments(bool pmReset);
+    bool InitializeEquipments(bool pmReset);
     void Prepare();
     bool Tank(Unit* pmTarget, bool pmAOE);
     bool Buff(Unit* pmTarget);

@@ -18,7 +18,6 @@ NingerMovement::NingerMovement(Player* pmMe)
     ogChaseTarget = ObjectGuid::Empty;
     ogFollowTarget = ObjectGuid::Empty;
     positionTarget = me->GetPosition();
-    forceBack = false;
     positionOK = false;
     movingDelay = 0;
     activeMovementType = NingerMovementType::NingerMovementType_None;
@@ -32,7 +31,6 @@ void NingerMovement::ResetMovement()
     ogChaseTarget = ObjectGuid::Empty;
     ogFollowTarget = ObjectGuid::Empty;
     positionTarget = me->GetPosition();
-    forceBack = false;
     positionOK = false;
     movingDelay = 0;
     activeMovementType = NingerMovementType::NingerMovementType_None;
@@ -170,19 +168,9 @@ void NingerMovement::Update(uint32 pmDiff)
                     if (chaseAngle == 0.0f)
                     {
                         chaseAngle = chaseTarget->GetAngle(me);
-                        if (Group* myGroup = me->GetGroup())
-                        {
-                            if (myGroup->GetLeaderGUID() != me->GetGUID())
-                            {
-                                if (Player* leader = myGroup->GetLeader())
-                                {
-                                    chaseAngle = leader->GetOrientation();
-                                }
-                            }
-                        }
                     }
                     chaseTarget->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), ns->dpsDistance, chaseAngle);
-                    me->GetMap()->CanReachPositionAndGetValidCoords(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
+                    //me->GetMap()->CanReachPositionAndGetValidCoords(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
                     if (me->GetDistance(positionTarget) > MIN_DISTANCE_GAP)
                     {
                         if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
@@ -211,11 +199,9 @@ void NingerMovement::Update(uint32 pmDiff)
         {
             if (NingerStrategy_Base* ns = me->strategyMap[me->activeStrategyIndex])
             {
-                Position targetPredict = chaseTarget->GetPosition();
                 if (chaseTarget->isMoving())
                 {
                     positionOK = false;
-                    targetPredict = PredictPosition(chaseTarget);
                 }
                 if (!positionOK)
                 {
@@ -230,14 +216,14 @@ void NingerMovement::Update(uint32 pmDiff)
                         me->SetSelection(ogChaseTarget);
                         me->SetTarget(ogChaseTarget);
                     }
-                    if (targetDistance < ns->dpsDistance + MIN_DISTANCE_GAP)
+                    if (targetDistance < ns->dpsDistance + MIN_DISTANCE_GAP && ((ns->dpsDistanceMin > 0.0f) ? (targetDistance > ns->dpsDistanceMin - MIN_DISTANCE_GAP) : true))
                     {
                         if (me->IsWithinLOSInMap(chaseTarget))
                         {
                             positionOK = true;
                             if (chaseTarget->GetTarget() != me->GetGUID())
                             {
-                                if (forceBack)
+                                if (ns->forceBack)
                                 {
                                     if (!chaseTarget->isInBack(me, M_PI / 4))
                                     {
@@ -275,7 +261,7 @@ void NingerMovement::Update(uint32 pmDiff)
                 else
                 {
                     float chaseAngle = chaseTarget->GetAngle(me) + M_PI * 2;
-                    if (forceBack)
+                    if (ns->forceBack)
                     {
                         chaseAngle = chaseTarget->GetOrientation() + M_PI * 2 + M_PI;
                     }
@@ -285,8 +271,8 @@ void NingerMovement::Update(uint32 pmDiff)
                         chaseAngle = chaseAngle + M_PI;
                     }
                     chaseAngle = frand(chaseAngle - M_PI / 8, chaseAngle + M_PI / 8);
-                    chaseTarget->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), ns->dpsDistance, chaseAngle, 0.0f, &targetPredict);
-                    me->GetMap()->CanReachPositionAndGetValidCoords(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
+                    chaseTarget->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), ns->dpsDistance, chaseAngle);
+                    //me->GetMap()->CanReachPositionAndGetValidCoords(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
                     if (me->GetDistance(positionTarget) > MIN_DISTANCE_GAP)
                     {
                         if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
@@ -371,7 +357,7 @@ void NingerMovement::Update(uint32 pmDiff)
                     }
                     followAngle = frand(followAngle - MIN_ANGLE_GAP, followAngle + MIN_ANGLE_GAP);
                     followTarget->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), ns->followDistance, followAngle, 0.0f, &targetPredict);
-                    me->GetMap()->CanReachPositionAndGetValidCoords(followTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
+                    //me->GetMap()->CanReachPositionAndGetValidCoords(followTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
                     if (me->GetDistance(positionTarget) > MIN_DISTANCE_GAP)
                     {
                         if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
@@ -454,14 +440,13 @@ bool NingerMovement::Tank(Unit* pmTankTarget)
     return false;
 }
 
-bool NingerMovement::Chase(Unit* pmChaseTarget, bool pmForceBack)
+bool NingerMovement::Chase(Unit* pmChaseTarget)
 {
     if (me && pmChaseTarget)
     {
         float distance = me->GetDistance(pmChaseTarget);
         if (distance < VISIBILITY_DISTANCE_NORMAL)
         {
-            forceBack = pmForceBack;
             activeMovementType = NingerMovementType::NingerMovementType_Chase;
             if (ogChaseTarget != pmChaseTarget->GetGUID())
             {
@@ -526,7 +511,7 @@ void NingerMovement::Point(Position pmPosTarget, uint32 pmLimit)
     }
 }
 
-bool NingerMovement::Direction(Player* pmCommander, uint32 pmDirection, uint32 pmLimit)
+bool NingerMovement::Direction(Unit* pmCommander, uint32 pmDirection, uint32 pmLimit, float pmDistance)
 {
     bool result = false;
 
@@ -561,7 +546,7 @@ bool NingerMovement::Direction(Player* pmCommander, uint32 pmDirection, uint32 p
                 break;
             }
             }
-            me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), FOLLOW_NEAR_DISTANCE, absAngle);
+            me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), pmDistance, absAngle);
             //me->GetMap()->CanReachPositionAndGetValidCoords(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
             activeMovementType = NingerMovementType::NingerMovementType_Point;
             positionOK = false;
@@ -584,6 +569,35 @@ bool NingerMovement::Direction(Player* pmCommander, uint32 pmDirection, uint32 p
             result = true;
         }
     }
+
+    return result;
+}
+
+bool NingerMovement::Direction(float pmAngle, uint32 pmLimit, float pmDistance)
+{
+    bool result = false;
+
+    me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), pmDistance, pmAngle);
+    //me->GetMap()->CanReachPositionAndGetValidCoords(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
+    activeMovementType = NingerMovementType::NingerMovementType_Point;
+    positionOK = false;
+    if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+    {
+        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+    }
+    if (me->IsWalking())
+    {
+        me->SetWalk(false);
+    }
+    if (me->IsNonMeleeSpellCast(false))
+    {
+        me->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+        me->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+    }
+    me->StopMoving();
+    me->GetMotionMaster()->Clear();
+    me->GetMotionMaster()->MovePoint(0, positionTarget);
+    result = true;
 
     return result;
 }
@@ -615,7 +629,7 @@ void NingerAction_Base::Update(uint32 pmDiff)
 
 }
 
-bool NingerAction_Base::DPS(Unit* pmTarget, bool pmAOE)
+bool NingerAction_Base::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
 {
     return false;
 }
@@ -626,6 +640,11 @@ bool NingerAction_Base::Tank(Unit* pmTarget, bool pmAOE)
 }
 
 bool NingerAction_Base::Heal(Unit* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Base::GroupHeal(Unit* pmTarget)
 {
     return false;
 }
@@ -670,9 +689,9 @@ void NingerAction_Base::ResetTalent()
 
 }
 
-void NingerAction_Base::InitializeEquipments(bool pmReset)
+bool NingerAction_Base::InitializeEquipments(bool pmReset)
 {
-
+    return true;
 }
 
 void NingerAction_Base::RemoveEquipments()
@@ -743,7 +762,7 @@ void NingerAction_Base::TrainSpells(uint32 pmTrainerEntry)
     }
 }
 
-void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, uint32 pmMaxRequiredLevel, int pmModType, std::unordered_set<uint32> pmInventoryTypeSet)
+void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32 pmSubclass, uint32 pmMinQuality, int pmModType, std::unordered_set<uint32> pmInventoryTypeSet)
 {
     bool checkStat = true;
     if (pmModType < 0)
@@ -816,20 +835,6 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
         return;
     }
 
-    uint32 minRequiredLevel = pmMaxRequiredLevel;
-    if (minRequiredLevel > 20)
-    {
-        minRequiredLevel = minRequiredLevel - 10;
-    }
-    else if (minRequiredLevel > 10)
-    {
-        minRequiredLevel = 10;
-    }
-    else
-    {
-        minRequiredLevel = 0;
-    }
-    std::unordered_set<uint32> availableItemEntrySet;
     std::ostringstream inventoryTypeQueryStream;
     if (pmInventoryTypeSet.size() > 0)
     {
@@ -845,54 +850,71 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
         inventoryTypeQueryStream << " InventoryType = " << inventoryType;
     }
     std::string inventoryTypeQuery = inventoryTypeQueryStream.str();
-    int activeQuality = pmMinQuality;
-    while (activeQuality >= 0)
+    int activeReqLevel = me->getLevel();
+    int minReqLevel = activeReqLevel - 3;
+    while (minReqLevel > 0)
     {
-        QueryResult itemQR = WorldDatabase.Query("SELECT entry FROM item_template where {} and class = {} and subclass = {} and Quality >= {} and RequiredLevel <= {} and RequiredLevel >= {} and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand()", inventoryTypeQuery, pmClass, pmSubclass, activeQuality, pmMaxRequiredLevel, minRequiredLevel);
-        if (itemQR)
+        int activeQuality = ItemQualities::ITEM_QUALITY_RARE;
+        while (activeQuality >= pmMinQuality)
         {
-            do
+            std::unordered_set<uint32> availableItemEntrySet;
+            QueryResult itemQR = WorldDatabase.Query("SELECT entry FROM item_template where {} and class = {} and subclass = {} and Quality = {} and RequiredLevel >= {} and RequiredLevel <= {} and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand()", inventoryTypeQuery, pmClass, pmSubclass, activeQuality, minReqLevel, activeReqLevel);
+            if (itemQR)
             {
-                Field* fields = itemQR->Fetch();
-                availableItemEntrySet.insert(fields[0].Get<uint32>());
-            } while (itemQR->NextRow());
-        }
-        activeQuality--;
-    }
-
-    for (std::unordered_set<uint32>::iterator entryIt = availableItemEntrySet.begin(); entryIt != availableItemEntrySet.end(); entryIt++)
-    {
-        if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(*entryIt))
-        {
-            bool hasStat = false;
-            if (checkStat)
-            {
-                for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
+                do
                 {
-                    if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
+                    Field* fields = itemQR->Fetch();
+                    availableItemEntrySet.insert(fields[0].Get<uint32>());
+                } while (itemQR->NextRow());
+            }
+            for (std::unordered_set<uint32>::iterator entryIt = availableItemEntrySet.begin(); entryIt != availableItemEntrySet.end(); entryIt++)
+            {
+                if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(*entryIt))
+                {
+                    bool hasStat = false;
+                    if (checkStat)
+                    {
+                        if (pProto->RandomProperty > 0 || pProto->RandomSuffix > 0)
+                        {
+                            hasStat = true;
+                        }
+                        else
+                        {
+                            for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
+                            {
+                                if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
+                                {
+                                    hasStat = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
                     {
                         hasStat = true;
-                        break;
                     }
-                }
-            }
-            else
-            {
-                hasStat = true;
-            }
-            if (hasStat)
-            {
-                if (Item* pItem = Item::CreateItem(*entryIt, 1))
-                {
-                    uint16 dest = 0;
-                    if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                    if (hasStat)
                     {
-                        me->EquipItem(dest, pItem, true);
-                        break;
+                        if (Item* pItem = Item::CreateItem(*entryIt, 1))
+                        {
+                            uint16 dest = 0;
+                            if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                            {
+                                me->EquipItem(dest, pItem, true);
+                                std::ostringstream msgStream;
+                                msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
+                                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+                                return;
+                            }
+                        }
                     }
                 }
             }
+            activeQuality--;
         }
+        activeReqLevel -= 4;
+        minReqLevel = activeReqLevel - 3;
     }
 }
 

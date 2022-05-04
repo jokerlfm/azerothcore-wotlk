@@ -311,6 +311,9 @@ void NingerEntity::Update(uint32 pmDiff)
                     me->strategyMap[me->activeStrategyIndex] = new NingerStrategy_Base();
                     me->strategyMap[me->activeStrategyIndex]->me = me;
                     me->strategyMap[me->activeStrategyIndex]->Reset();
+                    me->strategyMap[STRATEGY_THE_UNDERBOG] = new NingerStrategy_The_Underbog();
+                    me->strategyMap[STRATEGY_THE_UNDERBOG]->me = me;
+                    me->strategyMap[STRATEGY_THE_UNDERBOG]->Reset();
                     switch (target_class)
                     {
                     case Classes::CLASS_DEATH_KNIGHT:
@@ -392,21 +395,26 @@ void NingerEntity::Update(uint32 pmDiff)
             {
                 if (me->IsInWorld())
                 {
-                    me->ningerAction->InitializeEquipments();
-                    for (std::unordered_map<uint32, NingerStrategy_Base*>::iterator nsbIt = me->strategyMap.begin(); nsbIt != me->strategyMap.end(); nsbIt++)
+                    if (me->ningerAction->InitializeEquipments())
                     {
-                        if (NingerStrategy_Base* nsb = nsbIt->second)
+                        for (std::unordered_map<uint32, NingerStrategy_Base*>::iterator nsbIt = me->strategyMap.begin(); nsbIt != me->strategyMap.end(); nsbIt++)
                         {
-                            nsb->me = me;
-                            nsb->initialized = true;
+                            if (NingerStrategy_Base* nsb = nsbIt->second)
+                            {
+                                nsb->me = me;
+                                nsb->initialized = true;
+                            }
                         }
+                        me->strategyMap[me->activeStrategyIndex]->randomTeleportDelay = urand(2 * IN_MILLISECONDS, 20 * IN_MILLISECONDS);
+                        entityState = NingerEntityState::NingerEntityState_Online;
+                        std::ostringstream msgStream;
+                        msgStream << me->GetName() << " Equiped all slots";
+                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+                        break;
                     }
-                    me->strategyMap[me->activeStrategyIndex]->randomTeleportDelay = urand(2 * IN_MILLISECONDS, 20 * IN_MILLISECONDS);
-                    entityState = NingerEntityState::NingerEntityState_Online;
-                    break;
                 }
             }
-            offlineDelay = urand(2 * IN_MILLISECONDS, 4 * IN_MILLISECONDS);
+            offlineDelay = 100;
             break;
         }
         case NingerEntityState::NingerEntityState_Online:
