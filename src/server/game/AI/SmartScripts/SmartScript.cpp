@@ -1501,70 +1501,70 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
                 break;
             }
         case SMART_ACTION_SUMMON_CREATURE:
+        {
+            ObjectList* targets = GetTargets(e, unit);
+            WorldObject* summoner = GetBaseObject() ? GetBaseObject() : unit;
+            if (!summoner)
+                break;
+
+            if (e.GetTargetType() == SMART_TARGET_RANDOM_POINT)
             {
-                ObjectList* targets = GetTargets(e, unit);
-                WorldObject* summoner = GetBaseObject() ? GetBaseObject() : unit;
-                if (!summoner)
-                    break;
-
-                if (e.GetTargetType() == SMART_TARGET_RANDOM_POINT)
+                float range = (float)e.target.randomPoint.range;
+                Position randomPoint;
+                Position srcPos = { e.target.x, e.target.y, e.target.z, e.target.o };
+                for (uint32 i = 0; i < e.target.randomPoint.amount; i++)
                 {
-                    float range = (float)e.target.randomPoint.range;
-                    Position randomPoint;
-                    Position srcPos = { e.target.x, e.target.y, e.target.z, e.target.o };
-                    for (uint32 i = 0; i < e.target.randomPoint.amount; i++)
+                    if (e.target.randomPoint.self > 0)
+                        randomPoint = me->GetRandomPoint(me->GetPosition(), range);
+                    else
+                        randomPoint = me->GetRandomPoint(srcPos, range);
+                    if (Creature* summon = summoner->SummonCreature(e.action.summonCreature.creature, randomPoint, (TempSummonType)e.action.summonCreature.type, e.action.summonCreature.duration))
                     {
-                        if (e.target.randomPoint.self > 0)
-                            randomPoint = me->GetRandomPoint(me->GetPosition(), range);
-                        else
-                            randomPoint = me->GetRandomPoint(srcPos, range);
-                        if (Creature* summon = summoner->SummonCreature(e.action.summonCreature.creature, randomPoint, (TempSummonType)e.action.summonCreature.type, e.action.summonCreature.duration))
-                        {
-                            if (unit && e.action.summonCreature.attackInvoker)
-                                summon->AI()->AttackStart(unit);
-                            else if (me && e.action.summonCreature.attackScriptOwner)
-                                summon->AI()->AttackStart(me);
-                        }
+                        if (unit && e.action.summonCreature.attackInvoker)
+                            summon->AI()->AttackStart(unit);
+                        else if (me && e.action.summonCreature.attackScriptOwner)
+                            summon->AI()->AttackStart(me);
                     }
-                    break;
-                }
-
-                if (targets)
-                {
-                    float x, y, z, o;
-                    for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); ++itr)
-                    {
-                        (*itr)->GetPosition(x, y, z, o);
-                        x += e.target.x;
-                        y += e.target.y;
-                        z += e.target.z;
-                        o += e.target.o;
-                        if (Creature* summon = summoner->SummonCreature(e.action.summonCreature.creature, x, y, z, o, (TempSummonType)e.action.summonCreature.type, e.action.summonCreature.duration))
-                        {
-                            if (e.action.summonCreature.attackInvoker == 2) // pussywizard: proper attackInvoker implementation
-                                summon->AI()->AttackStart(unit);
-                            else if (e.action.summonCreature.attackInvoker)
-                                summon->AI()->AttackStart((*itr)->ToUnit());
-                            else if (me && e.action.summonCreature.attackScriptOwner)
-                                summon->AI()->AttackStart(me);
-                        }
-                    }
-
-                    delete targets;
-                }
-
-                if (e.GetTargetType() != SMART_TARGET_POSITION)
-                    break;
-
-                if (Creature* summon = summoner->SummonCreature(e.action.summonCreature.creature, e.target.x, e.target.y, e.target.z, e.target.o, (TempSummonType)e.action.summonCreature.type, e.action.summonCreature.duration))
-                {
-                    if (unit && e.action.summonCreature.attackInvoker)
-                        summon->AI()->AttackStart(unit);
-                    else if (me && e.action.summonCreature.attackScriptOwner)
-                        summon->AI()->AttackStart(me);
                 }
                 break;
             }
+
+            if (targets)
+            {
+                float x, y, z, o;
+                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); ++itr)
+                {
+                    (*itr)->GetPosition(x, y, z, o);
+                    x += e.target.x;
+                    y += e.target.y;
+                    z += e.target.z;
+                    o += e.target.o;
+                    if (Creature* summon = summoner->SummonCreature(e.action.summonCreature.creature, x, y, z, o, (TempSummonType)e.action.summonCreature.type, e.action.summonCreature.duration))
+                    {
+                        if (e.action.summonCreature.attackInvoker == 2) // pussywizard: proper attackInvoker implementation
+                            summon->AI()->AttackStart(unit);
+                        else if (e.action.summonCreature.attackInvoker)
+                            summon->AI()->AttackStart((*itr)->ToUnit());
+                        else if (me && e.action.summonCreature.attackScriptOwner)
+                            summon->AI()->AttackStart(me);
+                    }
+                }
+
+                delete targets;
+            }
+
+            if (e.GetTargetType() != SMART_TARGET_POSITION)
+                break;
+
+            if (Creature* summon = summoner->SummonCreature(e.action.summonCreature.creature, e.target.x, e.target.y, e.target.z, e.target.o, (TempSummonType)e.action.summonCreature.type, e.action.summonCreature.duration))
+            {
+                if (unit && e.action.summonCreature.attackInvoker)
+                    summon->AI()->AttackStart(unit);
+                else if (me && e.action.summonCreature.attackScriptOwner)
+                    summon->AI()->AttackStart(me);
+            }
+            break;
+        }
         case SMART_ACTION_SUMMON_GO:
             {
                 if (!GetBaseObject())
@@ -3817,12 +3817,15 @@ ObjectList* SmartScript::GetTargets(SmartScriptHolder const& e, Unit* invoker /*
                 break;
             }
         case SMART_TARGET_CLOSEST_GAMEOBJECT:
+        {
+            // lfm smart closest creature will not be near than 100
+            GameObject* target = GetClosestGameObjectWithEntry(GetBaseObject(), e.target.goClosest.entry, (float)(e.target.goClosest.dist > 100 ? e.target.goClosest.dist : 100), e.target.goClosest.onlySpawned);
+            if (target)
             {
-                GameObject* target = GetClosestGameObjectWithEntry(GetBaseObject(), e.target.goClosest.entry, (float)(e.target.goClosest.dist ? e.target.goClosest.dist : 100), e.target.goClosest.onlySpawned);
-                if (target)
-                    l->push_back(target);
-                break;
+                l->push_back(target);
             }
+            break;
+        }
         case SMART_TARGET_CLOSEST_PLAYER:
             {
                 if (WorldObject* obj = GetBaseObject())

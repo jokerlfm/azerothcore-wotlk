@@ -50,6 +50,9 @@
 #include "World.h"
 #include "WorldPacket.h"
 
+// lfm minger
+#include "MingerManager.h"
+
 // TODO: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
 //  there is probably some underlying problem with imports which should properly addressed
@@ -1438,6 +1441,67 @@ void Creature::SelectLevel(bool changelevel)
 
     uint32 basehp = std::max<uint32>(1, stats->GenerateHealth(cInfo));
     uint32 health = uint32(basehp * healthmod);
+
+    // lfm creature health
+    float lfmMultiplier = 1.0f;
+    if (CreatureTemplate const* ci = GetCreatureTemplate())
+    {
+        switch (ci->rank)
+        {
+        case CreatureEliteType::CREATURE_ELITE_NORMAL:
+        {
+            lfmMultiplier = 1.5f;
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_ELITE:
+        {
+            CreatureTemplate const* cinfo = ci;
+            for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
+            {
+                // we already have valid Map pointer for current creature!
+                if (ci->DifficultyEntry[diff - 1])
+                {
+                    cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
+                    if (cinfo)
+                        break;                                      // template found
+
+                    // check and reported at startup, so just ignore (restore normalInfo)
+                    cinfo = ci;
+                }
+
+                // for instances heroic to normal, other cases attempt to retrieve previous difficulty
+                if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
+                    diff -= 2;                                      // to normal raid difficulty cases
+                else
+                    --diff;
+            }
+            if (sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
+            {
+                lfmMultiplier = 1.25f;
+            }
+            else
+            {
+                lfmMultiplier = 1.5f;
+            }
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RARE:
+        {
+            lfmMultiplier = 2.0f;
+            break;
+        }
+        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+        {
+            lfmMultiplier = 2.5f;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
+    health = health * lfmMultiplier;
 
     SetCreateHealth(health);
     SetMaxHealth(health);

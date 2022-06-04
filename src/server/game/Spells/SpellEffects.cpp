@@ -1222,9 +1222,37 @@ void Spell::EffectTeleportUnits(SpellEffIndex /*effIndex*/)
         else
         {
             bool withPet = unitTarget->GetTypeId() == TYPEID_PLAYER && m_spellInfo->SpellFamilyName == SPELLFAMILY_GENERIC && unitTarget->GetMap()->IsDungeon() && unitTarget->GetExactDist(x, y, z) > 50.0f;
-            unitTarget->NearTeleportTo(x, y, z, orientation, unitTarget == m_caster, false, withPet, true);
+
+            // lfm shadowstep will be a little more back
+            if (m_spellInfo->Id == 36563)
+            {
+                float gap = m_caster->GetCombatReach() * 2.0f / 3.0f;
+                float ori = destTarget->GetOrientation();
+                float destX = destTarget->m_positionX;
+                float destY = destTarget->m_positionY;
+                float destZ = destTarget->m_positionZ;
+                if (ori < 0.0f)
+                {
+                    ori = ori + M_PI * 2;
+                }
+                ori = ori + M_PI;
+                destX = destX + gap * std::cos(ori);
+                destY = destY + gap * std::sin(ori);
+                unitTarget->UpdateGroundPositionZ(destX, destY, destZ);
+                unitTarget->NearTeleportTo(destX, destY, destZ, ori + M_PI, unitTarget == m_caster, false, withPet, true);
+                //float destOri = destTarget->GetOrientation();
+                //destTarget->RelocatePolarOffset(destTarget->GetOrientation() + M_PI, unitTarget->GetObjectSize() + m_caster->GetCombatReach() / 2);
+                //m_caster->UpdateGroundPositionZ(destTarget->m_positionX, destTarget->m_positionY, destTarget->m_positionZ);                
+                //unitTarget->NearTeleportTo(destTarget->GetPositionX(), destTarget->GetPositionY(), destTarget->GetPositionZ(), destOri, unitTarget == m_caster, false, withPet, true);
+            }
+            else
+            {
+                unitTarget->NearTeleportTo(x, y, z, orientation, unitTarget == m_caster, false, withPet, true);
+            }
             if (unitTarget->GetTypeId() == TYPEID_PLAYER) // pussywizard: for units it's done inside NearTeleportTo
+            {
                 unitTarget->UpdateObjectVisibility(true);
+            }
         }
     }
     else if (unitTarget->GetTypeId() == TYPEID_PLAYER)

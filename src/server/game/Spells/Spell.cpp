@@ -3561,6 +3561,13 @@ void Spell::cast(bool skipCheck)
 
 void Spell::_cast(bool skipCheck)
 {
+    // lfm debug
+    //uint32 spellId = m_spellInfo->Id;
+    //if (spellId == 47750)
+    //{
+    //    bool breakPoint = true;
+    //}
+    
     // update pointers base at GUIDs to prevent access to non-existed already object
     if (!UpdatePointers())
     {
@@ -5369,6 +5376,13 @@ void Spell::HandleThreatSpells()
 
 void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGOTarget, uint32 i, SpellEffectHandleMode mode)
 {
+    // lfm debug
+    //uint32 spellId = m_spellInfo->Id;
+    //if (spellId == 47750)
+    //{
+    //    bool breakPoint = true;
+    //}
+
     effectHandleMode = mode;
     unitTarget = pUnitTarget;
     itemTarget = pItemTarget;

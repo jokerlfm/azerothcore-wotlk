@@ -698,7 +698,9 @@ public:
 
             int32 rewMoney = 0;
 
-            if (charLevel >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
+            // lfm max level quest
+            uint32 accountMaxLevel = sWorld->GetAccountMaxLevel(player->GetSession()->Expansion());
+            if (charLevel >= accountMaxLevel)
             {
                 rewMoney = quest->GetRewMoneyMaxLevel();
             }

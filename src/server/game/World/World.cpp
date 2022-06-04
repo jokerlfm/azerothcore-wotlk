@@ -96,6 +96,9 @@
 #include <boost/asio/ip/address.hpp>
 #include <cmath>
 
+// lfm minger
+#include "MingerManager.h"
+
 // lfm ninger
 #include "NingerManager.h"
 
@@ -1555,6 +1558,9 @@ void World::SetInitialWorldSettings()
 
     MMAP::MMapMgr* mmmgr = MMAP::MMapFactory::createOrGetMMapMgr();
     mmmgr->InitializeThreadUnsafe(mapIds);
+
+    // lfm minger
+    sMingerManager->InitializeManager();
 
     LOG_INFO("server.loading", "Loading Game Graveyard...");
     sGraveyard->LoadGraveyardFromDB();
@@ -3395,4 +3401,24 @@ CliCommandHolder::CliCommandHolder(void* callbackArg, char const* command, Print
 CliCommandHolder::~CliCommandHolder()
 {
     free(m_command);
+}
+
+uint32 World::GetAccountMaxLevel(uint32 pmExpantion)
+{
+    uint32 accountMaxLevel = getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
+    if (pmExpantion < 1)
+    {
+        if (accountMaxLevel > 60)
+        {
+            accountMaxLevel = 60;
+        }
+    }
+    else if (pmExpantion < 2)
+    {
+        if (accountMaxLevel > 70)
+        {
+            accountMaxLevel = 70;
+        }
+    }
+    return accountMaxLevel;
 }

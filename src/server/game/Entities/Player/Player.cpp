@@ -2362,22 +2362,10 @@ void Player::GiveXP(uint32 xp, Unit* victim, float group_rate, bool isLFGReward)
     uint8 level = getLevel();
 
     // lfm expansion check
-    uint32 expansion = GetSession()->Expansion();
-    if (level >= 70)
+    if (level >= sWorld->GetAccountMaxLevel(GetSession()->Expansion()))
     {
-        if (expansion < 2)
-        {
-            return;
-        }
+        return;
     }
-    else if (level >= 60)
-    {
-        if (expansion < 1)
-        {
-            return;
-        }
-    }
-
 
     sScriptMgr->OnGivePlayerXP(this, xp, victim);
 
@@ -2560,7 +2548,26 @@ void Player::InitStatsForLevel(bool reapplyMods)
     PlayerLevelInfo info;
     sObjectMgr->GetPlayerLevelInfo(getRace(true), getClass(), getLevel(), &info);
 
-    SetUInt32Value(PLAYER_FIELD_MAX_LEVEL, sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
+    // lfm max level quest
+    //SetUInt32Value(PLAYER_FIELD_MAX_LEVEL, sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL));
+    uint32 accountMaxLevel = sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL);
+    uint32 accountExpansion = GetSession()->Expansion();
+    if (accountExpansion < 1)
+    {
+        if (accountMaxLevel > 60)
+        {
+            accountMaxLevel = 60;
+        }
+    }
+    else if (accountExpansion < 2)
+    {
+        if (accountMaxLevel > 70)
+        {
+            accountMaxLevel = 70;
+        }
+    }
+    SetUInt32Value(PLAYER_FIELD_MAX_LEVEL, accountMaxLevel);
+
     SetUInt32Value(PLAYER_NEXT_LEVEL_XP, sObjectMgr->GetXPForLevel(getLevel()));
 
     // reset before any aura state sources (health set/aura apply)

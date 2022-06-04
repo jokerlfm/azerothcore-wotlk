@@ -1398,8 +1398,21 @@ namespace Acore
         AllCreaturesOfEntryInRange(WorldObject const* object, uint32 entry, float maxRange) : m_pObject(object), m_uiEntry(entry), m_fRange(maxRange) {}
         bool operator() (Unit* unit)
         {
-            if (unit->GetEntry() == m_uiEntry && m_pObject->IsWithinDist(unit, m_fRange, false))
-                return true;
+            // lfm 0 entry will return all creatures
+            if (m_uiEntry > 0)
+            {
+                if (unit->GetEntry() == m_uiEntry && m_pObject->IsWithinDist(unit, m_fRange, false))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (m_pObject->IsWithinDist(unit, m_fRange, false))
+                {
+                    return true;
+                }
+            }
 
             return false;
         }

@@ -39,6 +39,8 @@
 #include <G3D/CoordinateFrame.h>
 #include <G3D/Quat.h>
 
+#include "MingerManager.h"
+
 GameObject::GameObject() : WorldObject(false), MovableMapObject(),
 m_model(nullptr), m_goValue(), m_AI(nullptr)
 {
@@ -1089,6 +1091,19 @@ bool GameObject::LoadGameObjectFromDB(ObjectGuid::LowType spawnId, Map* map, boo
     float z = data->posZ;
     float ang = data->orientation;
 
+    // lfm spawn checking 
+    if (sMingerManager->IsHerb(entry))
+    {
+        Position pos;
+        pos.m_positionX = x;
+        pos.m_positionY = y;
+        pos.m_positionZ = z;
+        if (!sMingerManager->AddHerb(spawnId, map->GetId(), pos, VISIBILITY_DISTANCE_NORMAL))
+        {
+            return false;
+        }
+    }
+
     uint32 animprogress = data->animprogress;
     GOState go_state = data->go_state;
     uint32 artKit = data->artKit;
@@ -1714,9 +1729,9 @@ void GameObject::Use(Unit* user)
             {
                 zone_skill = 25;
             }
-            else if (zone_skill < 100)
+            else if (zone_skill < 50)
             {
-                zone_skill = 100;
+                zone_skill = 50;
             }
             else
             {
@@ -1744,8 +1759,17 @@ void GameObject::Use(Unit* user)
             }
             else
             {
-                chance = skill - zone_skill + 10;
-            }            
+                float maxRootRate = zone_skill * 2;
+                if (maxRootRate > 150.0f)
+                {
+                    maxRootRate = 150.0f;
+                }
+                chance = (skill + 10 - zone_skill) * 100 / maxRootRate;
+            }
+            if (chance > 95)
+            {
+                chance = 95;
+            }        
 
             int32 roll = irand(1, 100);
 
@@ -1791,10 +1815,6 @@ void GameObject::Use(Unit* user)
         }
 
         // lfm auto fish
-        //if(tmpfish)
-        //    player->FinishSpell(CURRENT_CHANNELED_SPELL, true);
-        //else
-        //    player->InterruptSpell(CURRENT_CHANNELED_SPELL, true, true, true);
         player->fishingDelay = urand(500, 1000);
         uint32 maxSlot = loot.GetMaxSlotInLootFor(player);
         for (uint32 slotIndex = 0; slotIndex <= maxSlot; slotIndex++)

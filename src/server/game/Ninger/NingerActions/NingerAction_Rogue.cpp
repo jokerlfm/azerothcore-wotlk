@@ -1,9 +1,10 @@
 #include "NingerAction_Rogue.h"
+#include "Player.h"
 #include "Group.h"
 #include "Spell.h"
-#include "GridNotifiers.h"
+#include "World.h"
 
-NingerAction_Rogue::NingerAction_Rogue() :NingerAction_Base()
+NingerAction_Rogue::NingerAction_Rogue(Player* pmMe) :NingerAction_Base(pmMe)
 {
     spell_Dismantle = 0;
     spell_Eviscerate = 0;
@@ -24,6 +25,8 @@ NingerAction_Rogue::NingerAction_Rogue() :NingerAction_Base()
     spell_DeadlyThrow = 0;
 
     spell_AdrenalineRush = 0;
+    spell_KillingSpree = 0;
+    spell_Cloak_Of_Shadows = 0;
 
     item_InstantPoison = 0;
 }
@@ -36,21 +39,22 @@ void NingerAction_Rogue::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpec
     }
     specialty = pmSpecialtyTabIndex;
     me->ClearInCombat();
-    if (me->getLevel() != pmTargetLevel)
+    uint32 myLevel = me->getLevel();
+    if (myLevel != pmTargetLevel)
     {
         me->GiveLevel(pmTargetLevel);
         me->LearnDefaultSkills();
-        me->LearnCustomSpells();
+        me->learnQuestRewardedSpells();
 
         ResetTalent();
+        RemoveEquipments();
     }
-    uint32 myLevel = me->getLevel();
     spell_Stealth = 1784;
     spell_SinisterStrike = 1752;
     spell_Eviscerate = 2098;
-    me->learnSpell(1180);
-    me->learnSpell(15590);
-    me->learnSpell(2567);
+    me->learnSpell(1180, false);
+    me->learnSpell(15590, false);
+    me->learnSpell(2567, false);
     if (myLevel >= 4)
     {
 
@@ -209,9 +213,9 @@ void NingerAction_Rogue::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpec
         spell_Feint = 27448;
         spell_DeadlyThrow = 26679;
     }
-    if (myLevel >= 67)
+    if (myLevel >= 66)
     {
-
+        spell_Cloak_Of_Shadows = 31224;
     }
     if (myLevel >= 68)
     {
@@ -346,7 +350,6 @@ bool NingerAction_Rogue::InitializeEquipments(bool pmReset)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
-    bool allEquiped = true;
     for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
     {
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
@@ -491,11 +494,9 @@ bool NingerAction_Rogue::InitializeEquipments(bool pmReset)
             }
         }
         EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, modType, inventoryTypeSet);
-        allEquiped = false;
-        //break;
     }
 
-    return allEquiped;
+    return true;
 }
 
 void NingerAction_Rogue::Prepare()
@@ -513,7 +514,7 @@ void NingerAction_Rogue::Prepare()
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
 
-bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
+bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack)
 {
     if (!me)
     {
@@ -523,8 +524,20 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
     {
         return false;
     }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return true;
+    }
     if (!pmTarget)
     {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
         return false;
     }
     else if (!me->IsValidAttackTarget(pmTarget))
@@ -535,7 +548,7 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
         }
         return false;
     }
-    else if (pmTarget->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
+    else if (pmTarget->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_NORMAL))
     {
         if (me->GetTarget() == pmTarget->GetGUID())
         {
@@ -543,7 +556,7 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
         }
         return false;
     }
-    if (!me->CanSeeOrDetect(pmTarget))
+    if (!pmTarget->CanSeeOrDetect(me))
     {
         if (me->GetTarget() == pmTarget->GetGUID())
         {
@@ -551,12 +564,20 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
         }
         return false;
     }
+    if (pmChasing)
+    {
+        if (!nm->Chase(pmTarget, pmDistanceMax, pmDistanceMin, pmHolding, pmForceBack))
+        {
+            if (me->GetTarget() == pmTarget->GetGUID())
+            {
+                ClearTarget();
+            }
+            return false;
+        }
+    }
+    ChooseTarget(pmTarget);
+    me->Attack(pmTarget, true);
     float targetDistance = me->GetDistance(pmTarget);
-    if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
-    {
-        return false;
-    }
-    me->ningerMovement->Chase(pmTarget);
     if (targetDistance > FOLLOW_NORMAL_DISTANCE)
     {
         if (CastSpell(me, spell_Sprint))
@@ -565,18 +586,9 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
         }
     }
     uint32 myEnergy = me->GetPower(Powers::POWER_ENERGY);
-    uint32 comboPoints = me->GetComboPoints(pmTarget->GetGUID());
-    if (myEnergy >= 35)
-    {
-        if (pmTarget->isMoving())
-        {
-            if (CastSpell(pmTarget, spell_DeadlyThrow))
-            {
-                return true;
-            }
-        }
-    }
-    if (targetDistance < INTERACTION_DISTANCE)
+    uint32 comboPoints = me->GetComboPoints();
+    bool canMelee = me->IsWithinMeleeRange(pmTarget);
+    if (canMelee)
     {
         if (me->HasAura(spell_Stealth))
         {
@@ -593,6 +605,13 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
                     }
                     return true;
                 }
+            }
+        }
+        else
+        {
+            if (me->GetHealthPct() < 30.0f)
+            {
+                HealthPotion();
             }
         }
         if (pmTarget->GetTarget() == me->GetGUID())
@@ -621,22 +640,8 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
         }
         else
         {
-            if (Unit* targetTarget = ObjectAccessor::GetUnit(*me, pmTarget->GetTarget()))
-            {
-                if (Player* isTankPlayer = targetTarget->ToPlayer())
-                {
-                    if (isTankPlayer->groupRole == GroupRole::GroupRole_Tank)
-                    {
-                        if (pmTarget->getThreatMgr().getThreat(me) > pmTarget->getThreatMgr().getThreat(isTankPlayer) * 0.95f)
-                        {
-                            me->AttackStop();
-                            return true;
-                        }
-                    }
-                }
-            }
             me->Attack(pmTarget, true);
-            if (pmRush)
+            if (pmRushing)
             {
                 if (myEnergy >= 25)
                 {
@@ -656,16 +661,6 @@ bool NingerAction_Rogue::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
             }
             if (myEnergy >= 25)
             {
-                if (comboPoints > 0)
-                {
-                    if (pmTarget->isMoving())
-                    {
-                        if (CastSpell(pmTarget, spell_KidneyShot))
-                        {
-                            return true;
-                        }
-                    }
-                }
                 if (pmTarget->IsNonMeleeSpellCast(false, false, true))
                 {
                     if (CastSpell(pmTarget, spell_Kick))
@@ -807,4 +802,22 @@ bool NingerAction_Rogue::Buff(Unit* pmTarget)
     }
 
     return false;
+}
+
+uint32 NingerAction_Rogue::Caution()
+{
+    uint32 result = NingerAction_Base::Caution();
+    if (result > 0)
+    {
+        if (spell_Sprint > 0)
+        {
+            CastSpell(me, spell_Sprint);
+        }
+        if (spell_Cloak_Of_Shadows > 0)
+        {
+            CastSpell(me, spell_Cloak_Of_Shadows);
+        }
+    }
+
+    return result;
 }

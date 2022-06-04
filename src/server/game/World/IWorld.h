@@ -504,6 +504,10 @@ class IWorld
 {
 public:
     virtual ~IWorld() = default;
+
+    // lfm account max level
+    virtual uint32 GetAccountMaxLevel(uint32 pmExpantion) = 0;
+
     [[nodiscard]] virtual WorldSession* FindSession(uint32 id) const = 0;
     [[nodiscard]] virtual WorldSession* FindOfflineSession(uint32 id) const = 0;
     [[nodiscard]] virtual WorldSession* FindOfflineSessionForCharacterGUID(ObjectGuid::LowType guidLow) const = 0;

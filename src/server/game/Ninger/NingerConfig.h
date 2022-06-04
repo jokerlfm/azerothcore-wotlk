@@ -16,11 +16,15 @@
 #endif
 
 #ifndef MIN_DISTANCE_GAP
-# define MIN_DISTANCE_GAP 0.05f
+# define MIN_DISTANCE_GAP 0.5f
+#endif
+
+#ifndef MAX_DISTANCE_GAP
+# define MAX_DISTANCE_GAP 1.0f
 #endif
 
 #ifndef MIN_ANGLE_GAP
-# define MIN_ANGLE_GAP 0.1f
+# define MIN_ANGLE_GAP 0.5f
 #endif
 
 #ifndef FOLLOW_MIN_DISTANCE
@@ -44,23 +48,27 @@
 #endif
 
 #ifndef MELEE_MIN_DISTANCE
-# define MELEE_MIN_DISTANCE 0.1f
+# define MELEE_MIN_DISTANCE 0.5f
 #endif
 
 #ifndef MELEE_MAX_DISTANCE
-# define MELEE_MAX_DISTANCE 0.5f
+# define MELEE_MAX_DISTANCE 1.0f
 #endif
 
 #ifndef RANGE_MIN_DISTANCE
 # define RANGE_MIN_DISTANCE 8.0f
 #endif
 
+#ifndef RANGE_NEAR_DISTANCE
+# define RANGE_NEAR_DISTANCE 15.0f
+#endif
+
 #ifndef RANGE_NORMAL_DISTANCE
-# define RANGE_NORMAL_DISTANCE 25.0f
+# define RANGE_NORMAL_DISTANCE 20.0f
 #endif
 
 #ifndef RANGE_FAR_DISTANCE
-# define RANGE_FAR_DISTANCE 30.0f
+# define RANGE_FAR_DISTANCE 28.0f
 #endif
 
 #ifndef RANGE_MAX_DISTANCE

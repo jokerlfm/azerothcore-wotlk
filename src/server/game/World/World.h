@@ -159,6 +159,8 @@ public:
 
     static uint32 m_worldLoopCounter;
 
+    uint32 GetAccountMaxLevel(uint32 pmExpantion);
+
     [[nodiscard]] WorldSession* FindSession(uint32 id) const override;
     [[nodiscard]] WorldSession* FindOfflineSession(uint32 id) const override;
     [[nodiscard]] WorldSession* FindOfflineSessionForCharacterGUID(ObjectGuid::LowType guidLow) const override;

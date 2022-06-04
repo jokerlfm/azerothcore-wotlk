@@ -768,14 +768,6 @@ private:
 public:
     static ObjectMgr* instance();
 
-    // lfm gameobjects 
-    // 0 copper, 1 tin, 2 silver
-    std::unordered_map<uint32, std::unordered_set<uint32>> veinEntryMap;
-    std::unordered_map<uint32, std::unordered_set<Vein*>> veinGroupMap;
-
-    std::unordered_set<uint32> herbEntrySet;
-    std::unordered_set<Herb*> herbEntitySet;
-
     typedef std::unordered_map<uint32, Item*> ItemMap;
 
     typedef std::unordered_map<uint32, Quest*> QuestMap;

@@ -79,7 +79,7 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
 
     bool const mutualChase = IsMutualChase(owner, target);
     // lfm should be closer 
-    float hitboxSum = owner->GetCombatReach() + target->GetCombatReach() + CONTACT_DISTANCE;
+    float hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
     float maxRange = hitboxSum;
     if (_range)
     {

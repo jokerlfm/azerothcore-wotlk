@@ -241,25 +241,6 @@ void SmartAIMgr::LoadSmartAIFromDB()
         temp.target.z = fields[27].Get<float>();
         temp.target.o = fields[28].Get<float>();
 
-        // lfm smart scripts
-        if (temp.entryOrGuid == 19720 && temp.action.type == SMART_ACTION::SMART_ACTION_CALL_AREAEXPLOREDOREVENTHAPPENS && temp.action.raw.param1 == 10231)
-        {
-            temp.action.type = SMART_ACTION::SMART_ACTION_CAST;
-            temp.action.raw.param1 = 34549;
-            temp.target.type = SMARTAI_TARGETS::SMART_TARGET_SELF;
-        }
-        else if (temp.entryOrGuid == 21926 && temp.action.type == SMART_ACTION::SMART_ACTION_CAST && temp.action.raw.param1 == 28337)
-        {
-            temp.target.type = SMARTAI_TARGETS::SMART_TARGET_CLOSEST_CREATURE;
-            temp.target.raw.param1 = 20771;
-            temp.target.raw.param2 = 35;
-            temp.target.raw.param3 = 0;
-        }
-        else if (temp.entryOrGuid == 21926 && temp.action.type == SMART_ACTION::SMART_ACTION_CAST && temp.action.raw.param1 == 37903)
-        {
-            temp.target.type = SMARTAI_TARGETS::SMART_TARGET_OWNER_OR_SUMMONER;
-        }
-
         //check target
         if (!IsTargetValid(temp))
             continue;

@@ -1,9 +1,12 @@
 #include "NingerAction_Warrior.h"
+#include "Player.h"
 #include "Group.h"
+#include "Spell.h"
+#include "World.h"
 
-NingerAction_Warrior::NingerAction_Warrior() :NingerAction_Base()
+NingerAction_Warrior::NingerAction_Warrior(Player* pmMe) :NingerAction_Base(pmMe)
 {
-    ogVigilanceTarget = ObjectGuid::Empty;
+    ogVigilanceTarget = ObjectGuid();
 
     specialty = 0;
 
@@ -70,18 +73,18 @@ void NingerAction_Warrior::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSp
     }
     specialty = pmSpecialtyTabIndex;
     me->ClearInCombat();
-    if (me->getLevel() != pmTargetLevel)
+    uint32 myLevel = me->getLevel();
+    if (myLevel != pmTargetLevel)
     {
         me->GiveLevel(pmTargetLevel);
         me->LearnDefaultSkills();
-        me->LearnCustomSpells();
+        me->learnQuestRewardedSpells();
 
         ResetTalent();
         RemoveEquipments();
     }
-    me->learnSpell(201);
-    me->learnSpell(2567);
-    uint32 myLevel = me->getLevel();
+    me->learnSpell(201, false);
+    me->learnSpell(2567, false);
     spell_HeroicStrike = 78;
     spell_BattleShout = 6673;
     if (myLevel >= 4)
@@ -101,7 +104,7 @@ void NingerAction_Warrior::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSp
     {
         spell_Rend = 6546;
         spell_Bloodrage = 2687;
-        me->CastSpell(me, 8121);
+        me->CastSpell(me, 8121, TriggerCastFlags::TRIGGERED_NONE);
         spell_SunderArmor = 7386;
         spell_DefensiveStance = 71;
         spell_Taunt = 355;
@@ -157,7 +160,7 @@ void NingerAction_Warrior::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSp
     {
         spell_Cleave = 7369;
         spell_Rend = 6548;
-        me->CastSpell(me, 8616);
+        me->CastSpell(me, 8616, TriggerCastFlags::TRIGGERED_NONE);
         spell_intercept = 20252;
     }
     if (myLevel >= 32)
@@ -239,6 +242,7 @@ void NingerAction_Warrior::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSp
         spell_Rend = 11574;
         spell_HeroicStrike = 25286;
         spell_BattleShout = 25289;
+        spell_Shockwave = 46968;
     }
     if (myLevel >= 62)
     {
@@ -268,7 +272,7 @@ void NingerAction_Warrior::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSp
     }
     if (myLevel >= 70)
     {
-        spell_DemoralizingShout = 20203;
+        spell_DemoralizingShout = 25203;
         spell_ShieldSlam = 30356;
         spell_Revenge = 30357;
         spell_Devastate = 30022;
@@ -400,7 +404,6 @@ bool NingerAction_Warrior::InitializeEquipments(bool pmReset)
     {
         minQuality = ItemQualities::ITEM_QUALITY_POOR;
     }
-    bool allEquiped = true;
     for (uint32 checkEquipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; checkEquipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; checkEquipSlot++)
     {
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
@@ -543,11 +546,9 @@ bool NingerAction_Warrior::InitializeEquipments(bool pmReset)
             }
         }
         EquipRandomItem(checkEquipSlot, equipItemClass, equipItemSubClass, minQuality, modType, inventoryTypeSet);
-        allEquiped = false;
-        //break;
     }
 
-    return allEquiped;
+    return true;
 }
 
 void NingerAction_Warrior::Prepare()
@@ -565,7 +566,7 @@ void NingerAction_Warrior::Prepare()
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
 
-bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
+bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE, float pmDistanceMax, float pmDistanceMin, bool pmHolding)
 {
     if (!me)
     {
@@ -575,8 +576,20 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
     {
         return false;
     }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return true;
+    }
     if (!pmTarget)
     {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
         return false;
     }
     else if (!me->IsValidAttackTarget(pmTarget))
@@ -587,13 +600,18 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
         }
         return false;
     }
-    float targetDistance = me->GetDistance(pmTarget);
-    if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
+    if (!nm->Tank(pmTarget, pmDistanceMax, pmDistanceMin, pmHolding))
     {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
         return false;
     }
-    me->ningerMovement->Tank(pmTarget);
+    ChooseTarget(pmTarget);
     me->Attack(pmTarget, true);
+    float targetDistance = me->GetDistance(pmTarget);
+    bool canMelee = me->IsWithinMeleeRange(pmTarget);
     float myHealthPCT = me->GetHealthPct();
     if (targetDistance < RANGE_NORMAL_DISTANCE)
     {
@@ -640,25 +658,32 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
                 {
                     if (spell_Warbringer > 0)
                     {
-                        if (CastSpell(pmTarget, spell_Charge))
+                        if (!pmHolding)
                         {
-                            return true;
-                        }
-                        if (CastSpell(pmTarget, spell_intercept))
-                        {
-                            return true;
-                        }
-                        if (spell_Intervene > 0)
-                        {
-                            if (CastSpell(pmTarget, spell_Intervene))
+                            if (CastSpell(pmTarget, spell_Charge))
                             {
                                 return true;
+                            }
+                            if (CastSpell(pmTarget, spell_intercept))
+                            {
+                                return true;
+                            }
+                            if (spell_Intervene > 0)
+                            {
+                                if (CastSpell(pmTarget, spell_Intervene))
+                                {
+                                    return true;
+                                }
                             }
                         }
                     }
                 }
-                if (targetDistance < FOLLOW_NEAR_DISTANCE)
+                if (canMelee)
                 {
+                    if (me->GetHealthPct() < 30.0f)
+                    {
+                        HealthPotion();
+                    }
                     if (spell_Taunt > 0)
                     {
                         if (CastSpell(pmTarget, spell_Taunt))
@@ -683,31 +708,30 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
                 }
             }
         }
-        if (myRage > 100)
+        if (spell_DemoralizingShout > 0)
         {
-            if (spell_DemoralizingShout > 0)
+            if (spellDelay_DemoralizingShout < 0)
             {
-                if (spellDelay_DemoralizingShout < 0)
+                if (targetDistance < FOLLOW_NEAR_DISTANCE)
                 {
-                    if (targetDistance < FOLLOW_NEAR_DISTANCE)
+                    if (CastSpell(pmTarget, spell_DemoralizingShout, true))
                     {
-                        if (CastSpell(pmTarget, spell_DemoralizingShout, true))
-                        {
-                            spellDelay_DemoralizingShout = DEFAULT_WARRIOR_SPELL_DELAY;
-                            return true;
-                        }
+                        spellDelay_DemoralizingShout = DEFAULT_WARRIOR_SPELL_DELAY;
+                        return true;
                     }
                 }
             }
-            if (spell_BattleShout > 0)
+        }
+    }
+    if (canMelee)
+    {
+        if (pmAOE)
+        {
+            if (spell_ThunderClap > 0)
             {
-                if (spellDelay_BattleShout < 0)
+                if (CastSpell(pmTarget, spell_ThunderClap))
                 {
-                    if (CastSpell(me, spell_BattleShout, true))
-                    {
-                        spellDelay_BattleShout = DEFAULT_WARRIOR_SPELL_DELAY;
-                        return true;
-                    }
+                    return true;
                 }
             }
         }
@@ -728,14 +752,22 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
                 }
             }
         }
-    }
-    if (targetDistance < INTERACTION_DISTANCE)
-    {
         if (spell_ShieldBlock > 0)
         {
             if (CastSpell(me, spell_ShieldBlock))
             {
                 return true;
+            }
+        }
+        if (spell_BattleShout > 0)
+        {
+            if (spellDelay_BattleShout < 0)
+            {
+                if (CastSpell(nullptr, spell_BattleShout, true))
+                {
+                    spellDelay_BattleShout = DEFAULT_WARRIOR_SPELL_DELAY;
+                    return true;
+                }
             }
         }
         if (spell_BerserkerRage > 0)
@@ -752,18 +784,14 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE)
                 return true;
             }
         }
-        if (spell_ThunderClap > 0)
+        if (pmAOE)
         {
-            if (CastSpell(pmTarget, spell_ThunderClap))
+            if (spell_Shockwave > 0)
             {
-                return true;
-            }
-        }
-        if (spell_Shockwave > 0)
-        {
-            if (CastSpell(pmTarget, spell_Shockwave))
-            {
-                return true;
+                if (CastSpell(me, spell_Shockwave))
+                {
+                    return true;
+                }
             }
         }
         if (spell_ShieldSlam > 0)
@@ -868,6 +896,7 @@ bool NingerAction_Warrior::Buff(Unit* pmTarget)
                                 if (member->groupRole == GroupRole::GroupRole_Healer)
                                 {
                                     ogVigilanceTarget = member->GetGUID();
+                                    break;
                                 }
                             }
                         }
@@ -876,10 +905,28 @@ bool NingerAction_Warrior::Buff(Unit* pmTarget)
             }
             if (Player* healer = ObjectAccessor::FindPlayer(ogVigilanceTarget))
             {
-                if (CastSpell(healer, spell_Vigilance, true))
+                if (healer->IsInWorld())
                 {
-                    return true;
+                    if (healer->IsInSameGroupWith(me))
+                    {
+                        if (CastSpell(healer, spell_Vigilance, true))
+                        {
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        ogVigilanceTarget = ObjectGuid();
+                    }
                 }
+                else
+                {
+                    ogVigilanceTarget = ObjectGuid();
+                }
+            }
+            else
+            {
+                ogVigilanceTarget = ObjectGuid();
             }
         }
     }

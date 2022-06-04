@@ -179,16 +179,6 @@ uint32 LootStore::LoadLootTable()
             lootmode = 1;
         }
 
-        // lfm remove old rogue items
-        if (reference == 0 && (item == 2928 || item == 8924 || item == 5173 || item == 8923 || item == 5140 || item == 2930))
-        {
-            continue;
-        }
-        if (entry == 17084 && item == 23580)
-        {
-            chance = 100.0f;
-        }
-
         LootStoreItem* storeitem = new LootStoreItem(item, reference, chance, needsquest, lootmode, groupid, mincount, maxcount);
 
         if (!storeitem->IsValid(*this, entry))            // Validity checks

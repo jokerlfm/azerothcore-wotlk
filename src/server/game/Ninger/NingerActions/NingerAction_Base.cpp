@@ -1,25 +1,24 @@
 #include "NingerAction_Base.h"
-#include "Bag.h"
-#include "Spell.h"
-#include "SpellAuras.h"
-#include "SpellAuraEffects.h"
-#include "CreatureAI.h"
-#include "MotionMaster.h"
-#include "MovementGenerator.h"
-#include "MoveSplineInit.h"
-#include "SpellMgr.h"
+#include "World/World.h"
+#include "Player.h"
 #include "Pet.h"
+#include "CreatureAI.h"
+#include "Spell.h"
+#include "TargetedMovementGenerator.h"
 #include "GridNotifiers.h"
 
 NingerMovement::NingerMovement(Player* pmMe)
 {
     me = pmMe;
-    ogTankTarget = ObjectGuid::Empty;
-    ogChaseTarget = ObjectGuid::Empty;
-    ogFollowTarget = ObjectGuid::Empty;
+    ogTankTarget = ObjectGuid();
+    ogChaseTarget = ObjectGuid();
+    ogFollowTarget = ObjectGuid();
     positionTarget = me->GetPosition();
-    positionOK = false;
-    movingDelay = 0;
+    distanceMax = 0.0f;
+    distanceMin = 0.0f;
+    holding = false;
+    forceBack = false;
+    moveCheckDelay = 0;
     activeMovementType = NingerMovementType::NingerMovementType_None;
 }
 
@@ -27,20 +26,40 @@ void NingerMovement::ResetMovement()
 {
     me->StopMoving();
     me->GetMotionMaster()->Clear();
-    ogTankTarget = ObjectGuid::Empty;
-    ogChaseTarget = ObjectGuid::Empty;
-    ogFollowTarget = ObjectGuid::Empty;
+    ogTankTarget = ObjectGuid();
+    ogChaseTarget = ObjectGuid();
+    ogFollowTarget = ObjectGuid();
     positionTarget = me->GetPosition();
-    positionOK = false;
-    movingDelay = 0;
+    distanceMax = 0.0f;
+    distanceMin = 0.0f;
+    holding = false;
+    forceBack = false;
+    moveCheckDelay = 0;
+    me->m_movementInfo.flags = 0;
     activeMovementType = NingerMovementType::NingerMovementType_None;
 }
 
-void NingerMovement::Update(uint32 pmDiff)
+void NingerMovement::Run()
 {
-    if (movingDelay > 0)
+    if (me)
     {
-        movingDelay -= pmDiff;
+        if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+        {
+            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+        }
+        if (me->IsWalking())
+        {
+            me->SetWalk(false);
+        }
+    }
+}
+
+void NingerMovement::Update_Direct(uint32 pmDiff)
+{
+    if (moveCheckDelay > 0)
+    {
+        moveCheckDelay -= pmDiff;
+        return;
     }
     if (!me)
     {
@@ -58,6 +77,10 @@ void NingerMovement::Update(uint32 pmDiff)
     {
         return;
     }
+    //if (me->HasUnitState(UnitState::UNIT_STATE_ROAMING_MOVE))
+    //{
+    //	return;
+    //}
     if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return;
@@ -65,13 +88,6 @@ void NingerMovement::Update(uint32 pmDiff)
     if (me->IsBeingTeleported())
     {
         return;
-    }
-    if (me->isMoving())
-    {
-        if (movingDelay > 0)
-        {
-            return;
-        }
     }
     switch (activeMovementType)
     {
@@ -81,7 +97,7 @@ void NingerMovement::Update(uint32 pmDiff)
     }
     case NingerMovementType::NingerMovementType_Point:
     {
-        float distance = me->GetExactDist(positionTarget);
+        float distance = me->GetDistance(positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ);
         if (distance > VISIBILITY_DISTANCE_LARGE)
         {
             ResetMovement();
@@ -90,16 +106,14 @@ void NingerMovement::Update(uint32 pmDiff)
         {
             if (distance < MIN_DISTANCE_GAP)
             {
-                if (me->isMoving())
-                {
-                    me->StopMoving();
-                }
+                activeMovementType = NingerMovementType::NingerMovementType_None;
             }
             else
             {
-                me->GetMap()->CanReachPositionAndGetValidCoords(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
                 me->GetMotionMaster()->MovePoint(0, positionTarget);
-                movingDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+                moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
             }
         }
         break;
@@ -108,84 +122,59 @@ void NingerMovement::Update(uint32 pmDiff)
     {
         if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
         {
-            if (NingerStrategy_Base* ns = me->strategyMap[me->activeStrategyIndex])
+            if (holding)
             {
-                if (chaseTarget->isMoving())
+                if (me->isMoving())
                 {
-                    positionOK = false;
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
                 }
-                if (!positionOK)
+                if (!me->isInFront(chaseTarget, M_PI / 8))
                 {
-                    float targetDistance = me->GetDistance2d(chaseTarget);
-                    if (targetDistance > VISIBILITY_DISTANCE_LARGE)
+                    me->SetFacingToObject(chaseTarget);
+                }
+            }
+            else
+            {
+                float targetDistance = me->GetDistance(chaseTarget);
+                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (targetDistance > VISIBILITY_DISTANCE_LARGE)
+                {
+                    ResetMovement();
+                    break;
+                }
+                if (targetDistance < chaseDistance + MAX_DISTANCE_GAP)
+                {
+                    if (me->IsWithinLOSInMap(chaseTarget))
                     {
-                        ResetMovement();
+                        if (me->isMoving())
+                        {
+                            me->StopMoving();
+                            me->GetMotionMaster()->Clear();
+                        }
+                        if (!me->isInFront(chaseTarget, M_PI / 8))
+                        {
+                            me->SetFacingToObject(chaseTarget);
+                        }
                         break;
                     }
-                    if (me->GetTarget() != ogTankTarget)
-                    {
-                        me->SetSelection(ogTankTarget);
-                        me->SetTarget(ogTankTarget);
-                    }
-                    if (targetDistance < ns->dpsDistance + MIN_DISTANCE_GAP)
-                    {
-                        if (me->IsWithinLOSInMap(chaseTarget))
-                        {
-                            if (ns->combatAngle != 0.0f)
-                            {
-                                float targetAngle = me->GetAngle(chaseTarget);
-                                if (targetAngle < 0.0f)
-                                {
-                                    targetAngle = targetAngle + M_PI * 2;
-                                }
-                                targetAngle = targetAngle + M_PI * 2;
-                                if (targetAngle > ns->combatAngle + M_PI * 2 + M_PI - MIN_ANGLE_GAP && targetAngle < ns->combatAngle + M_PI * 2 + M_PI + MIN_ANGLE_GAP)
-                                {
-                                    positionOK = true;
-                                }
-                            }
-                            else
-                            {
-                                positionOK = true;
-                            }
-                        }
-                    }
                 }
-                if (positionOK)
+                float moveDistance = 0.0f;
+                if (targetDistance > chaseDistance)
                 {
-                    if (me->isMoving())
-                    {
-                        me->StopMoving();
-                    }
-                    if (!me->isInFront(chaseTarget, M_PI / 4))
-                    {
-                        me->SetFacingToObject(chaseTarget);
-                    }
+                    moveDistance = targetDistance - chaseDistance;
                 }
                 else
                 {
-                    float chaseAngle = ns->combatAngle;
-                    if (chaseAngle == 0.0f)
-                    {
-                        chaseAngle = chaseTarget->GetAngle(me);
-                    }
-                    chaseTarget->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), ns->dpsDistance, chaseAngle);
-                    //me->GetMap()->CanReachPositionAndGetValidCoords(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
-                    if (me->GetDistance(positionTarget) > MIN_DISTANCE_GAP)
-                    {
-                        if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-                        {
-                            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
-                        }
-                        if (me->IsWalking())
-                        {
-                            me->SetWalk(false);
-                        }
-                        me->GetMotionMaster()->MovePoint(0, positionTarget);
-                        movingDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
-                    }
+                    moveDistance = MAX_DISTANCE_GAP;
                 }
+                positionTarget = GetDestPosition(chaseTarget, moveDistance, true);
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MovePoint(0, positionTarget);
             }
+            //moveCheckDelay = 100;
         }
         else
         {
@@ -197,97 +186,87 @@ void NingerMovement::Update(uint32 pmDiff)
     {
         if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogChaseTarget))
         {
-            if (NingerStrategy_Base* ns = me->strategyMap[me->activeStrategyIndex])
+            if (holding)
             {
-                if (chaseTarget->isMoving())
+                if (me->isMoving())
                 {
-                    positionOK = false;
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
                 }
-                if (!positionOK)
+                if (!me->isInFront(chaseTarget, M_PI / 8))
                 {
-                    float targetDistance = me->GetDistance2d(chaseTarget);
-                    if (targetDistance > VISIBILITY_DISTANCE_LARGE)
+                    me->SetFacingToObject(chaseTarget);
+                }
+            }
+            else
+            {
+                float targetDistance = me->GetDistance(chaseTarget);
+                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                float chaseDistanceMin = 0.0f;
+                if (distanceMin > 0.0f)
+                {
+                    chaseDistanceMin = chaseTarget->GetObjectSize() + me->GetObjectSize() + chaseDistanceMin;
+                }
+                if (targetDistance > VISIBILITY_DISTANCE_LARGE)
+                {
+                    ResetMovement();
+                    break;
+                }
+                if (targetDistance < chaseDistance + MAX_DISTANCE_GAP && ((chaseDistanceMin > 0.0f) ? (targetDistance > chaseDistanceMin - MAX_DISTANCE_GAP) : true))
+                {
+                    if (me->IsWithinLOSInMap(chaseTarget))
                     {
-                        ResetMovement();
-                        break;
-                    }
-                    if (me->GetTarget() != ogChaseTarget)
-                    {
-                        me->SetSelection(ogChaseTarget);
-                        me->SetTarget(ogChaseTarget);
-                    }
-                    if (targetDistance < ns->dpsDistance + MIN_DISTANCE_GAP && ((ns->dpsDistanceMin > 0.0f) ? (targetDistance > ns->dpsDistanceMin - MIN_DISTANCE_GAP) : true))
-                    {
-                        if (me->IsWithinLOSInMap(chaseTarget))
+                        bool positionOK = true;
+                        //if (chaseTarget->GetTarget() != me->GetGUID())
+                        //{
+                        //	if (forceBack)
+                        //	{
+                        //		if (!chaseTarget->isInBack(me, RANGE_MAX_DISTANCE, M_PI / 4))
+                        //		{
+                        //			positionOK = false;
+                        //		}
+                        //	}
+                        //}
+                        if (positionOK)
                         {
-                            positionOK = true;
-                            if (chaseTarget->GetTarget() != me->GetGUID())
+                            if (me->isMoving())
                             {
-                                if (ns->forceBack)
-                                {
-                                    if (!chaseTarget->isInBack(me, M_PI / 4))
-                                    {
-                                        positionOK = false;
-                                    }
-                                }
-                                else if (ns->combatAngle != 0.0f)
-                                {
-                                    float targetAngle = me->GetAngle(chaseTarget);
-                                    if (targetAngle < 0.0f)
-                                    {
-                                        targetAngle = targetAngle + M_PI * 2;
-                                    }
-                                    targetAngle = targetAngle + M_PI * 2;
-                                    if (targetAngle > ns->combatAngle + M_PI * 2 - MIN_ANGLE_GAP && targetAngle < ns->combatAngle + M_PI * 2 + MIN_ANGLE_GAP)
-                                    {
-                                        positionOK = true;
-                                    }
-                                }
+                                me->StopMoving();
+                                me->GetMotionMaster()->Clear();
                             }
+                            if (!me->isInFront(chaseTarget, M_PI / 8))
+                            {
+                                me->SetFacingToObject(chaseTarget);
+                            }
+                            break;
                         }
                     }
                 }
-                if (positionOK)
+                bool closer = true;
+                float moveDistance = 0;
+                if (targetDistance > chaseDistance)
                 {
-                    if (me->isMoving())
-                    {
-                        me->StopMoving();
-                    }
-                    if (!me->isInFront(chaseTarget, M_PI / 4))
-                    {
-                        me->SetFacingToObject(chaseTarget);
-                    }
+                    moveDistance = targetDistance - chaseDistance;
                 }
                 else
                 {
-                    float chaseAngle = chaseTarget->GetAngle(me) + M_PI * 2;
-                    if (ns->forceBack)
+                    moveDistance = MAX_DISTANCE_GAP;
+                    if (chaseDistanceMin > 0.0f)
                     {
-                        chaseAngle = chaseTarget->GetOrientation() + M_PI * 2 + M_PI;
-                    }
-                    else if (ns->combatAngle != 0.0f)
-                    {
-                        chaseAngle = ns->combatAngle;
-                        chaseAngle = chaseAngle + M_PI;
-                    }
-                    chaseAngle = frand(chaseAngle - M_PI / 8, chaseAngle + M_PI / 8);
-                    chaseTarget->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), ns->dpsDistance, chaseAngle);
-                    //me->GetMap()->CanReachPositionAndGetValidCoords(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
-                    if (me->GetDistance(positionTarget) > MIN_DISTANCE_GAP)
-                    {
-                        if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
+                        if (targetDistance < chaseDistanceMin)
                         {
-                            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+                            moveDistance = chaseDistanceMin - targetDistance;
+                            closer = false;
                         }
-                        if (me->IsWalking())
-                        {
-                            me->SetWalk(false);
-                        }
-                        me->GetMotionMaster()->MovePoint(0, positionTarget);
-                        movingDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
                     }
                 }
+                positionTarget = GetDestPosition(chaseTarget, moveDistance, closer);
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MovePoint(0, positionTarget);
             }
+            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
         }
         else
         {
@@ -299,80 +278,58 @@ void NingerMovement::Update(uint32 pmDiff)
     {
         if (Unit* followTarget = ObjectAccessor::GetUnit(*me, ogFollowTarget))
         {
-            if (NingerStrategy_Base* ns = me->strategyMap[me->activeStrategyIndex])
+            if (holding)
             {
-                Position targetPredict = followTarget->GetPosition();
-                if (followTarget->isMoving())
+                if (me->isMoving())
                 {
-                    positionOK = false;
-                    targetPredict = PredictPosition(followTarget);
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
                 }
-                if (!positionOK)
+                if (!me->isInFront(followTarget, M_PI / 8))
                 {
-                    float targetDistance = me->GetDistance2d(followTarget);
-                    if (targetDistance > VISIBILITY_DISTANCE_LARGE)
+                    me->SetFacingToObject(followTarget);
+                }
+            }
+            else
+            {
+                float targetDistance = me->GetDistance(followTarget);
+                float followDistance = followTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
+                {
+                    ResetMovement();
+                    break;
+                }
+                if (targetDistance < followDistance + MAX_DISTANCE_GAP)
+                {
+                    if (me->IsWithinLOSInMap(followTarget))
                     {
-                        ResetMovement();
+                        if (me->isMoving())
+                        {
+                            me->StopMoving();
+                        }
+                        if (!me->isInFront(followTarget, M_PI / 8))
+                        {
+                            me->SetFacingToObject(followTarget);
+                        }
                         break;
                     }
-                    if (me->GetTarget() != ogFollowTarget)
-                    {
-                        me->SetSelection(ogFollowTarget);
-                        me->SetTarget(ogFollowTarget);
-                    }
-                    if (targetDistance < ns->followDistance + MIN_DISTANCE_GAP)
-                    {
-                        if (me->IsWithinLOSInMap(followTarget))
-                        {
-                            if (ns->combatAngle != 0.0f)
-                            {
-                                float targetAngle = me->GetAngle(followTarget);
-                                if (targetAngle < 0.0f)
-                                {
-                                    targetAngle = targetAngle + M_PI * 2;
-                                }
-                                targetAngle = targetAngle + M_PI * 2;
-                                if (targetAngle > ns->combatAngle + M_PI * 2 - MIN_ANGLE_GAP && targetAngle < ns->combatAngle + M_PI * 2 + MIN_ANGLE_GAP)
-                                {
-                                    positionOK = true;
-                                }
-                            }
-                            positionOK = true;
-                        }
-                    }
                 }
-                if (positionOK)
+                float moveDistance = 0.0f;
+                if (targetDistance > followDistance)
                 {
-                    if (me->isMoving())
-                    {
-                        me->StopMoving();
-                    }
+                    moveDistance = targetDistance - followDistance;
                 }
                 else
                 {
-                    float followAngle = followTarget->GetOrientation() + M_PI + M_PI * 2;
-                    if (ns->combatAngle != 0.0f)
-                    {
-                        followAngle = ns->combatAngle + M_PI + M_PI * 2;
-                    }
-                    followAngle = frand(followAngle - MIN_ANGLE_GAP, followAngle + MIN_ANGLE_GAP);
-                    followTarget->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), ns->followDistance, followAngle, 0.0f, &targetPredict);
-                    //me->GetMap()->CanReachPositionAndGetValidCoords(followTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
-                    if (me->GetDistance(positionTarget) > MIN_DISTANCE_GAP)
-                    {
-                        if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-                        {
-                            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
-                        }
-                        if (me->IsWalking())
-                        {
-                            me->SetWalk(false);
-                        }
-                        me->GetMotionMaster()->MovePoint(0, positionTarget);
-                        movingDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
-                    }
+                    moveDistance = MAX_DISTANCE_GAP;
                 }
+                positionTarget = GetDestPosition(followTarget, moveDistance, true);
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MovePoint(0, positionTarget);
             }
+            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
         }
         else
         {
@@ -387,41 +344,539 @@ void NingerMovement::Update(uint32 pmDiff)
     }
 }
 
-Position NingerMovement::PredictPosition(Unit* target)
+void NingerMovement::Update_Motion(uint32 pmDiff)
 {
-    Position pos = target->GetPosition();
-
-    // 0.5 - it's time (0.5 sec) between starting movement opcode (e.g. MSG_MOVE_START_FORWARD) and MSG_MOVE_HEARTBEAT sent by client
-    float speed = target->GetSpeed(Movement::SelectSpeedType(target->GetUnitMovementFlags())) * 0.5f;
-    float orientation = target->GetOrientation();
-
-    if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_FORWARD))
+    if (moveCheckDelay > 0)
     {
-        pos.m_positionX += cos(orientation) * speed;
-        pos.m_positionY += std::sin(orientation) * speed;
+        moveCheckDelay -= pmDiff;
+        return;
     }
-    else if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_BACKWARD))
+    if (!me)
     {
-        pos.m_positionX -= cos(orientation) * speed;
-        pos.m_positionY -= std::sin(orientation) * speed;
+        return;
     }
-
-    if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_STRAFE_LEFT))
+    if (!me->IsAlive())
     {
-        pos.m_positionX += cos(orientation + M_PI / 2.f) * speed;
-        pos.m_positionY += std::sin(orientation + M_PI / 2.f) * speed;
+        return;
     }
-    else if (target->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_STRAFE_RIGHT))
+    if (me->HasAuraType(SPELL_AURA_MOD_PACIFY))
     {
-        pos.m_positionX += cos(orientation - M_PI / 2.f) * speed;
-        pos.m_positionY += std::sin(orientation - M_PI / 2.f) * speed;
+        return;
     }
-
-    return pos;
+    if (me->HasUnitState(UnitState::UNIT_STATE_NOT_MOVE))
+    {
+        return;
+    }
+    //if (me->HasUnitState(UnitState::UNIT_STATE_ROAMING_MOVE))
+    //{
+    //	return;
+    //}
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return;
+    }
+    if (me->IsBeingTeleported())
+    {
+        return;
+    }
+    switch (activeMovementType)
+    {
+    case NingerMovementType::NingerMovementType_None:
+    {
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Point:
+    {
+        float distance = me->GetDistance(positionTarget);
+        if (distance > VISIBILITY_DISTANCE_LARGE)
+        {
+            ResetMovement();
+        }
+        else
+        {
+            if (distance < MIN_DISTANCE_GAP)
+            {
+                activeMovementType = NingerMovementType::NingerMovementType_None;
+            }
+            else
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::POINT_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                    me->GetMotionMaster()->MovePoint(0, positionTarget);
+                }
+                moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+            }
+        }
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Tank:
+    {
+        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
+        {
+            if (holding)
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                }
+                if (!me->isInFront(chaseTarget, M_PI / 8))
+                {
+                    me->SetFacingToObject(chaseTarget);
+                }
+            }
+            else
+            {
+                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
+                {
+                    if (!me->isInFront(chaseTarget, M_PI / 8))
+                    {
+                        me->SetFacingToObject(chaseTarget);
+                    }
+                    return;
+                }
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::CHASE_MOTION_TYPE)
+                {
+                    if (const ChaseMovementGenerator<Player>* mg = static_cast<ChaseMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
+                    {
+                        if (Unit* mgTarget = mg->GetTarget())
+                        {
+                            if (mgTarget->GetGUID() == chaseTarget->GetGUID())
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MoveChase(chaseTarget, chaseDistance);
+            }
+            //moveCheckDelay = 100;
+        }
+        else
+        {
+            ResetMovement();
+        }
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Chase:
+    {
+        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogChaseTarget))
+        {
+            if (holding)
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                }
+                if (!me->isInFront(chaseTarget, M_PI / 8))
+                {
+                    me->SetFacingToObject(chaseTarget);
+                }
+            }
+            else
+            {
+                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
+                {
+                    if (!me->isInFront(chaseTarget, M_PI / 8))
+                    {
+                        me->SetFacingToObject(chaseTarget);
+                    }
+                    return;
+                }
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::CHASE_MOTION_TYPE)
+                {
+                    if (const ChaseMovementGenerator<Player>* mg = static_cast<ChaseMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
+                    {
+                        if (Unit* mgTarget = mg->GetTarget())
+                        {
+                            if (mgTarget->GetGUID() == chaseTarget->GetGUID())
+                            {
+                                if (distanceMin > 0.0f)
+                                {
+                                    if (me->GetDistance(chaseTarget) > chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMin - MAX_DISTANCE_GAP)
+                                    {
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        chaseDistance = distanceMin + (chaseDistance - distanceMin) / 2.0f;
+                                    }
+                                }
+                                else
+                                {
+                                    return;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                float chaseAngle = 0.0f;
+                if (forceBack)
+                {
+                    if (chaseTarget->GetTarget() != me->GetGUID())
+                    {
+                        chaseAngle = frand(M_PI - M_PI / 8, M_PI + M_PI / 8);
+                    }
+                }
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MoveChase(chaseTarget, chaseDistance, chaseAngle);
+            }
+            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+        }
+        else
+        {
+            ResetMovement();
+        }
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Follow:
+    {
+        if (Unit* followTarget = ObjectAccessor::GetUnit(*me, ogFollowTarget))
+        {
+            if (holding)
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                }
+                if (!me->isInFront(followTarget, M_PI / 8))
+                {
+                    me->SetFacingToObject(followTarget);
+                }
+            }
+            else
+            {
+                float followDistance = followTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (me->IsWithinLOSInMap(followTarget) && me->IsWithinDistInMap(followTarget, followDistance + MIN_DISTANCE_GAP))
+                {
+                    if (!me->isInFront(followTarget, M_PI / 8))
+                    {
+                        me->SetFacingToObject(followTarget);
+                    }
+                    return;
+                }
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::CHASE_MOTION_TYPE)
+                {
+                    if (const ChaseMovementGenerator<Player>* mg = static_cast<ChaseMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
+                    {
+                        if (Unit* mgTarget = mg->GetTarget())
+                        {
+                            if (mgTarget->GetGUID() == followTarget->GetGUID())
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MoveChase(followTarget, distanceMax);
+            }
+            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+        }
+        else
+        {
+            ResetMovement();
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
 }
 
-bool NingerMovement::Tank(Unit* pmTankTarget)
+void NingerMovement::Update_Follow(uint32 pmDiff)
 {
+    if (moveCheckDelay > 0)
+    {
+        moveCheckDelay -= pmDiff;
+        return;
+    }
+    if (!me)
+    {
+        return;
+    }
+    if (!me->IsAlive())
+    {
+        return;
+    }
+    if (me->HasAuraType(SPELL_AURA_MOD_PACIFY))
+    {
+        return;
+    }
+    if (me->HasAuraType(SPELL_AURA_MOD_PACIFY))
+    {
+        return;
+    }
+    if (me->HasUnitState(UnitState::UNIT_STATE_NOT_MOVE))
+    {
+        return;
+    }
+    //if (me->HasUnitState(UnitState::UNIT_STATE_ROAMING_MOVE))
+    //{
+    //	return;
+    //}
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return;
+    }
+    if (me->IsBeingTeleported())
+    {
+        return;
+    }
+    switch (activeMovementType)
+    {
+    case NingerMovementType::NingerMovementType_None:
+    {
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Point:
+    {
+        float distance = me->GetDistance(positionTarget);
+        if (distance > VISIBILITY_DISTANCE_LARGE)
+        {
+            ResetMovement();
+        }
+        else
+        {
+            if (distance < MIN_DISTANCE_GAP)
+            {
+                activeMovementType = NingerMovementType::NingerMovementType_None;
+            }
+            else
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::POINT_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                    me->GetMotionMaster()->MovePoint(0, positionTarget);
+                }
+                moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+            }
+        }
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Tank:
+    {
+        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
+        {
+            if (holding)
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                }
+                if (!me->isInFront(chaseTarget, M_PI / 8))
+                {
+                    me->SetFacingToObject(chaseTarget);
+                }
+            }
+            else
+            {
+                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
+                {
+                    if (me->isMoving())
+                    {
+                        me->StopMoving();
+                        me->GetMotionMaster()->Clear();
+                    }
+                    if (!me->isInFront(chaseTarget, M_PI / 8))
+                    {
+                        me->SetFacingToObject(chaseTarget);
+                    }
+                    return;
+                }
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
+                {
+                    if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
+                    {
+                        if (Unit* mgTarget = mg->GetTarget())
+                        {
+                            if (mgTarget->GetGUID() == chaseTarget->GetGUID())
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MoveFollow(chaseTarget, chaseDistance, 0.0f);
+            }
+            //moveCheckDelay = 100;
+        }
+        else
+        {
+            ResetMovement();
+        }
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Chase:
+    {
+        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogChaseTarget))
+        {
+            if (holding)
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                }
+                if (!me->isInFront(chaseTarget, M_PI / 8))
+                {
+                    me->SetFacingToObject(chaseTarget);
+                }
+            }
+            else
+            {
+                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
+                {
+                    if (me->isMoving())
+                    {
+                        me->StopMoving();
+                        me->GetMotionMaster()->Clear();
+                    }
+                    if (!me->isInFront(chaseTarget, M_PI / 8))
+                    {
+                        me->SetFacingToObject(chaseTarget);
+                    }
+                    return;
+                }
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
+                {
+                    if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
+                    {
+                        if (Unit* mgTarget = mg->GetTarget())
+                        {
+                            if (mgTarget->GetGUID() == chaseTarget->GetGUID())
+                            {
+                                if (distanceMin > 0.0f)
+                                {
+                                    if (me->GetDistance(chaseTarget) > chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMin - MAX_DISTANCE_GAP)
+                                    {
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        chaseDistance = distanceMin + (chaseDistance - distanceMin) / 2.0f;
+                                    }
+                                }
+                                else
+                                {
+                                    return;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                float chaseAngle = 0.0f;
+                if (forceBack)
+                {
+                    if (chaseTarget->GetTarget() != me->GetGUID())
+                    {
+                        chaseAngle = frand(M_PI - M_PI / 8, M_PI + M_PI / 8);
+                    }
+                }
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MoveFollow(chaseTarget, chaseDistance, chaseAngle);
+            }
+            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+        }
+        else
+        {
+            ResetMovement();
+        }
+        break;
+    }
+    case NingerMovementType::NingerMovementType_Follow:
+    {
+        if (Unit* followTarget = ObjectAccessor::GetUnit(*me, ogFollowTarget))
+        {
+            if (holding)
+            {
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                }
+                if (!me->isInFront(followTarget, M_PI / 8))
+                {
+                    me->SetFacingToObject(followTarget);
+                }
+            }
+            else
+            {
+                float followDistance = followTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                if (me->IsWithinLOSInMap(followTarget) && me->IsWithinDistInMap(followTarget, followDistance + MIN_DISTANCE_GAP))
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                    if (!me->isInFront(followTarget, M_PI / 8))
+                    {
+                        me->SetFacingToObject(followTarget);
+                    }
+                    return;
+                }
+                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
+                {
+                    if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
+                    {
+                        if (Unit* mgTarget = mg->GetTarget())
+                        {
+                            if (mgTarget->GetGUID() == followTarget->GetGUID())
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+                Run();
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
+                me->GetMotionMaster()->MoveFollow(followTarget, distanceMax, 0.0f);
+            }
+            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+        }
+        else
+        {
+            ResetMovement();
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
+}
+
+bool NingerMovement::Tank(Unit* pmTankTarget, float pmDistanceMax, float pmDistanceMin, bool pmHolding)
+{
+    distanceMax = pmDistanceMax;
+    distanceMin = pmDistanceMin;
+    holding = pmHolding;
     if (me && pmTankTarget)
     {
         float distance = me->GetDistance(pmTankTarget);
@@ -430,8 +885,10 @@ bool NingerMovement::Tank(Unit* pmTankTarget)
             activeMovementType = NingerMovementType::NingerMovementType_Tank;
             if (ogTankTarget != pmTankTarget->GetGUID())
             {
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
                 ogTankTarget = pmTankTarget->GetGUID();
-                positionOK = false;
+                moveCheckDelay = 0;
             }
             return true;
         }
@@ -440,18 +897,23 @@ bool NingerMovement::Tank(Unit* pmTankTarget)
     return false;
 }
 
-bool NingerMovement::Chase(Unit* pmChaseTarget)
+bool NingerMovement::Chase(Unit* pmChaseTarget, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmForceBack)
 {
     if (me && pmChaseTarget)
     {
-        float distance = me->GetDistance(pmChaseTarget);
-        if (distance < VISIBILITY_DISTANCE_NORMAL)
+        if (me->IsWithinDist(pmChaseTarget, VISIBILITY_DISTANCE_NORMAL))
         {
+            distanceMax = pmDistanceMax;
+            distanceMin = pmDistanceMin;
+            holding = pmHolding;
+            forceBack = pmForceBack;
             activeMovementType = NingerMovementType::NingerMovementType_Chase;
             if (ogChaseTarget != pmChaseTarget->GetGUID())
             {
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
                 ogChaseTarget = pmChaseTarget->GetGUID();
-                positionOK = false;
+                moveCheckDelay = 0;
             }
             return true;
         }
@@ -460,18 +922,22 @@ bool NingerMovement::Chase(Unit* pmChaseTarget)
     return false;
 }
 
-bool NingerMovement::Follow(Unit* pmFollowTarget)
+bool NingerMovement::Follow(Unit* pmFollowTarget, float pmDistanceMax, float pmDistanceMin, bool pmHolding)
 {
     if (me && pmFollowTarget)
     {
-        float distance = me->GetDistance(pmFollowTarget);
-        if (distance < VISIBILITY_DISTANCE_NORMAL)
+        if (me->IsWithinDist(pmFollowTarget, VISIBILITY_DISTANCE_NORMAL))
         {
+            distanceMax = pmDistanceMax;
+            distanceMin = pmDistanceMin;
+            holding = pmHolding;
             activeMovementType = NingerMovementType::NingerMovementType_Follow;
             if (ogFollowTarget != pmFollowTarget->GetGUID())
             {
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
                 ogFollowTarget = pmFollowTarget->GetGUID();
-                positionOK = false;
+                moveCheckDelay = 0;
             }
             return true;
         }
@@ -486,29 +952,56 @@ void NingerMovement::Point(Position pmPosTarget, uint32 pmLimit)
     {
         return;
     }
-    float distance = me->GetDistance(pmPosTarget);
+    float distance = me->GetDistance(pmPosTarget.m_positionX, pmPosTarget.m_positionY, pmPosTarget.m_positionZ);
     if (distance < VISIBILITY_DISTANCE_NORMAL)
     {
         activeMovementType = NingerMovementType::NingerMovementType_Point;
-        positionTarget = pmPosTarget;
-        positionOK = false;
-        if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-        {
-            me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
-        }
-        if (me->IsWalking())
-        {
-            me->SetWalk(false);
-        }
         if (me->IsNonMeleeSpellCast(false))
         {
             me->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
             me->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
         }
+        positionTarget = pmPosTarget;
+
+        Run();
         me->StopMoving();
         me->GetMotionMaster()->Clear();
         me->GetMotionMaster()->MovePoint(0, positionTarget);
+        moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
     }
+}
+
+Position NingerMovement::GetDestPosition(Unit* pmTarget, float pmMoveDistance, bool pmCloser)
+{
+    Position result;
+
+    bool found = false;
+    if (pmMoveDistance < VISIBILITY_DISTANCE_NORMAL)
+    {
+        float moveAngle = me->GetAngle(pmTarget);
+        if (!pmCloser)
+        {
+            moveAngle += M_PI;
+        }
+        float checkDistance = pmMoveDistance;
+        while (checkDistance < RANGE_MAX_DISTANCE)
+        {
+            me->GetNearPoint(me, result.m_positionX, result.m_positionY, result.m_positionZ, 0.0f, checkDistance + MIN_DISTANCE_GAP, moveAngle);
+            me->UpdateGroundPositionZ(result.m_positionX, result.m_positionY, result.m_positionZ);
+            if (pmTarget->IsWithinLOS(result.m_positionX, result.m_positionY, result.m_positionZ))
+            {
+                found = true;
+                break;
+            }
+            checkDistance += MAX_DISTANCE_GAP;
+        }
+    }
+    if (!found)
+    {
+        result = pmTarget->GetPosition();
+    }
+
+    return result;
 }
 
 bool NingerMovement::Direction(Unit* pmCommander, uint32 pmDirection, uint32 pmLimit, float pmDistance)
@@ -517,57 +1010,45 @@ bool NingerMovement::Direction(Unit* pmCommander, uint32 pmDirection, uint32 pmL
 
     if (pmCommander)
     {
-        if (pmCommander->GetDistance(me) < FOLLOW_MAX_DISTANCE)
+        float absAngle = pmCommander->GetOrientation();
+        switch (pmDirection)
         {
-            float absAngle = pmCommander->GetOrientation();
-            switch (pmDirection)
-            {
-            case NingerMovementDirection_Forward:
-            {
-                break;
-            }
-            case NingerMovementDirection_Back:
-            {
-                absAngle = absAngle + M_PI;
-                break;
-            }
-            case NingerMovementDirection_Left:
-            {
-                absAngle = absAngle + M_PI_2;
-                break;
-            }
-            case NingerMovementDirection_Right:
-            {
-                absAngle = absAngle + M_PI * 3 / 2;
-                break;
-            }
-            default:
-            {
-                break;
-            }
-            }
-            me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), pmDistance, absAngle);
-            //me->GetMap()->CanReachPositionAndGetValidCoords(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
-            activeMovementType = NingerMovementType::NingerMovementType_Point;
-            positionOK = false;
-            if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-            {
-                me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
-            }
-            if (me->IsWalking())
-            {
-                me->SetWalk(false);
-            }
-            if (me->IsNonMeleeSpellCast(false))
-            {
-                me->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-                me->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-            }
-            me->StopMoving();
-            me->GetMotionMaster()->Clear();
-            me->GetMotionMaster()->MovePoint(0, positionTarget);
-            result = true;
+        case NingerMovementDirection_Forward:
+        {
+            break;
         }
+        case NingerMovementDirection_Back:
+        {
+            absAngle = absAngle + M_PI;
+            break;
+        }
+        case NingerMovementDirection_Left:
+        {
+            absAngle = absAngle + M_PI / 2;
+            break;
+        }
+        case NingerMovementDirection_Right:
+        {
+            absAngle = absAngle + M_PI * 3 / 2;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+        me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), pmDistance, absAngle);
+        activeMovementType = NingerMovementType::NingerMovementType_Point;
+        if (me->IsNonMeleeSpellCast(false))
+        {
+            me->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+            me->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+        }
+        Run();
+        me->StopMoving();
+        me->GetMotionMaster()->Clear();
+        me->GetMotionMaster()->MovePoint(0, positionTarget);
+        result = true;
     }
 
     return result;
@@ -578,17 +1059,8 @@ bool NingerMovement::Direction(float pmAngle, uint32 pmLimit, float pmDistance)
     bool result = false;
 
     me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, me->GetObjectSize(), pmDistance, pmAngle);
-    //me->GetMap()->CanReachPositionAndGetValidCoords(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, false, false);
     activeMovementType = NingerMovementType::NingerMovementType_Point;
-    positionOK = false;
-    if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-    {
-        me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
-    }
-    if (me->IsWalking())
-    {
-        me->SetWalk(false);
-    }
+    Run();
     if (me->IsNonMeleeSpellCast(false))
     {
         me->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
@@ -602,11 +1074,11 @@ bool NingerMovement::Direction(float pmAngle, uint32 pmLimit, float pmDistance)
     return result;
 }
 
-NingerAction_Base::NingerAction_Base()
+NingerAction_Base::NingerAction_Base(Player* pmMe)
 {
-    me = nullptr;
+    me = pmMe;
+    nm = new NingerMovement(me);
     specialty = 0;
-    rti = -1;
 }
 
 void NingerAction_Base::Prepare()
@@ -615,41 +1087,86 @@ void NingerAction_Base::Prepare()
     {
         me->SetPvP(true);
         me->DurabilityRepairAll(false, 0, false);
+        if (!me->GetGroup())
+        {
+            if (me->GetMap()->Instanceable())
+            {
+                me->TeleportTo(me->m_homebindMapId, me->m_homebindX, me->m_homebindY, me->m_homebindZ, 0);
+            }
+        }
     }
 }
 
 void NingerAction_Base::Reset()
 {
-    rti = -1;
     ClearTarget();
 }
 
 void NingerAction_Base::Update(uint32 pmDiff)
 {
-
+    nm->Update_Direct(pmDiff);
 }
 
-bool NingerAction_Base::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
+bool NingerAction_Base::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack)
 {
     return false;
 }
 
-bool NingerAction_Base::Tank(Unit* pmTarget, bool pmAOE)
+bool NingerAction_Base::AOE(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing)
 {
     return false;
 }
 
-bool NingerAction_Base::Heal(Unit* pmTarget)
+bool NingerAction_Base::Tank(Unit* pmTarget, bool pmAOE, float pmDistanceMax, float pmDistanceMin, bool pmHolding)
 {
     return false;
 }
 
-bool NingerAction_Base::GroupHeal(Unit* pmTarget)
+bool NingerAction_Base::Follow(Unit* pmFollowTarget, float pmDistanceMax, float pmDistanceMin, bool pmHolding)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return true;
+    }
+    if (!pmFollowTarget)
+    {
+        return false;
+    }
+    if (!nm->Follow(pmFollowTarget, pmDistanceMax, pmDistanceMin, pmHolding))
+    {
+        if (me->GetTarget() == pmFollowTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    ChooseTarget(pmFollowTarget);
+}
+
+bool NingerAction_Base::Heal(Unit* pmTarget, bool pmInstantOnly)
 {
     return false;
 }
 
-bool NingerAction_Base::SimpleHeal(Unit* pmTarget)
+bool NingerAction_Base::ReadyTank(Unit* pmTarget)
+{
+    return false;
+}
+
+bool NingerAction_Base::GroupHeal(Unit* pmTarget, bool pmInstantOnly)
+{
+    return false;
+}
+
+bool NingerAction_Base::SimpleHeal(Unit* pmTarget, bool pmInstantOnly)
 {
     return false;
 }
@@ -664,7 +1181,39 @@ bool NingerAction_Base::Buff(Unit* pmTarget)
     return false;
 }
 
-bool NingerAction_Base::Assist(Unit* pmTarget)
+uint32 NingerAction_Base::Caution()
+{
+    if (me)
+    {
+        if (me->IsAlive())
+        {
+            float startAngle = me->GetOrientation() + M_PI / 4;
+            float angleGap = 0.0f;
+            Position pos;
+            while (angleGap < M_PI * 2)
+            {
+                me->GetNearPoint(me, pos.m_positionX, pos.m_positionY, pos.m_positionZ, me->GetObjectSize(), RANGE_NEAR_DISTANCE + MAX_DISTANCE_GAP, startAngle + angleGap);
+                if (me->GetDistance(pos.m_positionX, pos.m_positionY, pos.m_positionZ) > RANGE_NEAR_DISTANCE - MIN_DISTANCE_GAP)
+                {
+                    me->InterruptNonMeleeSpells(false);
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                    me->GetMotionMaster()->MovePoint(0, pos);
+                    return 2000;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+bool NingerAction_Base::Mark(Unit* pmTarget, int pmRTI)
+{
+    return false;
+}
+
+bool NingerAction_Base::Assist(int pmRTI)
 {
     return false;
 }
@@ -854,11 +1403,13 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
     int minReqLevel = activeReqLevel - 3;
     while (minReqLevel > 0)
     {
-        int activeQuality = ItemQualities::ITEM_QUALITY_RARE;
+        int activeQuality = ItemQualities::ITEM_QUALITY_EPIC;
         while (activeQuality >= pmMinQuality)
         {
             std::unordered_set<uint32> availableItemEntrySet;
-            QueryResult itemQR = WorldDatabase.Query("SELECT entry FROM item_template where {} and class = {} and subclass = {} and Quality = {} and RequiredLevel >= {} and RequiredLevel <= {} and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand()", inventoryTypeQuery, pmClass, pmSubclass, activeQuality, minReqLevel, activeReqLevel);
+            std::ostringstream queryStream;
+            queryStream << "SELECT entry FROM item_template where " << inventoryTypeQuery << " and class = " << pmClass << " and subclass = " << pmSubclass << " and Quality = " << activeQuality << " and RequiredLevel >= " << minReqLevel << " and RequiredLevel <= " << activeReqLevel << " and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand()";
+            QueryResult itemQR = WorldDatabase.Query(queryStream.str().c_str());
             if (itemQR)
             {
                 do
@@ -905,6 +1456,7 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
                                 std::ostringstream msgStream;
                                 msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
                                 sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+                                sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, msgStream.str().c_str());
                                 return;
                             }
                         }
@@ -975,8 +1527,7 @@ bool NingerAction_Base::UseItem(Item* pmItem, Unit* pmTarget)
 
     if (const ItemTemplate* proto = pmItem->GetTemplate())
     {
-        me->SetSelection(pmTarget->GetGUID());
-        me->SetTarget(pmTarget->GetGUID());
+        ChooseTarget(pmTarget);
         SpellCastTargets targets;
         targets.Update(pmTarget);
         me->CastItemUseSpell(pmItem, targets, 1, 0);
@@ -1032,37 +1583,43 @@ bool NingerAction_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheck
     }
     if (pmClearShapeShift)
     {
-        ClearShapeshift();
+        me->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
     }
-    const SpellInfo* pS = sSpellMgr->GetSpellInfo(pmSpellId);
-    if (!pS)
+    if (const SpellInfo* pS = sSpellMgr->GetSpellInfo(pmSpellId))
     {
-        return false;
-    }
-    if (pmTarget)
-    {
-        if (!me->IsWithinLOSInMap(pmTarget))
+        if (pmTarget)
         {
-            return false;
-        }
-        if (pmTarget->IsImmunedToSpell(pS))
-        {
-            return false;
-        }
-        if (pmCheckAura)
-        {
-            if (pmOnlyMyAura)
+            if (!me->IsWithinLOSInMap(pmTarget))
             {
-                if (pmTarget->HasAura(pmSpellId, me->GetGUID()))
+                return false;
+            }
+            if (pmTarget->IsImmunedToSpell(pS))
+            {
+                return false;
+            }
+            if (pmCheckAura)
+            {
+                if (pmOnlyMyAura)
                 {
-                    if (pmMaxAuraStack > 1)
+                    if (Aura* targetAura = pmTarget->GetAura(pmSpellId, me->GetGUID()))
                     {
-                        if (Aura* activeAura = pmTarget->GetAura(pmSpellId, me->GetGUID()))
+                        if (targetAura->GetStackAmount() < pmMaxAuraStack)
                         {
-                            if (activeAura->GetStackAmount() >= pmMaxAuraStack)
-                            {
-                                return false;
-                            }
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (Aura* targetAura = pmTarget->GetAura(pmSpellId))
+                    {
+                        if (targetAura->GetStackAmount() < pmMaxAuraStack)
+                        {
+                            return false;
                         }
                     }
                     else
@@ -1071,68 +1628,40 @@ bool NingerAction_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheck
                     }
                 }
             }
-            else
+            if (!me->isInFront(pmTarget, M_PI / 4))
             {
-                if (pmTarget->HasAura(pmSpellId))
+                me->SetFacingToObject(pmTarget);
+            }
+            if (me->GetTarget() != pmTarget->GetGUID())
+            {
+                ChooseTarget(pmTarget);
+            }
+        }
+        for (size_t i = 0; i < MAX_SPELL_REAGENTS; i++)
+        {
+            if (pS->Reagent[i] > 0)
+            {
+                if (!me->HasItemCount(pS->Reagent[i], pS->ReagentCount[i]))
                 {
-                    if (pmMaxAuraStack > 1)
-                    {
-                        if (Aura* activeAura = pmTarget->GetAura(pmSpellId))
-                        {
-                            if (activeAura->GetStackAmount() >= pmMaxAuraStack)
-                            {
-                                return false;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    me->StoreNewItemInBestSlots(pS->Reagent[i], pS->ReagentCount[i] * 10);
                 }
             }
         }
-        if (!me->isInFront(pmTarget, M_PI / 4))
+        if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
         {
-            me->SetFacingToObject(pmTarget);
+            me->SetStandState(UNIT_STAND_STATE_STAND);
         }
-        if (me->GetTarget() != pmTarget->GetGUID())
-        {
-            ChooseTarget(pmTarget);
-        }
-    }
-    for (size_t i = 0; i < MAX_SPELL_REAGENTS; i++)
-    {
-        if (pS->Reagent[i] > 0)
-        {
-            if (!me->HasItemCount(pS->Reagent[i], pS->ReagentCount[i]))
-            {
-                me->StoreNewItemInBestSlots(pS->Reagent[i], pS->ReagentCount[i] * 10);
-            }
-        }
-    }
-    if (me->getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-    {
-        me->SetStandState(UNIT_STAND_STATE_STAND);
-    }
-    me->CastSpell(pmTarget, pS);
-    return true;
+        //me->CastSpell(pmTarget, pS, TriggerCastFlags::TRIGGERED_NONE);
+        //return true;
 
-    //SpellCastResult scr = me->CastSpell(pmTarget, pS);
-    //if (scr == SpellCastResult::SPELL_CAST_OK)
-    //{
-    //    return true;
-    //}
-    //return false;
-}
-
-void NingerAction_Base::ClearShapeshift()
-{
-    if (!me)
-    {
-        return;
+        SpellCastResult scr = me->CastSpell(pmTarget, pS, TriggerCastFlags::TRIGGERED_NONE);
+        if (scr == SpellCastResult::SPELL_CAST_OK)
+        {
+            return true;
+        }
     }
-    me->RemoveAurasByShapeShift();
+
+    return false;
 }
 
 void NingerAction_Base::CancelAura(uint32 pmSpellID)
@@ -1145,24 +1674,7 @@ void NingerAction_Base::CancelAura(uint32 pmSpellID)
     {
         return;
     }
-    if (const SpellInfo* pS = sSpellMgr->GetSpellInfo(pmSpellID))
-    {
-        if (const SpellInfo* pSFirst = pS->GetFirstRankSpell())
-        {
-            me->RemoveAurasDueToSpell(pSFirst->Id);
-            while (true)
-            {
-                if (const SpellInfo* pSNext = pSFirst->GetNextRankSpell())
-                {
-                    me->RemoveAurasDueToSpell(pSNext->Id);
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-    }
+    me->RemoveAurasDueToSpell(pmSpellID);
 }
 
 bool NingerAction_Base::Eat()
@@ -1223,7 +1735,7 @@ bool NingerAction_Base::Eat()
     }
     me->CombatStop(true);
     me->StopMoving();
-    me->GetMotionMaster()->Initialize();
+    me->GetMotionMaster()->Clear();
     ClearTarget();
 
     Item* pFood = GetItemInInventory(foodEntry);
@@ -1231,7 +1743,7 @@ bool NingerAction_Base::Eat()
     {
         if (UseItem(pFood, me))
         {
-            me->ningerMovement->ResetMovement();
+            nm->ResetMovement();
             return true;
         }
     }
@@ -1304,16 +1816,146 @@ bool NingerAction_Base::Drink()
         me->StoreNewItemInBestSlots(drinkEntry, 20);
     }
     me->CombatStop(true);
-    me->GetMotionMaster()->Initialize();
     me->StopMoving();
+    me->GetMotionMaster()->Clear();
     ClearTarget();
     Item* pDrink = GetItemInInventory(drinkEntry);
     if (pDrink && !pDrink->IsInTrade())
     {
         if (UseItem(pDrink, me))
         {
-            me->ningerMovement->ResetMovement();
+            nm->ResetMovement();
             return true;
+        }
+    }
+
+    return false;
+}
+
+bool NingerAction_Base::HealthPotion()
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    else if (!me->IsInCombat())
+    {
+        return false;
+    }
+    uint32 potionEntry = 0;
+    uint32 myLevel = me->getLevel();
+    if (myLevel >= 70)
+    {
+        potionEntry = 33447;
+    }
+    else if (myLevel >= 55)
+    {
+        potionEntry = 22829;
+    }
+    else if (myLevel >= 45)
+    {
+        potionEntry = 13446;
+    }
+    else if (myLevel >= 35)
+    {
+        potionEntry = 3928;
+    }
+    else if (myLevel >= 21)
+    {
+        potionEntry = 1710;
+    }
+    else if (myLevel >= 12)
+    {
+        potionEntry = 929;
+    }
+    else if (myLevel >= 3)
+    {
+        potionEntry = 858;
+    }
+    else
+    {
+        potionEntry = 118;
+    }
+    if (!me->HasItemCount(potionEntry, 1))
+    {
+        me->StoreNewItemInBestSlots(potionEntry, 20);
+    }
+    Item* pPotion = GetItemInInventory(potionEntry);
+    if (pPotion && !pPotion->IsInTrade())
+    {
+        if (UseItem(pPotion, me))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool NingerAction_Base::ManaPotion()
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    else if (!me->IsInCombat())
+    {
+        return false;
+    }
+    uint32 potionEntry = 0;
+    uint32 myLevel = me->getLevel();
+    if (myLevel >= 70)
+    {
+        potionEntry = 33448;
+    }
+    else if (myLevel >= 55)
+    {
+        potionEntry = 22832;
+    }
+    else if (myLevel >= 49)
+    {
+        potionEntry = 13444;
+    }
+    else if (myLevel >= 41)
+    {
+        potionEntry = 13443;
+    }
+    else if (myLevel >= 31)
+    {
+        potionEntry = 6149;
+    }
+    else if (myLevel >= 22)
+    {
+        potionEntry = 3827;
+    }
+    else if (myLevel >= 14)
+    {
+        potionEntry = 3385;
+    }
+    else if (myLevel >= 5)
+    {
+        potionEntry = 2455;
+    }
+    if (potionEntry > 0)
+    {
+        if (!me->HasItemCount(potionEntry, 1))
+        {
+            me->StoreNewItemInBestSlots(potionEntry, 20);
+        }
+        Item* pPotion = GetItemInInventory(potionEntry);
+        if (pPotion && !pPotion->IsInTrade())
+        {
+            if (UseItem(pPotion, me))
+            {
+                return true;
+            }
         }
     }
 
@@ -1347,7 +1989,7 @@ bool NingerAction_Base::RandomTeleport()
         }
     }
     uint32 targetPlayerIndex = urand(0, samePlayersMap.size());
-    if (Player* targetPlayer = ObjectAccessor::FindConnectedPlayer(samePlayersMap[targetPlayerIndex]))
+    if (Player* targetPlayer = ObjectAccessor::FindPlayer(samePlayersMap[targetPlayerIndex]))
     {
         float nearX = 0.0f;
         float nearY = 0.0f;
@@ -1397,7 +2039,7 @@ bool NingerAction_Base::SpellValid(uint32 pmSpellID)
     {
         return false;
     }
-    return true;
+    return false;
 }
 
 Item* NingerAction_Base::GetItemInInventory(uint32 pmEntry)
@@ -1453,7 +2095,10 @@ Player* NingerAction_Base::GetNearbyHostilePlayer(float pmRange)
             {
                 if (me->IsValidAttackTarget(eachPlayer))
                 {
-                    return eachPlayer;
+                    if (eachPlayer->CanSeeOrDetect(me))
+                    {
+                        return eachPlayer;
+                    }
                 }
             }
         }
@@ -1465,62 +2110,25 @@ Player* NingerAction_Base::GetNearbyHostilePlayer(float pmRange)
 Unit* NingerAction_Base::GetNearbyHostileUnit(float pmRange)
 {
     std::list<Creature*> creatureList;
-    Acore::AnyUnitInObjectRangeCheck go_check(me, pmRange);
-    Acore::CreatureListSearcher<Acore::AnyUnitInObjectRangeCheck> go_search(me, creatureList, go_check);
-    Cell::VisitGridObjects(me, go_search, pmRange);
+    me->GetCreatureListWithEntryInGrid(creatureList, 0, pmRange);
     if (!creatureList.empty())
     {
         for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
         {
-            if (Unit* eachUnit = *itr)
+            if (Creature* hostileCreature = *itr)
             {
-                if (eachUnit->IsAlive())
+                if (hostileCreature->IsAlive())
                 {
-                    if (Creature* hostileCreature = eachUnit->ToCreature())
+                    if (!hostileCreature->IsCivilian())
                     {
-                        if (!hostileCreature->IsCivilian())
+                        if (me->IsValidAttackTarget(hostileCreature))
                         {
-                            if (me->IsValidAttackTarget(hostileCreature))
-                            {
-                                return hostileCreature;
-                            }
+                            return hostileCreature;
                         }
                     }
                 }
             }
         }
-    }
-
-    return nullptr;
-}
-
-Unit* NingerAction_Base::GetAnyUnitInRange(float pmMinRange, float pmMaxRange)
-{
-    std::unordered_map<uint32, Unit*> unitsMap;
-
-    std::list<Creature*> creatureList;
-    Acore::AnyUnitInObjectRangeCheck go_check(me, pmMaxRange);
-    Acore::CreatureListSearcher<Acore::AnyUnitInObjectRangeCheck> go_search(me, creatureList, go_check);
-    Cell::VisitGridObjects(me, go_search, pmMaxRange);
-    if (!creatureList.empty())
-    {
-        for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
-        {
-            if (Unit* eachUnit = *itr)
-            {
-                float eachDistance = me->GetDistance(eachUnit);
-                if (eachDistance > pmMinRange)
-                {
-                    unitsMap[unitsMap.size()] = eachUnit;
-                }
-            }
-        }
-    }
-
-    if (unitsMap.size() > 0)
-    {
-        uint32 targetIndex = urand(0, unitsMap.size() - 1);
-        return unitsMap[targetIndex];
     }
 
     return nullptr;

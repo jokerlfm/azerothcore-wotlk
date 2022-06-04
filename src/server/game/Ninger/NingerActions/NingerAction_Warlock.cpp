@@ -1,10 +1,6 @@
 #include "NingerAction_Warlock.h"
-#include "Group.h"
-#include "Spell.h"
-#include "GridNotifiers.h"
-#include "Pet.h"
 
-NingerAction_Warlock::NingerAction_Warlock() :NingerAction_Base()
+NingerAction_Warlock::NingerAction_Warlock(Player* pmMe) :NingerAction_Base(pmMe)
 {
     curseType = WarlockCurseType::WarlockCurseType_Weakness;
     curseDelay = 0;

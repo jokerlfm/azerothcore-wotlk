@@ -72,6 +72,9 @@
 #include "StringConvert.h"
 #include <math.h>
 
+// lfm minger
+#include "MingerManager.h"
+
 float baseMoveSpeed[MAX_MOVE_TYPE] =
 {
     2.5f,                  // MOVE_WALK
@@ -11299,7 +11302,6 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
 
     float tmpDamage = (float(pdamage) + DoneTotal) * DoneTotalMod;
 
-    // lfm creature spell power 
     // apply spellmod to Done damage (flat and pct)
     if (Player* modOwner = GetSpellModOwner())
     {
@@ -11307,6 +11309,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     }
     else if (GetTypeId() == TypeID::TYPEID_UNIT)
     {
+        // lfm creature spell damage mod        
         if (Creature* meCreature = ToCreature())
         {
             if (const CreatureTemplate* ci = meCreature->GetCreatureTemplate())
@@ -11320,7 +11323,27 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 }
                 case CreatureEliteType::CREATURE_ELITE_ELITE:
                 {
-                    if (!sNingerManager->IsInstanceEncounter(GetEntry()))
+                    CreatureTemplate const* cinfo = ci;
+                    for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
+                    {
+                        // we already have valid Map pointer for current creature!
+                        if (ci->DifficultyEntry[diff - 1])
+                        {
+                            cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
+                            if (cinfo)
+                                break;                                      // template found
+
+                            // check and reported at startup, so just ignore (restore normalInfo)
+                            cinfo = ci;
+                        }
+
+                        // for instances heroic to normal, other cases attempt to retrieve previous difficulty
+                        if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
+                            diff -= 2;                                      // to normal raid difficulty cases
+                        else
+                            --diff;
+                    }
+                    if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
                     {
                         tmpDamage = tmpDamage * 1.5f;
                     }
@@ -19466,7 +19489,9 @@ void Unit::NearTeleportTo(float x, float y, float z, float orientation, bool cas
 {
     DisableSpline();
     if (GetTypeId() == TYPEID_PLAYER)
+    {
         ToPlayer()->TeleportTo(GetMapId(), x, y, z, orientation, TELE_TO_NOT_LEAVE_COMBAT | (removeTransport ? 0 : TELE_TO_NOT_LEAVE_TRANSPORT) | TELE_TO_NOT_UNSUMMON_PET | (casting ? TELE_TO_SPELL : 0) | (vehicleTeleport ? TELE_TO_NOT_LEAVE_VEHICLE : 0) | (withPet ? TELE_TO_WITH_PET : 0));
+    }
     else
     {
         Position pos = { x, y, z, orientation };

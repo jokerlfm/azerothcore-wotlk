@@ -251,8 +251,9 @@ public:
     bool OnGossipHello(Player* player, Creature* creature) override
     {
         if (player->GetQuestStatus(DEATHBLOW_TO_THE_LEGION) == QUEST_STATUS_INCOMPLETE)
-            AddGossipItemFor(player, ADYEN_THE_LIGHTBRINGER, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
-
+        {
+            AddGossipItemFor(player, ADYEN_THE_LIGHTBRINGER, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);            
+        }
         SendGossipMenuFor(player, player->GetGossipTextId(creature), creature->GetGUID());
 
         return true;
@@ -744,14 +745,6 @@ public:
                         }
                         break;
                     case EVENT_END_ALDOR_FIGHT:
-                        if (GetCreature(KAYLAAN_THE_LOST))
-                        {
-                            kaylaan->SetFaction(FACTION_DEMON);
-                            kaylaan->GetMotionMaster()->MoveTargetedHome();
-                            kaylaan->CombatStop();
-                            kaylaan->ClearInCombat();
-                        }
-
                         if (GetCreature(ADYEN_THE_LIGHTBRINGER))
                         {
                             adyen->GetMotionMaster()->MoveTargetedHome();
@@ -1028,9 +1021,22 @@ public:
 
             _events.Update(diff);
 
-            if (me->GetHealthPct() <= 30)
-                if (Creature* socrethar = me->FindNearestCreature(SOCRETHAR, 200.0f, true))
-                    socrethar->AI()->DoAction(EVENT_END_ALDOR_FIGHT);
+            if (me->IsInCombat())
+            {
+                if (me->GetHealthPct() <= 30)
+                {
+                    if (Creature* socrethar = me->FindNearestCreature(SOCRETHAR, 200.0f, true))
+                    {
+                        socrethar->AI()->DoAction(EVENT_END_ALDOR_FIGHT);
+                        me->SetUnitFlag(UnitFlags::UNIT_FLAG_IMMUNE_TO_NPC);
+                        me->SetUnitFlag(UnitFlags::UNIT_FLAG_IMMUNE_TO_PC);
+                        me->SetFaction(FACTION_DEMON);
+                        me->GetMotionMaster()->MoveTargetedHome();
+                        me->CombatStop();
+                        me->ClearInCombat();
+                    }
+                }
+            }
 
             switch (_events.ExecuteEvent())
             {

@@ -252,17 +252,9 @@ public:
             {
                 if (posY >= 106.0f && posY <= 123.0f)
                 {
-                    // lfm prisoner count
-                    if (_prisonersCell[0].size() < 3)
-                    {
-                        _prisonersCell[0].insert(creature->GetGUID());
-                        ++_prisonerCounter[0];
-                        ResetPrisoner(creature);
-                    }
-                    else
-                    {
-                        creature->DisappearAndDie();
-                    }
+                    _prisonersCell[0].insert(creature->GetGUID());
+                    ++_prisonerCounter[0];
+                    ResetPrisoner(creature);
                 }
                 else if (posY >= 76.0f && posY <= 91.0f)
                 {

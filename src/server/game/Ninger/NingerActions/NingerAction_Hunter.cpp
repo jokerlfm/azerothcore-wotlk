@@ -1,10 +1,11 @@
 #include "NingerAction_Hunter.h"
-#include "Pet.h"
+#include "Player.h"
 #include "Group.h"
+#include "Pet.h"
 #include "Spell.h"
-#include "GridNotifiers.h"
+#include "World.h"
 
-NingerAction_Hunter::NingerAction_Hunter() :NingerAction_Base()
+NingerAction_Hunter::NingerAction_Hunter(Player* pmMe) :NingerAction_Base(pmMe)
 {
     specialty = 0;
 
@@ -19,6 +20,7 @@ NingerAction_Hunter::NingerAction_Hunter() :NingerAction_Base()
     spell_Volley = 0;
     spell_SteadyShot = 0;
     spell_AspectOfTheHawk = 0;
+    spell_AspectOfTheViper = 0;
     spell_CallPet = 0;
     spell_DismissPet = 0;
     spell_RevivePet = 0;
@@ -37,7 +39,7 @@ NingerAction_Hunter::NingerAction_Hunter() :NingerAction_Base()
     ammoEntry = 0;
 }
 
-void NingerAction_Hunter::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex)
+void NingerAction_Hunter::InitializeCharacter(uint32 pmTarGetLevel, uint32 pmSpecialtyTabIndex)
 {
     if (!me)
     {
@@ -45,18 +47,18 @@ void NingerAction_Hunter::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     }
     specialty = pmSpecialtyTabIndex;
     me->ClearInCombat();
-    if (me->getLevel() != pmTargetLevel)
+    uint32 myLevel = me->getLevel();
+    if (myLevel != pmTarGetLevel)
     {
-        me->GiveLevel(pmTargetLevel);
+        me->GiveLevel(pmTarGetLevel);
         me->LearnDefaultSkills();
-        me->LearnCustomSpells();
+        me->learnQuestRewardedSpells();
 
         ResetTalent();
     }
-    uint32 myLevel = me->getLevel();
     spell_AutoShot = 75;
-    me->learnSpell(197);
-    me->learnSpell(264);
+    me->learnSpell(197, true);
+    me->learnSpell(264, true);
     ammoEntry = 2512;
     if (myLevel >= 4)
     {
@@ -76,8 +78,8 @@ void NingerAction_Hunter::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
         ammoEntry = 2515;
         spell_SerpentSting = 13549;
         spell_AspectOfTheHawk = 13165;
-        me->CastSpell(me, 23356);
-        me->CastSpell(me, 23357);
+        me->CastSpell(me, 23356, TriggerCastFlags::TRIGGERED_NONE);
+        me->CastSpell(me, 23357, TriggerCastFlags::TRIGGERED_NONE);
         spell_CallPet = 883;
         spell_DismissPet = 2641;
         spell_RevivePet = 982;
@@ -97,7 +99,8 @@ void NingerAction_Hunter::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
     {
         spell_ArcaneShot = 14282;
         spell_MendPet = 3111;
-        me->learnSpell(200);
+        spell_AspectOfTheViper = 34074;
+        me->learnSpell(200, true);
     }
     if (myLevel >= 22)
     {
@@ -560,10 +563,11 @@ void NingerAction_Hunter::Prepare()
         }
         myPet->SetPower(Powers::POWER_HAPPINESS, HAPPINESS_LEVEL_SIZE * 2);
     }
+
     me->Say("Prepared", Language::LANG_UNIVERSAL);
 }
 
-bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
+bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack)
 {
     if (!me)
     {
@@ -572,6 +576,10 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
     else if (!me->IsAlive())
     {
         return false;
+    }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return true;
     }
     if (!pmTarget)
     {
@@ -585,7 +593,7 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
         }
         return false;
     }
-    else if (pmTarget->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_ALL))
+    else if (pmTarget->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_NORMAL))
     {
         if (me->GetTarget() == pmTarget->GetGUID())
         {
@@ -593,16 +601,24 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
         }
         return false;
     }
-    float targetDistance = me->GetDistance(pmTarget);
-    if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
+    if (pmChasing)
     {
-        return false;
+        if (!nm->Chase(pmTarget, pmDistanceMax, pmDistanceMin, pmHolding, pmForceBack))
+        {
+            if (me->GetTarget() == pmTarget->GetGUID())
+            {
+                ClearTarget();
+            }
+            return false;
+        }
     }
-    me->ningerMovement->Chase(pmTarget);
+    ChooseTarget(pmTarget);
+    me->Attack(pmTarget, true);
     if (CastSpell(pmTarget, spell_HuntersMark, true))
     {
         return true;
     }
+    float targetDistance = me->GetDistance(pmTarget);
     if (targetDistance > RANGE_MAX_DISTANCE)
     {
         return true;
@@ -612,7 +628,7 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
     {
         if (spell->m_spellInfo->Id == spell_AutoShot)
         {
-            if (spell->m_targets.GetUnitTargetGUID() == pmTarget->GetGUID())
+            if (spell->m_targets.GetUnitTarget()->GetGUID() == pmTarget->GetGUID())
             {
                 shooting = true;
             }
@@ -630,43 +646,50 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
     {
         CastSpell(pmTarget, spell_AutoShot);
     }
-    if (pmAOE)
+    PetAttack(pmTarget);
+    if (me->GetHealthPct() < 30.0f)
     {
-        if (spell_Volley > 0)
+        HealthPotion();
+    }
+    float manaPCT = me->GetPowerPct(Powers::POWER_MANA);
+    if (manaPCT < 30.0f)
+    {
+        if (!me->HasAura(spell_AspectOfTheViper))
         {
-            int attackerInRangeCount = 0;
-            std::list<Creature*> creatureList;
-            Acore::AnyUnitInObjectRangeCheck go_check(pmTarget, INTERACTION_DISTANCE);
-            Acore::CreatureListSearcher<Acore::AnyUnitInObjectRangeCheck> go_search(pmTarget, creatureList, go_check);
-            Cell::VisitGridObjects(pmTarget, go_search, INTERACTION_DISTANCE);
-            if (!creatureList.empty())
+            if (CastSpell(me, spell_AspectOfTheViper))
             {
-                for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
+                return true;
+            }
+        }
+    }
+    else if (manaPCT > 70.0f)
+    {
+        if (me->HasAura(spell_AspectOfTheViper))
+        {
+            switch (aspectType)
+            {
+            case HunterAspectType::HunterAspectType_Hawk:
+            {
+                if (spell_AspectOfTheDragonhawk > 0)
                 {
-                    if (Unit* eachUnit = *itr)
+                    if (CastSpell(me, spell_AspectOfTheDragonhawk, true))
                     {
-                        if (eachUnit->IsAlive())
-                        {
-                            if (Creature* hostileCreature = eachUnit->ToCreature())
-                            {
-                                if (!hostileCreature->IsSummon() && !hostileCreature->IsPet())
-                                {
-                                    if (me->IsValidAttackTarget(hostileCreature))
-                                    {
-                                        attackerInRangeCount++;
-                                    }
-                                }
-                            }
-                        }
+                        return true;
                     }
                 }
-            }
-            if (attackerInRangeCount > 2)
-            {
-                if (CastSpell(pmTarget, spell_Volley))
+                else if (spell_AspectOfTheHawk > 0)
                 {
-                    return true;
+                    if (CastSpell(me, spell_AspectOfTheHawk, true))
+                    {
+                        return true;
+                    }
                 }
+                break;
+            }
+            default:
+            {
+                break;
+            }
             }
         }
     }
@@ -681,20 +704,23 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
     {
         return true;
     }
-    if (pmRush)
+    if (pmRushing)
     {
         if (CastSpell(me, spell_RapidFire, true))
         {
             return true;
         }
-        if (CastSpell(pmTarget, spell_ChimeraShot))
-        {
-            return true;
-        }
-        if (CastSpell(pmTarget, spell_ArcaneShot))
-        {
-            return true;
-        }
+    }
+    if (CastSpell(pmTarget, spell_ChimeraShot))
+    {
+        return true;
+    }
+    if (CastSpell(pmTarget, spell_ArcaneShot))
+    {
+        return true;
+    }
+    if (!pmInstantOnly)
+    {
         if (CastSpell(pmTarget, spell_SteadyShot))
         {
             return true;
@@ -702,6 +728,91 @@ bool NingerAction_Hunter::DPS(Unit* pmTarget, bool pmAOE, bool pmRush)
     }
 
     return true;
+}
+
+bool NingerAction_Hunter::AOE(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return true;
+    }
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    else if (!me->IsValidAttackTarget(pmTarget))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    else if (pmTarget->IsImmunedToDamage(SpellSchoolMask::SPELL_SCHOOL_MASK_NORMAL))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    if (!pmTarget->CanSeeOrDetect(me))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    if (pmChasing)
+    {
+        if (!nm->Chase(pmTarget, pmDistanceMax, pmDistanceMin, pmHolding, false))
+        {
+            if (me->GetTarget() == pmTarget->GetGUID())
+            {
+                ClearTarget();
+            }
+            return false;
+        }
+    }
+    ChooseTarget(pmTarget);
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance > RANGE_FAR_DISTANCE)
+    {
+        return true;
+    }
+    if (me->GetPowerPct(Powers::POWER_MANA) < 30.0f)
+    {
+        ManaPotion();
+    }
+    if (!pmInstantOnly)
+    {
+        if (spell_Volley > 0)
+        {
+            if (CastSpell(pmTarget, spell_Volley))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 bool NingerAction_Hunter::Buff(Unit* pmTarget)
@@ -842,17 +953,4 @@ bool NingerAction_Hunter::Petting(bool pmSummon, bool pmReset)
     }
 
     return false;
-}
-
-void NingerAction_Hunter::PetStop()
-{
-    if (Pet* myPet = me->GetPet())
-    {
-        myPet->AttackStop();
-        if (CharmInfo* ci = myPet->GetCharmInfo())
-        {
-            ci->SetIsCommandAttack(false);
-            ci->SetIsCommandFollow(true);
-        }
-    }
 }

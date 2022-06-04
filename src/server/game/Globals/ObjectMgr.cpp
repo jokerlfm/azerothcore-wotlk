@@ -52,6 +52,9 @@
 #include "StringConvert.h"
 #include "Tokenize.h"
 
+ // lfm minger
+#include "MingerManager.h"
+
 ScriptMapMap sSpellScripts;
 ScriptMapMap sEventScripts;
 ScriptMapMap sWaypointScripts;
@@ -307,14 +310,6 @@ ObjectMgr::ObjectMgr() :
         for (uint8 j = 0; j < MAX_RACES; ++j)
             _playerInfo[j][i] = nullptr;
     }
-
-    // lfm veins
-    veinEntryMap.clear();
-    veinGroupMap.clear();
-
-    // lfm herbs
-    herbEntrySet.clear();
-    herbEntitySet.clear();
 }
 
 ObjectMgr::~ObjectMgr()
@@ -660,53 +655,6 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
     creatureTemplate.SpellSchoolImmuneMask = fields[68].Get<uint8>();
     creatureTemplate.flags_extra = fields[69].Get<uint32>();
     creatureTemplate.ScriptID = GetScriptId(fields[70].Get<std::string>());
-
-    // lfm creature_templates
-    if (creatureTemplate.Entry == 38 || creatureTemplate.Entry == 103)
-    {
-        creatureTemplate.faction = 17;
-    }
-    else if (creatureTemplate.Entry == 1986 || creatureTemplate.Entry == 1994)
-    {
-        creatureTemplate.faction = 22;
-    }
-    else if (creatureTemplate.Entry == 16537 || creatureTemplate.Entry == 16521 || creatureTemplate.Entry == 16522)
-    {
-        creatureTemplate.faction = 14;
-    }
-    else if (creatureTemplate.Entry == 706 || creatureTemplate.Entry == 808 || creatureTemplate.Entry == 946)
-    {
-        creatureTemplate.faction = 37;
-    }
-    else if (creatureTemplate.Entry == 8125)
-    {
-        creatureTemplate.ScriptID = GetScriptId("npc_dirge_quikcleave");
-    }
-    else if (creatureTemplate.Entry == 18990)
-    {
-        creatureTemplate.npcflag = 80;
-    }
-    else if (creatureTemplate.Entry == 22482)
-    {
-        creatureTemplate.Modelid1 = 20617;
-        creatureTemplate.ScriptID = GetScriptId("npc_worm");
-    }
-    else if (creatureTemplate.Entry == 22038)
-    {
-        creatureTemplate.Modelid1 = 20746;
-        creatureTemplate.ScriptID = GetScriptId("npc_worm");
-    }
-    else if (creatureTemplate.Entry == 21796)
-    {
-        creatureTemplate.Modelid1 = 20476;
-    }
-    else if (creatureTemplate.Entry == 22441)
-    {
-        if (creatureTemplate.unit_flags & 768)
-        {
-            creatureTemplate.unit_flags = creatureTemplate.unit_flags - 768;
-        }
-    }
 }
 
 void ObjectMgr::LoadCreatureTemplateResistances()
@@ -2085,6 +2033,21 @@ void ObjectMgr::LoadCreatures()
 {
     uint32 oldMSTime = getMSTime();
 
+    uint32 creatureCount = 0;
+    QueryResult qrBaseCount = WorldDatabase.Query("SELECT count(*) FROM creature;");
+    if (qrBaseCount)
+    {
+        Field* fields = qrBaseCount->Fetch();
+        creatureCount = creatureCount + fields[0].Get<uint32>();
+    }
+    // Build single time for check spawnmask
+    std::map<uint32, uint32> spawnMasks;
+    for (uint32 i = 0; i < sMapStore.GetNumRows(); ++i)
+        if (sMapStore.LookupEntry(i))
+            for (int k = 0; k < MAX_DIFFICULTY; ++k)
+                if (GetMapDifficultyData(i, Difficulty(k)))
+                    spawnMasks[i] |= (1 << k);
+
     //                                                     0         1    2    3    4        5            6           7           8            9              10            11
     QueryResult result = WorldDatabase.Query("SELECT creature.guid, id1, id2, id3, map, equipment_id, position_x, position_y, position_z, orientation, spawntimesecs, wander_distance, "
         //      12            13       14          15           16         17         18          19             20                 21                    22
@@ -2102,15 +2065,9 @@ void ObjectMgr::LoadCreatures()
         return;
     }
 
-    // Build single time for check spawnmask
-    std::map<uint32, uint32> spawnMasks;
-    for (uint32 i = 0; i < sMapStore.GetNumRows(); ++i)
-        if (sMapStore.LookupEntry(i))
-            for (int k = 0; k < MAX_DIFFICULTY; ++k)
-                if (GetMapDifficultyData(i, Difficulty(k)))
-                    spawnMasks[i] |= (1 << k);
+    //_creatureDataStore.rehash(result->GetRowCount());
+    _creatureDataStore.rehash(creatureCount);
 
-    _creatureDataStore.rehash(result->GetRowCount());
     uint32 count = 0;
     do
     {
@@ -2168,12 +2125,6 @@ void ObjectMgr::LoadCreatures()
         data.unit_flags = fields[21].Get<uint32>();
         data.dynamicflags = fields[22].Get<uint32>();
         data.ScriptId = GetScriptId(fields[23].Get<std::string>());
-
-        // lfm normal mobs spawn longer
-        if (data.spawntimesecs > 60 && data.spawntimesecs < 1800)
-        {
-            data.spawntimesecs = 1800;
-        }
 
         if (!data.ScriptId)
             data.ScriptId = cInfo->ScriptID;
@@ -2417,88 +2368,6 @@ void ObjectMgr::LoadGameobjects()
 
     uint32 count = 0;
 
-    // lfm vein entries
-    veinEntryMap[0].insert(1731);
-    veinEntryMap[0].insert(3763);
-    veinEntryMap[0].insert(181248);
-    veinEntryMap[0].insert(2055);
-    veinEntryMap[0].insert(103713);
-    veinEntryMap[1].insert(1732);
-    veinEntryMap[1].insert(3764);
-    veinEntryMap[1].insert(103711);
-    veinEntryMap[1].insert(181249);
-    veinEntryMap[1].insert(2054);
-    veinEntryMap[2].insert(1733);
-    veinEntryMap[2].insert(105569);
-
-    // lfm herb entries
-    herbEntrySet.insert(1618);
-    herbEntrySet.insert(3724);
-    herbEntrySet.insert(1617);
-    herbEntrySet.insert(3725);
-    herbEntrySet.insert(1619);
-    herbEntrySet.insert(3726);
-    herbEntrySet.insert(1620);
-    herbEntrySet.insert(3727);
-    herbEntrySet.insert(1621);
-    herbEntrySet.insert(3729);
-    herbEntrySet.insert(1622);
-    herbEntrySet.insert(3730);
-    herbEntrySet.insert(2045);
-    herbEntrySet.insert(1623);
-    herbEntrySet.insert(1628);
-    herbEntrySet.insert(1624);
-    herbEntrySet.insert(2041);
-    herbEntrySet.insert(2042);
-    herbEntrySet.insert(2046);
-    herbEntrySet.insert(2043);
-    herbEntrySet.insert(2044);
-    herbEntrySet.insert(2866);
-    herbEntrySet.insert(142140);
-    herbEntrySet.insert(180165);
-    herbEntrySet.insert(142141);
-    herbEntrySet.insert(176642);
-    herbEntrySet.insert(142142);
-    herbEntrySet.insert(176636);
-    herbEntrySet.insert(180164);
-    herbEntrySet.insert(142143);
-    herbEntrySet.insert(183046);
-    herbEntrySet.insert(142144);
-    herbEntrySet.insert(142145);
-    herbEntrySet.insert(176637);
-    herbEntrySet.insert(176583);
-    herbEntrySet.insert(176638);
-    herbEntrySet.insert(180167);
-    herbEntrySet.insert(176584);
-    herbEntrySet.insert(176639);
-    herbEntrySet.insert(180168);
-    herbEntrySet.insert(176586);
-    herbEntrySet.insert(176640);
-    herbEntrySet.insert(180166);
-    herbEntrySet.insert(176587);
-    herbEntrySet.insert(176641);
-    herbEntrySet.insert(176588);
-    herbEntrySet.insert(176589);
-    herbEntrySet.insert(181270);
-    herbEntrySet.insert(183044);
-    herbEntrySet.insert(181271);
-    herbEntrySet.insert(183045);
-    herbEntrySet.insert(181277);
-    herbEntrySet.insert(181275);
-    herbEntrySet.insert(183043);
-    herbEntrySet.insert(181276);
-    herbEntrySet.insert(181278);
-    herbEntrySet.insert(181279);
-    herbEntrySet.insert(181280);
-    herbEntrySet.insert(181281);
-    herbEntrySet.insert(189973);
-    herbEntrySet.insert(190169);
-    herbEntrySet.insert(190170);
-    herbEntrySet.insert(191019);
-    herbEntrySet.insert(190173);
-    herbEntrySet.insert(190174);
-    herbEntrySet.insert(190175);
-
     //                                                0                1   2    3           4           5           6
     QueryResult result = WorldDatabase.Query("SELECT gameobject.guid, id, map, position_x, position_y, position_z, orientation, "
         //   7          8          9          10         11             12            13     14         15         16          17
@@ -2662,25 +2531,6 @@ void ObjectMgr::LoadGameobjects()
         //    AddGameobjectToGrid(guid, &data);
         //}
 
-        // lfm vein and herb spawn time
-        for (std::unordered_map<uint32, std::unordered_set<uint32>>::iterator typeIt = veinEntryMap.begin(); typeIt != veinEntryMap.end(); typeIt++)
-        {
-            if (typeIt->second.find(data.id) != typeIt->second.end())
-            {
-                if (data.spawntimesecs < 3600)
-                {
-                    data.spawntimesecs = 3600;
-                }
-            }
-        }
-        if (herbEntrySet.find(data.id) != herbEntrySet.end())
-        {
-            if (data.spawntimesecs < 3600)
-            {
-                data.spawntimesecs = 3600;
-            }
-        }
-
         if (gameEvent == 0)
         {
             AddGameobjectToGrid(guid, &data);
@@ -2688,213 +2538,20 @@ void ObjectMgr::LoadGameobjects()
         ++count;
     } while (result->NextRow());
 
-    // lfm vein grouped
-    for (std::unordered_map<uint32, std::unordered_set<Vein*>>::iterator groupIt = veinGroupMap.begin(); groupIt != veinGroupMap.end(); groupIt++)
-    {
-        Vein* targetVein = nullptr;
-        Vein* baseVein = nullptr;
-        for (std::unordered_set<Vein*>::iterator veinIt = groupIt->second.begin(); veinIt != groupIt->second.end(); veinIt++)
-        {
-            if (Vein* eachVein = *veinIt)
-            {
-                if (baseVein)
-                {
-                    if (baseVein->type < eachVein->type)
-                    {
-                        continue;
-                    }
-                }
-                baseVein = eachVein;
-            }
-        }
-        for (std::unordered_set<Vein*>::iterator veinIt = groupIt->second.begin(); veinIt != groupIt->second.end(); veinIt++)
-        {
-            if (Vein* eachVein = *veinIt)
-            {
-                uint32 chooseRate = urand(0, 100);
-                if (eachVein->type == 0)
-                {
-                    if (chooseRate < 50)
-                    {
-                        targetVein = eachVein;
-                        break;
-                    }
-                }
-                else if (eachVein->type == 1)
-                {
-                    if (chooseRate < 50)
-                    {
-                        targetVein = eachVein;
-                        break;
-                    }
-                }
-                else if (eachVein->type == 2)
-                {
-                    if (chooseRate < 50)
-                    {
-                        targetVein = eachVein;
-                        break;
-                    }
-                }
-            }
-        }
-        if (!targetVein)
-        {
-            targetVein = baseVein;
-        }
-        if (targetVein)
-        {
-            uint8 mask = targetVein->spawnMask;
-            for (uint8 i = 0; mask != 0; i++, mask >>= 1)
-            {
-                if (mask & 1)
-                {
-                    CellCoord cellCoord = Acore::ComputeCellCoord(targetVein->wl->m_positionX, targetVein->wl->m_positionY);
-                    CellObjectGuids& cell_guids = _mapObjectGuidsStore[MAKE_PAIR32(targetVein->wl->m_mapId, i)][cellCoord.GetId()];
-                    cell_guids.gameobjects.insert(targetVein->guid);
-                }
-            }
-        }
-    }
-
-    // lfm herb 
-    for (std::unordered_set<Herb*>::iterator herbIt = herbEntitySet.begin(); herbIt != herbEntitySet.end(); herbIt++)
-    {
-        if (Herb* eachherb = *herbIt)
-        {
-            uint8 mask = eachherb->spawnMask;
-            for (uint8 i = 0; mask != 0; i++, mask >>= 1)
-            {
-                if (mask & 1)
-                {
-                    CellCoord cellCoord = Acore::ComputeCellCoord(eachherb->wl->m_positionX, eachherb->wl->m_positionY);
-                    CellObjectGuids& cell_guids = _mapObjectGuidsStore[MAKE_PAIR32(eachherb->wl->m_mapId, i)][cellCoord.GetId()];
-                    cell_guids.gameobjects.insert(eachherb->guid);
-                }
-            }
-        }
-    }
-
     LOG_INFO("server.loading", ">> Loaded {} gameobjects in {} ms", (unsigned long)_gameObjectDataStore.size(), GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
 }
 
 void ObjectMgr::AddGameobjectToGrid(ObjectGuid::LowType guid, GameObjectData const* data)
 {
-    // lfm vein
-    bool grouped = false;
-    for (std::unordered_map<uint32, std::unordered_set<uint32>>::iterator typeIt = veinEntryMap.begin(); typeIt != veinEntryMap.end(); typeIt++)
+    uint8 mask = data->spawnMask;
+    for (uint8 i = 0; mask != 0; i++, mask >>= 1)
     {
-        if (typeIt->second.find(data->id) != typeIt->second.end())
+        if (mask & 1)
         {
-            uint32 addGroupIndex = 0;
-            for (std::unordered_map<uint32, std::unordered_set<Vein*>>::iterator groupIt = veinGroupMap.begin(); groupIt != veinGroupMap.end(); groupIt++)
-            {
-                bool inGroup = false;
-                for (std::unordered_set<Vein*>::iterator veinIt = groupIt->second.begin(); veinIt != groupIt->second.end(); veinIt++)
-                {
-                    if (Vein* eachVein = *veinIt)
-                    {
-                        if (eachVein->wl->GetMapId() == data->mapid)
-                        {
-                            float eachDistance = eachVein->wl->GetExactDist(data->posX, data->posY, data->posZ);
-                            if (eachDistance < 50.0f)
-                            {
-                                addGroupIndex = groupIt->first;
-                                inGroup = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (inGroup)
-                {
-                    break;
-                }
-            }
-            if (addGroupIndex == 0)
-            {
-                addGroupIndex = veinGroupMap.size();
-                veinGroupMap[addGroupIndex].clear();
-            }
-            Vein* addGroupVein = new Vein();
-            addGroupVein->guid = guid;
-            addGroupVein->type = typeIt->first;
-            addGroupVein->spawnMask = data->spawnMask;
-            addGroupVein->wl->SetMapId(data->mapid);
-            addGroupVein->wl->m_positionX = data->posX;
-            addGroupVein->wl->m_positionY = data->posY;
-            addGroupVein->wl->m_positionZ = data->posZ;
-            veinGroupMap[addGroupIndex].insert(addGroupVein);
-            grouped = true;
-            break;
-        }
-    }
-
-    if (!grouped)
-    {
-        // lfm herbs
-        if (herbEntrySet.find(data->id) != herbEntrySet.end())
-        {
-            bool included = false;
-            for (std::unordered_set<Herb*>::iterator herbIt = herbEntitySet.begin(); herbIt != herbEntitySet.end(); herbIt++)
-            {
-                if (Herb* eachHerb = *herbIt)
-                {
-                    if (eachHerb->wl->GetMapId() == data->mapid)
-                    {
-                        float eachDistance = eachHerb->wl->GetExactDist(data->posX, data->posY, data->posZ);
-                        if (eachDistance < 100.0f)
-                        {
-                            included = true;
-                            break;
-                        }
-                        //if (eachDistance < 20.0f)
-                        //{
-                        //    included = true;
-                        //    break;
-                        //}
-                        //else if (eachDistance < 100.0f)
-                        //{
-                        //    if (Map* eachMap = sMapMgr->FindBaseMap(eachHerb->wl->GetMapId()))
-                        //    {
-                        //        PositionFullTerrainStatus data;
-                        //        eachMap->GetFullTerrainStatusForPosition(0, eachHerb->wl->m_positionX, eachHerb->wl->m_positionY, eachHerb->wl->m_positionZ, 1.0f, data);
-                        //        if (data.outdoors)
-                        //        {
-                        //            included = true;
-                        //            break;
-                        //        }
-                        //    }
-                        //}
-                    }
-                }
-            }
-            if (!included)
-            {
-                Herb* addGroupHerb = new Herb();
-                addGroupHerb->guid = guid;
-                addGroupHerb->type = 0;
-                addGroupHerb->spawnMask = data->spawnMask;
-                addGroupHerb->wl->SetMapId(data->mapid);
-                addGroupHerb->wl->m_positionX = data->posX;
-                addGroupHerb->wl->m_positionY = data->posY;
-                addGroupHerb->wl->m_positionZ = data->posZ;
-                herbEntitySet.insert(addGroupHerb);
-            }
-        }
-        else
-        {
-            uint8 mask = data->spawnMask;
-            for (uint8 i = 0; mask != 0; i++, mask >>= 1)
-            {
-                if (mask & 1)
-                {
-                    CellCoord cellCoord = Acore::ComputeCellCoord(data->posX, data->posY);
-                    CellObjectGuids& cell_guids = _mapObjectGuidsStore[MAKE_PAIR32(data->mapid, i)][cellCoord.GetId()];
-                    cell_guids.gameobjects.insert(guid);
-                }
-            }
+            CellCoord cellCoord = Acore::ComputeCellCoord(data->posX, data->posY);
+            CellObjectGuids& cell_guids = _mapObjectGuidsStore[MAKE_PAIR32(data->mapid, i)][cellCoord.GetId()];
+            cell_guids.gameobjects.insert(guid);
         }
     }
 }
@@ -2943,34 +2600,6 @@ void ObjectMgr::LoadItemLocales()
 
 void ObjectMgr::LoadItemTemplates()
 {
-    // lfm item templates
-    std::unordered_set<uint32> oreEntrySet;
-    oreEntrySet.insert(2770);
-    oreEntrySet.insert(2771);
-    oreEntrySet.insert(2772);
-    oreEntrySet.insert(2775);
-    oreEntrySet.insert(2776);
-    oreEntrySet.insert(2798);
-    oreEntrySet.insert(3858);
-    oreEntrySet.insert(4278);
-    oreEntrySet.insert(5833);
-    oreEntrySet.insert(6800);
-    oreEntrySet.insert(6808);
-    oreEntrySet.insert(7911);
-    oreEntrySet.insert(10620);
-    oreEntrySet.insert(11370);
-    oreEntrySet.insert(18562);
-    oreEntrySet.insert(22634);
-    oreEntrySet.insert(23424);
-    oreEntrySet.insert(23425);
-    oreEntrySet.insert(23426);
-    oreEntrySet.insert(23427);
-    oreEntrySet.insert(32464);
-    oreEntrySet.insert(36909);
-    oreEntrySet.insert(36910);
-    oreEntrySet.insert(36912);
-    oreEntrySet.insert(41557);
-
     uint32 oldMSTime = getMSTime();
 
     //                                                 0      1       2               3              4        5        6       7          8         9        10        11           12
@@ -3129,11 +2758,6 @@ void ObjectMgr::LoadItemTemplates()
         itemTemplate.MinMoneyLoot = fields[135].Get<uint32>();
         itemTemplate.MaxMoneyLoot = fields[136].Get<uint32>();
         itemTemplate.FlagsCu = fields[137].Get<uint32>();
-
-        if (oreEntrySet.find(entry) != oreEntrySet.end())
-        {
-            itemTemplate.Stackable = 10;
-        }
 
         // Checks
         if (itemTemplate.Class >= MAX_ITEM_CLASS)
@@ -4546,17 +4170,6 @@ void ObjectMgr::LoadPlayerInfo()
                 continue;
             }
             //PlayerXPperLevel
-
-            // lfm xp
-            if (current_level >= 70)
-            {
-                current_xp = current_xp * 150 / 100;
-            }
-            else if (current_level >= 60)
-            {
-                current_xp = current_xp * 2;
-            }
-
             _playerXPperLevel[current_level] = current_xp;
             ++count;
         } while (result->NextRow());
@@ -5324,16 +4937,6 @@ void ObjectMgr::LoadQuests()
                     qinfo->GetQuestId(), qinfo->RewardSpell, qinfo->RewardSpell);
                 qinfo->RewardSpell = 0;                    // no spell will be casted on player
             }
-        }
-
-        // lfm quests
-        if (qinfo->Id == 6622 || qinfo->Id == 6624)
-        {
-            qinfo->RewardSpell = 10847;
-        }
-        if (qinfo->Id == 6607)
-        {
-            qinfo->RewardSpell = 18249;
         }
 
         if (qinfo->RewardMailTemplateId)
@@ -9036,20 +8639,6 @@ void ObjectMgr::LoadMailLevelRewards()
             continue;
         }
 
-        // lfm mail level rewards
-        if (level == 20)
-        {
-            level = 30;
-        }
-        else if (level == 40)
-        {
-            level = 55;
-        }
-        else if (level == 60)
-        {
-            level = 69;
-        }
-
         _mailLevelRewardStore[level].push_back(MailLevelReward(raceMask, mailTemplateId, senderEntry));
 
         ++count;
@@ -9176,41 +8765,6 @@ void ObjectMgr::LoadTrainerSpell()
         uint32 reqLevel = fields[5].Get<uint8>();
         uint32 reqSpell = fields[6].Get<uint32>();
 
-        // lfm trainer
-        if (spell == 37836)
-        {
-            continue;
-        }
-        else if (spell == 33388)
-        {
-            reqLevel = 30;
-            spellCost = 500000;
-        }
-        else if (spell == 33391)
-        {
-            reqLevel = 55;
-            spellCost = 5000000;
-        }
-        else if (spell == 34090)
-        {
-            reqLevel = 69;
-            spellCost = 10000000;
-        }
-        else if (spell == 34091)
-        {
-            reqLevel = 70;
-            spellCost = 50000000;
-        }
-        else if (spell == 54197)
-        {
-            reqLevel = 80;
-            spellCost = 50000000;
-        }
-        else if (spell == 54083 || spell == 18249)
-        {
-            continue;
-        }
-
         AddSpellToTrainer(entry, spell, spellCost, reqSkill, reqSkillValue, reqLevel, reqSpell);
 
         ++count;
@@ -9305,70 +8859,6 @@ void ObjectMgr::LoadVendors()
             ++count;
         }
     } while (result->NextRow());
-
-    // lfm vendor
-    VendorItemData& vi16083 = _cacheVendorItemStore[2626];
-    bool has16083 = false;
-    for (VendorItemList::const_iterator i = vi16083.m_items.begin(); i != vi16083.m_items.end(); ++i)
-    {
-        if ((*i)->item == 16083)
-        {
-            has16083 = true;
-        }
-    }
-    if (!has16083)
-    {
-        vi16083.AddItem(16083, 0, 0, 0);
-        ++count;
-    }
-    VendorItemData& vi16072 = _cacheVendorItemStore[3955];
-    bool has16072 = false;
-    for (VendorItemList::const_iterator i = vi16072.m_items.begin(); i != vi16072.m_items.end(); ++i)
-    {
-        if ((*i)->item == 16072)
-        {
-            has16072 = true;
-        }
-    }
-    if (!has16072)
-    {
-        vi16072.AddItem(16072, 0, 0, 0);
-        ++count;
-    }
-    VendorItemData& vi16113_16112_16084 = _cacheVendorItemStore[2805];
-    bool has16113 = false;
-    bool has16112 = false;
-    bool has16084 = false;
-    for (VendorItemList::const_iterator i = vi16113_16112_16084.m_items.begin(); i != vi16113_16112_16084.m_items.end(); ++i)
-    {
-        if ((*i)->item == 16113)
-        {
-            has16113 = true;
-        }
-        if ((*i)->item == 16112)
-        {
-            has16112 = true;
-        }
-        if ((*i)->item == 16084)
-        {
-            has16084 = true;
-        }
-    }
-    if (!has16113)
-    {
-        vi16113_16112_16084.AddItem(16113, 0, 0, 0);
-        ++count;
-    }
-    if (!has16112)
-    {
-        vi16113_16112_16084.AddItem(16112, 0, 0, 0);
-        ++count;
-    }
-    if (!has16084)
-    {
-        vi16113_16112_16084.AddItem(16084, 0, 0, 0);
-        ++count;
-    }
 
     LOG_INFO("server.loading", ">> Loaded {} Vendors in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
     LOG_INFO("server.loading", " ");
@@ -9654,10 +9144,6 @@ void ObjectMgr::LoadScriptNames()
     {
         _scriptNamesStore.push_back((*result)[0].Get<std::string>());
     } while (result->NextRow());
-
-    // lfm script names
-    _scriptNamesStore.push_back("npc_dirge_quikcleave");
-    _scriptNamesStore.push_back("npc_worm"); 
 
     std::sort(_scriptNamesStore.begin(), _scriptNamesStore.end());
     LOG_INFO("server.loading", ">> Loaded {} ScriptNames in {} ms", _scriptNamesStore.size(), GetMSTimeDiffToNow(oldMSTime));
@@ -10358,18 +9844,18 @@ void ObjectMgr::LoadMailServerTemplates()
 
         ServerMail& servMail = _serverMailStore[id];
 
-        servMail.id          = id;
-        servMail.reqLevel    = fields[1].Get<uint8>();
+        servMail.id = id;
+        servMail.reqLevel = fields[1].Get<uint8>();
         servMail.reqPlayTime = fields[2].Get<uint32>();
-        servMail.moneyA      = fields[3].Get<uint32>();
-        servMail.moneyH      = fields[4].Get<uint32>();
-        servMail.itemA       = fields[5].Get<uint32>();
-        servMail.itemCountA  = fields[6].Get<uint32>();
-        servMail.itemH       = fields[7].Get<uint32>();
-        servMail.itemCountH  = fields[8].Get<uint32>();
-        servMail.subject     = fields[9].Get<std::string>();
-        servMail.body        = fields[10].Get<std::string>();
-        servMail.active      = fields[11].Get<uint8>();
+        servMail.moneyA = fields[3].Get<uint32>();
+        servMail.moneyH = fields[4].Get<uint32>();
+        servMail.itemA = fields[5].Get<uint32>();
+        servMail.itemCountA = fields[6].Get<uint32>();
+        servMail.itemH = fields[7].Get<uint32>();
+        servMail.itemCountH = fields[8].Get<uint32>();
+        servMail.subject = fields[9].Get<std::string>();
+        servMail.body = fields[10].Get<std::string>();
+        servMail.active = fields[11].Get<uint8>();
 
         if (servMail.reqLevel > sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
         {

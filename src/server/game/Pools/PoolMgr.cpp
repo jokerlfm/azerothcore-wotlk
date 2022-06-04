@@ -22,6 +22,9 @@
 #include "ObjectMgr.h"
 #include "Transport.h"
 
+// lfm minger
+#include "MingerManager.h"
+
 ////////////////////////////////////////////////////////////
 // template class ActivePoolData
 

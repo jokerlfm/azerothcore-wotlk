@@ -925,13 +925,14 @@ bool Player::UpdateFishingSkill()
         return false;
     }
 
+    // lfm fishing skill increase rate will always be 20%
+    int chance = 10;
+
     /* Whenever the player clicks on the fishing gameobject the
      * core will decide based on a probability if the skill raises or not.
      */
-    return UpdateSkillPro(
-        SKILL_FISHING,
-        static_cast<int32>(getProbabilityOfLevelUp(SkillValue)) * 10,
-        sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
+    //return UpdateSkillPro(SKILL_FISHING, static_cast<int32>(getProbabilityOfLevelUp(SkillValue)) * 10, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
+    return UpdateSkillPro(SKILL_FISHING, chance * 10, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
 }
 
 // levels sync. with spell requirement for skill levels to learn
