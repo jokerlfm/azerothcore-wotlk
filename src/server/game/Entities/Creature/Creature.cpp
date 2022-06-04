@@ -210,8 +210,8 @@ bool TemporaryThreatModifierEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
     {
         if (m_owner.IsInCombatWith(victim))
         {
-            m_owner.getThreatMgr().modifyThreatPercent(victim, -100); // Reset threat to zero.
-            m_owner.getThreatMgr().addThreat(victim, m_threatValue);  // Set to the previous value it had, first before modification.
+            m_owner.GetThreatMgr().modifyThreatPercent(victim, -100); // Reset threat to zero.
+            m_owner.GetThreatMgr().addThreat(victim, m_threatValue);  // Set to the previous value it had, first before modification.
         }
     }
 
@@ -1419,6 +1419,7 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
     trans->Append(stmt);
 
     WorldDatabase.CommitTransaction(trans);
+    sScriptMgr->OnCreatureSaveToDB(this);
 }
 
 void Creature::SelectLevel(bool changelevel)
@@ -3615,11 +3616,11 @@ void Creature::ModifyThreatPercentTemp(Unit* victim, int32 percent, Milliseconds
 {
     if (victim)
     {
-        float currentThreat = getThreatMgr().getThreat(victim);
+        float currentThreat = GetThreatMgr().getThreat(victim);
 
         if (percent != 0.0f)
         {
-            getThreatMgr().modifyThreatPercent(victim, percent);
+            GetThreatMgr().modifyThreatPercent(victim, percent);
         }
 
         TemporaryThreatModifierEvent* pEvent = new TemporaryThreatModifierEvent(*this, victim->GetGUID(), currentThreat);
