@@ -415,8 +415,7 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     groupRole = 0;
     teleportTargetGuid = 0;
     teleportDelay = 0;
-    reviveDelay = 0;
-    ningerMovement = nullptr;
+    reviveDelay = 0;    
     ningerAction = nullptr;
     strategyMap.clear();
     activeStrategyIndex = 0;

@@ -1060,8 +1060,7 @@ public:
     int fishingDelay;
 
     // 0 dps, 1 tank, 2 healer
-    uint32 groupRole;
-    NingerMovement* ningerMovement;
+    uint32 groupRole;    
     NingerAction_Base* ningerAction;
     std::unordered_map<uint32, NingerStrategy_Base*> strategyMap;
     uint32 activeStrategyIndex;

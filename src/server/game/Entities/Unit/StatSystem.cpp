@@ -1115,7 +1115,16 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         weaponMaxDamage = 0.0f;
     }
 
-    float dmgMultiplier = 1.0f;
+    float attackPower      = GetTotalAttackPowerValue(attType);
+    float attackSpeedMulti = GetAPMultiplier(attType, normalized);
+    float baseValue        = GetModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance;
+    float basePct          = GetModifierValue(unitMod, BASE_PCT) * attackSpeedMulti;
+    float totalValue       = GetModifierValue(unitMod, TOTAL_VALUE);
+    float totalPct         = addTotalPct ? GetModifierValue(unitMod, TOTAL_PCT) : 1.0f;
+    float dmgMultiplier = GetCreatureTemplate()->DamageModifier;
+
+    minDamage = ((weaponMinDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;
+    maxDamage = ((weaponMaxDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;
 
     // lfm creature damage
     float lfmMultiplier = 1.0f;
@@ -1130,29 +1139,32 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:
         {
-            CreatureTemplate const* cinfo = ci;
-            for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
+            if (ci->expansion < 2)
             {
-                // we already have valid Map pointer for current creature!
-                if (ci->DifficultyEntry[diff - 1])
+                CreatureTemplate const* cinfo = ci;
+                for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
                 {
-                    cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
-                    if (cinfo)
-                        break;                                      // template found
+                    // we already have valid Map pointer for current creature!
+                    if (ci->DifficultyEntry[diff - 1])
+                    {
+                        cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
+                        if (cinfo)
+                            break;                                      // template found
 
-                    // check and reported at startup, so just ignore (restore normalInfo)
-                    cinfo = ci;
+                        // check and reported at startup, so just ignore (restore normalInfo)
+                        cinfo = ci;
+                    }
+
+                    // for instances heroic to normal, other cases attempt to retrieve previous difficulty
+                    if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
+                        diff -= 2;                                      // to normal raid difficulty cases
+                    else
+                        --diff;
                 }
-
-                // for instances heroic to normal, other cases attempt to retrieve previous difficulty
-                if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
-                    diff -= 2;                                      // to normal raid difficulty cases
-                else
-                    --diff;
-            }
-            if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
-            {
-                lfmMultiplier = 1.5f;
+                if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
+                {
+                    lfmMultiplier = 1.5f;
+                }
             }
             break;
         }
@@ -1172,19 +1184,8 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         }
         }
     }
-
-    weaponMinDamage = weaponMinDamage * lfmMultiplier;
-    weaponMaxDamage = weaponMaxDamage * lfmMultiplier;
-
-    float attackPower      = GetTotalAttackPowerValue(attType);
-    float attackSpeedMulti = GetAPMultiplier(attType, normalized);
-    float baseValue        = GetModifierValue(unitMod, BASE_VALUE) + (attackPower / 14.0f) * variance;
-    float basePct          = GetModifierValue(unitMod, BASE_PCT) * attackSpeedMulti;
-    float totalValue       = GetModifierValue(unitMod, TOTAL_VALUE);
-    float totalPct         = addTotalPct ? GetModifierValue(unitMod, TOTAL_PCT) : 1.0f;
-
-    minDamage = ((weaponMinDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;
-    maxDamage = ((weaponMaxDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;
+    minDamage = minDamage * lfmMultiplier;
+    maxDamage = maxDamage * lfmMultiplier;
 
     // pussywizard: crashfix (casting negative to uint => min > max => assertion in urand)
     if (minDamage < 0.0f || minDamage > 1000000000.0f)

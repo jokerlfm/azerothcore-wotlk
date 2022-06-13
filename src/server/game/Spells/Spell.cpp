@@ -6773,6 +6773,26 @@ SpellCastResult Spell::CheckCast(bool strict)
         if (m_caster->HasSpellCooldown(SPELL_RELIC_COOLDOWN) && !m_caster->HasSpellItemCooldown(SPELL_RELIC_COOLDOWN, m_CastItem->GetEntry()))
             return SPELL_FAILED_NOT_READY;
 
+    // lfm spell check
+    if (m_spellInfo->Id == 56393)
+    {
+        if (Creature* casterTarget = ObjectAccessor::GetCreature(*m_caster, m_caster->GetTarget()))
+        {
+            if (casterTarget->GetEntry() == 29854)
+            {
+                if (m_caster->GetDistance(casterTarget) < 20.0f)
+                {
+                    return SPELL_CAST_OK;
+                }
+                else
+                {
+                    return SpellCastResult::SPELL_FAILED_OUT_OF_RANGE;
+                }
+            }
+        }
+        return SpellCastResult::SPELL_FAILED_BAD_TARGETS;
+    }
+
     // all ok
     return SPELL_CAST_OK;
 }

@@ -925,7 +925,7 @@ bool Player::UpdateFishingSkill()
         return false;
     }
 
-    // lfm fishing skill increase rate will always be 20%
+    // lfm fishing skill increase rate will always be 10%
     int chance = 10;
 
     /* Whenever the player clicks on the fishing gameobject the

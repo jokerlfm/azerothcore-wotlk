@@ -61,6 +61,7 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
         moveCheckDelay -= pmDiff;
         return;
     }
+    moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
     if (!me)
     {
         return;
@@ -77,14 +78,6 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
     {
         return;
     }
-    //if (me->HasUnitState(UnitState::UNIT_STATE_ROAMING_MOVE))
-    //{
-    //	return;
-    //}
-    if (me->IsNonMeleeSpellCast(false, false, true))
-    {
-        return;
-    }
     if (me->IsBeingTeleported())
     {
         return;
@@ -97,7 +90,7 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
     }
     case NingerMovementType::NingerMovementType_Point:
     {
-        float distance = me->GetDistance(positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ);
+        float distance = me->GetExactDist(positionTarget);
         if (distance > VISIBILITY_DISTANCE_LARGE)
         {
             ResetMovement();
@@ -106,14 +99,18 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
         {
             if (distance < MIN_DISTANCE_GAP)
             {
+                me->StopMoving();
+                me->GetMotionMaster()->Clear();
                 activeMovementType = NingerMovementType::NingerMovementType_None;
             }
             else
             {
-                me->StopMoving();
-                me->GetMotionMaster()->Clear();
-                me->GetMotionMaster()->MovePoint(0, positionTarget);
-                moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
+                if (!me->isMoving())
+                {
+                    me->StopMoving();
+                    me->GetMotionMaster()->Clear();
+                    me->GetMotionMaster()->MovePoint(0, positionTarget);
+                }
             }
         }
         break;
@@ -136,14 +133,18 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
             }
             else
             {
-                float targetDistance = me->GetDistance(chaseTarget);
-                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
+                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
                 if (targetDistance > VISIBILITY_DISTANCE_LARGE)
                 {
                     ResetMovement();
                     break;
                 }
-                if (targetDistance < chaseDistance + MAX_DISTANCE_GAP)
+                float chaseDistance = distanceMax;
+                if (chaseDistance > MAX_DISTANCE_GAP)
+                {
+                    chaseDistance = chaseDistance - MAX_DISTANCE_GAP;
+                }
+                if (targetDistance < chaseTarget->GetCombatReach() + me->GetCombatReach() + distanceMax)
                 {
                     if (me->IsWithinLOSInMap(chaseTarget))
                     {
@@ -158,23 +159,34 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
                         }
                         break;
                     }
+                    else
+                    {
+                        chaseDistance = chaseDistance / 2.0f;
+                    }
                 }
-                float moveDistance = 0.0f;
-                if (targetDistance > chaseDistance)
+                if (me->isMoving())
                 {
-                    moveDistance = targetDistance - chaseDistance;
+                    bool ptValid = true;
+                    if (chaseTarget->GetExactDist(positionTarget) > chaseTarget->GetCombatReach() + distanceMax)
+                    {
+                        ptValid = false;
+                    }
+                    else if (!chaseTarget->IsWithinLOS(positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ))
+                    {
+                        ptValid = false;
+                    }
+                    if (ptValid)
+                    {
+                        break;
+                    }
                 }
-                else
-                {
-                    moveDistance = MAX_DISTANCE_GAP;
-                }
-                positionTarget = GetDestPosition(chaseTarget, moveDistance, true);
+                Position predict = sNingerManager->PredictPosition(chaseTarget);
+                chaseTarget->GetNearPoint(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, chaseDistance, chaseTarget->GetAngle(me), 0.0f, &predict);
                 Run();
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
                 me->GetMotionMaster()->MovePoint(0, positionTarget);
             }
-            //moveCheckDelay = 100;
         }
         else
         {
@@ -200,34 +212,31 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
             }
             else
             {
-                float targetDistance = me->GetDistance(chaseTarget);
-                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                float chaseDistanceMin = 0.0f;
-                if (distanceMin > 0.0f)
-                {
-                    chaseDistanceMin = chaseTarget->GetObjectSize() + me->GetObjectSize() + chaseDistanceMin;
-                }
+                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
                 if (targetDistance > VISIBILITY_DISTANCE_LARGE)
                 {
                     ResetMovement();
                     break;
                 }
-                if (targetDistance < chaseDistance + MAX_DISTANCE_GAP && ((chaseDistanceMin > 0.0f) ? (targetDistance > chaseDistanceMin - MAX_DISTANCE_GAP) : true))
+                float chaseDistance = distanceMax;
+                if (chaseDistance > MAX_DISTANCE_GAP)
                 {
-                    if (me->IsWithinLOSInMap(chaseTarget))
+                    chaseDistance = chaseDistance - MAX_DISTANCE_GAP;
+                }
+                if (targetDistance < chaseTarget->GetCombatReach() + me->GetCombatReach() + distanceMax)
+                {
+                    bool minValid = true;
+                    if (distanceMin > 0.0f)
                     {
-                        bool positionOK = true;
-                        //if (chaseTarget->GetTarget() != me->GetGUID())
-                        //{
-                        //	if (forceBack)
-                        //	{
-                        //		if (!chaseTarget->isInBack(me, RANGE_MAX_DISTANCE, M_PI / 4))
-                        //		{
-                        //			positionOK = false;
-                        //		}
-                        //	}
-                        //}
-                        if (positionOK)
+                        if (targetDistance < chaseTarget->GetCombatReach() + distanceMin)
+                        {
+                            minValid = false;
+                            chaseDistance = distanceMin + (distanceMax - distanceMin) / 2.0f;
+                        }
+                    }
+                    if (minValid)
+                    {
+                        if (me->IsWithinLOSInMap(chaseTarget))
                         {
                             if (me->isMoving())
                             {
@@ -240,33 +249,43 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
                             }
                             break;
                         }
-                    }
-                }
-                bool closer = true;
-                float moveDistance = 0;
-                if (targetDistance > chaseDistance)
-                {
-                    moveDistance = targetDistance - chaseDistance;
-                }
-                else
-                {
-                    moveDistance = MAX_DISTANCE_GAP;
-                    if (chaseDistanceMin > 0.0f)
-                    {
-                        if (targetDistance < chaseDistanceMin)
+                        else
                         {
-                            moveDistance = chaseDistanceMin - targetDistance;
-                            closer = false;
+                            chaseDistance = chaseDistance / 2.0f;
                         }
                     }
                 }
-                positionTarget = GetDestPosition(chaseTarget, moveDistance, closer);
+                if (me->isMoving())
+                {
+                    bool ptValid = true;
+                    float ptDistance = chaseTarget->GetExactDist(positionTarget);
+                    if (ptDistance > chaseTarget->GetCombatReach() + distanceMax)
+                    {
+                        ptValid = false;
+                    }
+                    else if (!chaseTarget->IsWithinLOS(positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ))
+                    {
+                        ptValid = false;
+                    }
+                    else if (distanceMin > 0.0f)
+                    {
+                        if (ptDistance < chaseTarget->GetCombatReach() + distanceMin)
+                        {
+                            ptValid = false;
+                        }
+                    }
+                    if (ptValid)
+                    {
+                        break;
+                    }
+                }
+                Position predict = sNingerManager->PredictPosition(chaseTarget);
+                chaseTarget->GetNearPoint(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, chaseDistance, chaseTarget->GetAngle(me), 0.0f, &predict);
                 Run();
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
                 me->GetMotionMaster()->MovePoint(0, positionTarget);
             }
-            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
         }
         else
         {
@@ -276,7 +295,7 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
     }
     case NingerMovementType::NingerMovementType_Follow:
     {
-        if (Unit* followTarget = ObjectAccessor::GetUnit(*me, ogFollowTarget))
+        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogFollowTarget))
         {
             if (holding)
             {
@@ -285,51 +304,85 @@ void NingerMovement::Update_Direct(uint32 pmDiff)
                     me->StopMoving();
                     me->GetMotionMaster()->Clear();
                 }
-                if (!me->isInFront(followTarget, M_PI / 8))
+                if (!me->isInFront(chaseTarget, M_PI / 8))
                 {
-                    me->SetFacingToObject(followTarget);
+                    me->SetFacingToObject(chaseTarget);
                 }
             }
             else
             {
-                float targetDistance = me->GetDistance(followTarget);
-                float followDistance = followTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
+                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
+                if (targetDistance > VISIBILITY_DISTANCE_LARGE)
                 {
                     ResetMovement();
                     break;
                 }
-                if (targetDistance < followDistance + MAX_DISTANCE_GAP)
+                float chaseDistance = distanceMax;
+                if (chaseDistance > MAX_DISTANCE_GAP)
                 {
-                    if (me->IsWithinLOSInMap(followTarget))
+                    chaseDistance = chaseDistance - MAX_DISTANCE_GAP;
+                }
+                if (targetDistance < chaseTarget->GetCombatReach() + me->GetCombatReach() + distanceMax)
+                {
+                    if (me->IsWithinLOSInMap(chaseTarget))
                     {
                         if (me->isMoving())
                         {
                             me->StopMoving();
+                            me->GetMotionMaster()->Clear();
                         }
-                        if (!me->isInFront(followTarget, M_PI / 8))
+                        if (!me->isInFront(chaseTarget, M_PI / 8))
                         {
-                            me->SetFacingToObject(followTarget);
+                            me->SetFacingToObject(chaseTarget);
                         }
                         break;
                     }
+                    else
+                    {
+                        chaseDistance = chaseDistance / 2.0f;
+                    }
                 }
-                float moveDistance = 0.0f;
-                if (targetDistance > followDistance)
+                if (me->isMoving())
                 {
-                    moveDistance = targetDistance - followDistance;
+                    bool ptValid = true;
+                    float ptDistance = chaseTarget->GetExactDist(positionTarget);
+                    if (ptDistance > chaseTarget->GetCombatReach() + distanceMax)
+                    {
+                        ptValid = false;
+                    }
+                    else if (!chaseTarget->IsWithinLOS(positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ))
+                    {
+                        ptValid = false;
+                    }
+                    else if (distanceMin > 0.0f)
+                    {
+                        if (ptDistance < chaseTarget->GetCombatReach() + distanceMin)
+                        {
+                            ptValid = false;
+                        }
+                    }
+                    if (ptValid)
+                    {
+                        break;
+                    }
                 }
-                else
+                Position predict = sNingerManager->PredictPosition(chaseTarget);
+                float moveDistance = me->GetExactDist(predict);
+                if (moveDistance > chaseDistance)
                 {
-                    moveDistance = MAX_DISTANCE_GAP;
+                    moveDistance = moveDistance - chaseDistance;
                 }
-                positionTarget = GetDestPosition(followTarget, moveDistance, true);
+                if (moveDistance > chaseTarget->GetCombatReach())
+                {
+                    moveDistance = moveDistance - chaseTarget->GetCombatReach();
+                }
+                me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, moveDistance, me->GetAngle(&predict));
+                //chaseTarget->GetNearPoint(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, chaseDistance, chaseTarget->GetAngle(me), 0.0f, &predict);
                 Run();
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
                 me->GetMotionMaster()->MovePoint(0, positionTarget);
             }
-            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
         }
         else
         {
@@ -429,8 +482,13 @@ void NingerMovement::Update_Motion(uint32 pmDiff)
             }
             else
             {
-                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
+                float chaseDistance = distanceMax;
+                if (chaseDistance > MAX_DISTANCE_GAP)
+                {
+                    chaseDistance = chaseDistance - MAX_DISTANCE_GAP;
+                }
+                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
+                if (me->IsWithinLOSInMap(chaseTarget) && targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
                 {
                     if (!me->isInFront(chaseTarget, M_PI / 8))
                     {
@@ -482,8 +540,13 @@ void NingerMovement::Update_Motion(uint32 pmDiff)
             }
             else
             {
-                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
+                float chaseDistance = distanceMax;
+                if (chaseDistance > MAX_DISTANCE_GAP)
+                {
+                    chaseDistance = chaseDistance - MAX_DISTANCE_GAP;
+                }
+                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
+                if (me->IsWithinLOSInMap(chaseTarget) && targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
                 {
                     if (!me->isInFront(chaseTarget, M_PI / 8))
                     {
@@ -501,13 +564,13 @@ void NingerMovement::Update_Motion(uint32 pmDiff)
                             {
                                 if (distanceMin > 0.0f)
                                 {
-                                    if (me->GetDistance(chaseTarget) > chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMin - MAX_DISTANCE_GAP)
+                                    if (targetDistance > chaseTarget->GetCombatReach() + distanceMin)
                                     {
                                         return;
                                     }
                                     else
                                     {
-                                        chaseDistance = distanceMin + (chaseDistance - distanceMin) / 2.0f;
+                                        chaseDistance = distanceMin + (distanceMax - distanceMin) / 2.0f;
                                     }
                                 }
                                 else
@@ -558,8 +621,13 @@ void NingerMovement::Update_Motion(uint32 pmDiff)
             }
             else
             {
-                float followDistance = followTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                if (me->IsWithinLOSInMap(followTarget) && me->IsWithinDistInMap(followTarget, followDistance + MIN_DISTANCE_GAP))
+                float followDistance = distanceMax;
+                if (followDistance > MAX_DISTANCE_GAP)
+                {
+                    followDistance = followDistance - MAX_DISTANCE_GAP;
+                }
+                float targetDistance = me->GetExactDist(followTarget->GetPosition());
+                if (me->IsWithinLOSInMap(followTarget) && targetDistance < followTarget->GetCombatReach() + followDistance)
                 {
                     if (!me->isInFront(followTarget, M_PI / 8))
                     {
@@ -575,7 +643,10 @@ void NingerMovement::Update_Motion(uint32 pmDiff)
                         {
                             if (mgTarget->GetGUID() == followTarget->GetGUID())
                             {
-                                break;
+                                if (me->isMoving())
+                                {
+                                    break;
+                                }
                             }
                         }
                     }
@@ -583,7 +654,7 @@ void NingerMovement::Update_Motion(uint32 pmDiff)
                 Run();
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
-                me->GetMotionMaster()->MoveChase(followTarget, distanceMax);
+                me->GetMotionMaster()->MoveChase(followTarget, followDistance);
             }
             moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
         }
@@ -689,20 +760,6 @@ void NingerMovement::Update_Follow(uint32 pmDiff)
             }
             else
             {
-                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
-                {
-                    if (me->isMoving())
-                    {
-                        me->StopMoving();
-                        me->GetMotionMaster()->Clear();
-                    }
-                    if (!me->isInFront(chaseTarget, M_PI / 8))
-                    {
-                        me->SetFacingToObject(chaseTarget);
-                    }
-                    return;
-                }
                 if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
                 {
                     if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
@@ -711,9 +768,38 @@ void NingerMovement::Update_Follow(uint32 pmDiff)
                         {
                             if (mgTarget->GetGUID() == chaseTarget->GetGUID())
                             {
-                                break;
+                                if (me->isMoving())
+                                {
+                                    break;
+                                }
                             }
                         }
+                    }
+                }
+                float chaseDistance = distanceMax;
+                if (chaseDistance > MAX_DISTANCE_GAP)
+                {
+                    chaseDistance = chaseDistance - MAX_DISTANCE_GAP;
+                }
+                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
+                if (targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
+                {
+                    if (me->IsWithinLOSInMap(chaseTarget))
+                    {
+                        if (me->isMoving())
+                        {
+                            me->StopMoving();
+                            me->GetMotionMaster()->Clear();
+                        }
+                        if (!me->isInFront(chaseTarget, M_PI / 8))
+                        {
+                            me->SetFacingToObject(chaseTarget);
+                        }
+                        return;
+                    }
+                    else
+                    {
+                        chaseDistance = chaseDistance / 2.0f;
                     }
                 }
                 Run();
@@ -747,20 +833,6 @@ void NingerMovement::Update_Follow(uint32 pmDiff)
             }
             else
             {
-                float chaseDistance = chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                if (me->IsWithinLOSInMap(chaseTarget) && me->IsWithinDistInMap(chaseTarget, chaseDistance + MIN_DISTANCE_GAP))
-                {
-                    if (me->isMoving())
-                    {
-                        me->StopMoving();
-                        me->GetMotionMaster()->Clear();
-                    }
-                    if (!me->isInFront(chaseTarget, M_PI / 8))
-                    {
-                        me->SetFacingToObject(chaseTarget);
-                    }
-                    return;
-                }
                 if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
                 {
                     if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
@@ -769,23 +841,49 @@ void NingerMovement::Update_Follow(uint32 pmDiff)
                         {
                             if (mgTarget->GetGUID() == chaseTarget->GetGUID())
                             {
-                                if (distanceMin > 0.0f)
+                                if (me->isMoving())
                                 {
-                                    if (me->GetDistance(chaseTarget) > chaseTarget->GetObjectSize() + me->GetObjectSize() + distanceMin - MAX_DISTANCE_GAP)
-                                    {
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        chaseDistance = distanceMin + (chaseDistance - distanceMin) / 2.0f;
-                                    }
+                                    break;
                                 }
-                                else
-                                {
-                                    return;
-                                }
-                                break;
                             }
+                        }
+                    }
+                }
+                float chaseDistance = distanceMax;
+                if (chaseDistance > MAX_DISTANCE_GAP)
+                {
+                    chaseDistance = chaseDistance - MAX_DISTANCE_GAP;
+                }
+                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
+                if (targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
+                {
+                    bool minValid = true;
+                    if (distanceMin > 0.0f)
+                    {
+                        if (targetDistance < chaseTarget->GetCombatReach() + distanceMin)
+                        {
+                            minValid = false;
+                            chaseDistance = distanceMin + (chaseDistance - distanceMin) / 2.0f;
+                        }
+                    }
+                    if (minValid)
+                    {
+                        if (me->IsWithinLOSInMap(chaseTarget))
+                        {
+                            if (me->isMoving())
+                            {
+                                me->StopMoving();
+                                me->GetMotionMaster()->Clear();
+                            }
+                            if (!me->isInFront(chaseTarget, M_PI / 8))
+                            {
+                                me->SetFacingToObject(chaseTarget);
+                            }
+                            return;
+                        }
+                        else
+                        {
+                            chaseDistance = chaseDistance / 2.0f;
                         }
                     }
                 }
@@ -828,17 +926,6 @@ void NingerMovement::Update_Follow(uint32 pmDiff)
             }
             else
             {
-                float followDistance = followTarget->GetObjectSize() + me->GetObjectSize() + distanceMax;
-                if (me->IsWithinLOSInMap(followTarget) && me->IsWithinDistInMap(followTarget, followDistance + MIN_DISTANCE_GAP))
-                {
-                    me->StopMoving();
-                    me->GetMotionMaster()->Clear();
-                    if (!me->isInFront(followTarget, M_PI / 8))
-                    {
-                        me->SetFacingToObject(followTarget);
-                    }
-                    return;
-                }
                 if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
                 {
                     if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
@@ -847,15 +934,45 @@ void NingerMovement::Update_Follow(uint32 pmDiff)
                         {
                             if (mgTarget->GetGUID() == followTarget->GetGUID())
                             {
-                                break;
+                                if (me->isMoving())
+                                {
+                                    break;
+                                }
                             }
                         }
+                    }
+                }
+                float followDistance = distanceMax;
+                if (followDistance > MAX_DISTANCE_GAP)
+                {
+                    followDistance = followDistance - MAX_DISTANCE_GAP;
+                }
+                float targetDistance = me->GetExactDist(followTarget->GetPosition());
+                if (targetDistance < followTarget->GetCombatReach() + followDistance)
+                {
+                    if (me->IsWithinLOSInMap(followTarget))
+                    {
+                        if (me->isMoving())
+                        {
+                            me->StopMoving();
+                            me->GetMotionMaster()->Clear();
+                        }
+                        if (!me->isInFront(followTarget, M_PI / 8))
+                        {
+                            me->SetFacingToObject(followTarget);
+                        }
+                        return;
+                    }
+                    else
+                    {
+                        followDistance = followDistance / 2.0f;
                     }
                 }
                 Run();
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
                 me->GetMotionMaster()->MoveFollow(followTarget, distanceMax, 0.0f);
+
             }
             moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
         }
@@ -1456,7 +1573,7 @@ void NingerAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint
                                 std::ostringstream msgStream;
                                 msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
                                 sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
-                                sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, msgStream.str().c_str());
+                                sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, msgStream.str().c_str());
                                 return;
                             }
                         }
@@ -1599,30 +1716,18 @@ bool NingerAction_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheck
             }
             if (pmCheckAura)
             {
+                Aura* targetAura = nullptr;
                 if (pmOnlyMyAura)
                 {
-                    if (Aura* targetAura = pmTarget->GetAura(pmSpellId, me->GetGUID()))
-                    {
-                        if (targetAura->GetStackAmount() < pmMaxAuraStack)
-                        {
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    targetAura = pmTarget->GetAura(pmSpellId, me->GetGUID());
                 }
                 else
                 {
-                    if (Aura* targetAura = pmTarget->GetAura(pmSpellId))
-                    {
-                        if (targetAura->GetStackAmount() < pmMaxAuraStack)
-                        {
-                            return false;
-                        }
-                    }
-                    else
+                    targetAura = pmTarget->GetAura(pmSpellId);
+                }
+                if (targetAura)
+                {
+                    if (targetAura->GetStackAmount() >= pmMaxAuraStack)
                     {
                         return false;
                     }
@@ -2039,7 +2144,8 @@ bool NingerAction_Base::SpellValid(uint32 pmSpellID)
     {
         return false;
     }
-    return false;
+
+    return true;
 }
 
 Item* NingerAction_Base::GetItemInInventory(uint32 pmEntry)

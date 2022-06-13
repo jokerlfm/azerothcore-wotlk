@@ -48,6 +48,7 @@ void NingerAction_Rogue::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpec
 
         ResetTalent();
         RemoveEquipments();
+        myLevel = me->getLevel();
     }
     spell_Stealth = 1784;
     spell_SinisterStrike = 1752;
@@ -765,29 +766,32 @@ bool NingerAction_Rogue::Buff(Unit* pmTarget)
     }
     if (me->GetGUID() == pmTarget->GetGUID())
     {
-        if (!me->HasItemCount(item_InstantPoison, 1))
+        if (item_InstantPoison > 0)
         {
-            me->StoreNewItemInBestSlots(item_InstantPoison, 20);
-        }
-        if (Item* poison = GetItemInInventory(item_InstantPoison))
-        {
-            if (Item* mWeapon = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
+            if (!me->HasItemCount(item_InstantPoison, 1))
             {
-                if (mWeapon->GetEnchantmentId(EnchantmentSlot::TEMP_ENCHANTMENT_SLOT) == 0)
+                me->StoreNewItemInBestSlots(item_InstantPoison, 20);
+            }
+            if (Item* poison = GetItemInInventory(item_InstantPoison))
+            {
+                if (Item* mWeapon = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
                 {
-                    if (UseItem(poison, mWeapon))
+                    if (mWeapon->GetEnchantmentId(EnchantmentSlot::TEMP_ENCHANTMENT_SLOT) == 0)
                     {
-                        return true;
+                        if (UseItem(poison, mWeapon))
+                        {
+                            return true;
+                        }
                     }
                 }
-            }
-            if (Item* oWeapon = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND))
-            {
-                if (oWeapon->GetEnchantmentId(EnchantmentSlot::TEMP_ENCHANTMENT_SLOT) == 0)
+                if (Item* oWeapon = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND))
                 {
-                    if (UseItem(poison, oWeapon))
+                    if (oWeapon->GetEnchantmentId(EnchantmentSlot::TEMP_ENCHANTMENT_SLOT) == 0)
                     {
-                        return true;
+                        if (UseItem(poison, oWeapon))
+                        {
+                            return true;
+                        }
                     }
                 }
             }

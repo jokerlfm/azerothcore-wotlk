@@ -1231,8 +1231,18 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
                     break;
 
                 for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); ++itr)
-                    if (IsCreature(*itr))
-                        (*itr)->ToCreature()->UpdateEntry(e.action.updateTemplate.creature, nullptr, e.action.updateTemplate.updateLevel != 0);
+                {
+                    // lfm creature update entry should set to full health
+                    //if (IsCreature(*itr))
+                    //{
+                    //    (*itr)->ToCreature()->UpdateEntry(e.action.updateTemplate.creature, nullptr, e.action.updateTemplate.updateLevel != 0);                        
+                    //}
+                    if (Creature* tc = (*itr)->ToCreature())
+                    {
+                        tc->UpdateEntry(e.action.updateTemplate.creature, nullptr, e.action.updateTemplate.updateLevel != 0);
+                        tc->SetFullHealth();
+                    }
+                }                    
 
                 delete targets;
                 break;
@@ -1877,6 +1887,13 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
             {
                 if (!IsSmart())
                     break;
+
+                // lfm debug
+                //uint32 myEntry = e.entryOrGuid;
+                //if (myEntry == 29863)
+                //{
+                //    bool bp = true;
+                //}
 
                 WorldObject* target = nullptr;
 
@@ -4034,8 +4051,18 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
     if ((e.event.event_phase_mask && !IsInPhase(e.event.event_phase_mask)) || ((e.event.event_flags & SMART_EVENT_FLAG_NOT_REPEATABLE) && e.runOnce))
         return;
 
-    if (!(e.event.event_flags & SMART_EVENT_FLAG_WHILE_CHARMED) && IsCharmedCreature(me))
-        return;
+    // lfm charmed flag should not be necessary
+    //if (e.event.event_flags & SMART_EVENT_FLAG_WHILE_CHARMED)
+    //{
+    //    if (!IsCharmedCreature(me))
+    //    {
+    //        return;
+    //    }
+    //}
+    //if (!(e.event.event_flags & SMART_EVENT_FLAG_WHILE_CHARMED) && IsCharmedCreature(me))
+    //{
+    //    return;
+    //}
 
     switch (e.GetEventType())
     {
@@ -4712,6 +4739,20 @@ void SmartScript::UpdateTimer(SmartScriptHolder& e, uint32 const diff)
 
     if (e.timer < diff)
     {
+        // lfm debug
+        //if (me)
+        //{
+        //    uint32 myEntry = me->GetEntry();
+        //    if (myEntry == 28750 || myEntry == 2875000)
+        //    {
+        //        bool bp = true;
+        //    }
+        //}
+        //if (e.entryOrGuid == 2875000)
+        //{
+        //    bool bp = true;
+        //}
+
         // delay spell cast event if another spell is being casted
         if (e.GetActionType() == SMART_ACTION_CAST)
         {
@@ -4748,23 +4789,30 @@ void SmartScript::UpdateTimer(SmartScriptHolder& e, uint32 const diff)
             case SMART_EVENT_FRIENDLY_HEALTH_PCT:
             case SMART_EVENT_DISTANCE_CREATURE:
             case SMART_EVENT_DISTANCE_GAMEOBJECT:
+            {
+                // lfm debug
+                //uint32 myEntry = e.entryOrGuid;
+                //if (myEntry == 29863)
+                //{
+                //    bool bp = true;
+                //}
+
+                ProcessEvent(e);
+                if (e.GetScriptType() == SMART_SCRIPT_TYPE_TIMED_ACTIONLIST)
                 {
-                    ProcessEvent(e);
-                    if (e.GetScriptType() == SMART_SCRIPT_TYPE_TIMED_ACTIONLIST)
+                    e.enableTimed = false;//disable event if it is in an ActionList and was processed once
+                    for (SmartAIEventList::iterator i = mTimedActionList.begin(); i != mTimedActionList.end(); ++i)
                     {
-                        e.enableTimed = false;//disable event if it is in an ActionList and was processed once
-                        for (SmartAIEventList::iterator i = mTimedActionList.begin(); i != mTimedActionList.end(); ++i)
+                        //find the first event which is not the current one and enable it
+                        if (i->event_id > e.event_id)
                         {
-                            //find the first event which is not the current one and enable it
-                            if (i->event_id > e.event_id)
-                            {
-                                i->enableTimed = true;
-                                break;
-                            }
+                            i->enableTimed = true;
+                            break;
                         }
                     }
-                    break;
                 }
+                break;
+            }
         }
     }
     else

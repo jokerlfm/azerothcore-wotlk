@@ -49,6 +49,7 @@ void NingerAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpe
 
         ResetTalent();
         RemoveEquipments();
+        myLevel = me->getLevel();
     }
     if (myLevel >= 1)
     {

@@ -58,7 +58,7 @@ void NingerEntity::Update(uint32 pmDiff)
         case NingerEntityState::NingerEntityState_Enter:
         {
             entityState = NingerEntityState::NingerEntityState_CheckAccount;
-            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Ninger %s is ready to go online.", account_name.c_str());
+            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger {} is ready to go online.", account_name.c_str());
             break;
         }
         case NingerEntityState::NingerEntityState_CheckAccount:
@@ -88,12 +88,12 @@ void NingerEntity::Update(uint32 pmDiff)
                         std::string sql = sqlStream.str();
                         CharacterDatabase.DirectExecute(sql.c_str());
                     }
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Ninger %s is ready.", account_name.c_str());
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger {} is ready.", account_name.c_str());
                     entityState = NingerEntityState::NingerEntityState_CheckCharacter;
                 }
                 else
                 {
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Ninger %s is not ready.", account_name.c_str());
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger {} is not ready.", account_name.c_str());
                     entityState = NingerEntityState::NingerEntityState_CreateAccount;
                 }
             }
@@ -113,7 +113,7 @@ void NingerEntity::Update(uint32 pmDiff)
                 }
                 else
                 {
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Ninger id %d account creation failed.", ninger_id);
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger id {} account creation failed.", ninger_id);
                     entityState = NingerEntityState::NingerEntityState_None;
                 }
             }
@@ -130,13 +130,13 @@ void NingerEntity::Update(uint32 pmDiff)
                 character_id = characterFields[0].Get<uint32>();
                 if (character_id > 0)
                 {
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Ninger account_id %d character_id %d is ready.", account_id, character_id);
-                    //entityState = NingerEntityState::NingerEntityState_DoEnum;
-                    entityState = NingerEntityState::NingerEntityState_DoLogin;
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger account_id {} character_id {} is ready.", account_id, character_id);
+                    entityState = NingerEntityState::NingerEntityState_DoEnum;
+                    //entityState = NingerEntityState::NingerEntityState_DoLogin;
                     break;
                 }
             }
-            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Ninger account_id %d character_id is not ready.", account_id);
+            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger account_id {} character_id is not ready.", account_id);
             entityState = NingerEntityState::NingerEntityState_CreateCharacter;
             break;
         }
@@ -152,7 +152,7 @@ void NingerEntity::Update(uint32 pmDiff)
                 QueryResult checkNameQR = CharacterDatabase.Query(queryStream.str().c_str());
                 if (!checkNameQR)
                 {
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Name %s is available", currentName.c_str());
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Name {} is available", currentName.c_str());
                     nameValid = true;
                 }
                 else
@@ -212,8 +212,8 @@ void NingerEntity::Update(uint32 pmDiff)
                     newPlayer->CleanupsBeforeDelete();
                     delete createSession;
                     delete newPlayer;
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_ERROR, "Character create failed, %s %d %d ", currentName.c_str(), target_race, target_class);
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Try again");
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_ERROR, "Character create failed, {} {} {} ", currentName.c_str(), target_race, target_class);
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Try again");
                     continue;
                 }
                 newPlayer->GetMotionMaster()->Initialize();
@@ -229,7 +229,7 @@ void NingerEntity::Update(uint32 pmDiff)
                     replyStream << "ninger character created : account - " << account_id << " character - " << newPlayer->GetGUID().GetCounter() << " " << currentName;
                     std::string replyString = replyStream.str();
                     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyString.c_str());
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, replyString.c_str());
                     break;
                 }
             }
@@ -256,7 +256,7 @@ void NingerEntity::Update(uint32 pmDiff)
             loginSession->isNinger = true;
             WorldPacket wpEnum(CMSG_CHAR_ENUM, 4);
             loginSession->HandleCharEnumOpcode(wpEnum);
-            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Enum character %d %d ", account_id, character_id);
+            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Enum character {} {} ", account_id, character_id);
             checkDelay = urand(5 * IN_MILLISECONDS, 10 * IN_MILLISECONDS);
             entityState = NingerEntityState::NingerEntityState_CheckEnum;
             break;
@@ -283,7 +283,7 @@ void NingerEntity::Update(uint32 pmDiff)
             replyStream << "log in character : account - " << account_id << " character - " << character_id;
             std::string replyString = replyStream.str();
             sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyString.c_str());
-            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
+            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, replyString.c_str());
             checkDelay = urand(5 * IN_MILLISECONDS, 10 * IN_MILLISECONDS);
             entityState = NingerEntityState::NingerEntityState_CheckLogin;
             break;
@@ -291,7 +291,7 @@ void NingerEntity::Update(uint32 pmDiff)
         case NingerEntityState::NingerEntityState_CheckLogin:
         {
             ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-            if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+            if (Player* me = ObjectAccessor::FindConnectedPlayer(playerGuid))
             {
                 if (me->IsInWorld())
                 {
@@ -299,7 +299,7 @@ void NingerEntity::Update(uint32 pmDiff)
                     replyStream << "ninger character logged in : account - " << account_id << " character - " << character_id;
                     std::string replyString = replyStream.str();
                     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyString.c_str());
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, replyString.c_str());
                     entityState = NingerEntityState::NingerEntityState_Initialize;
                     break;
                 }
@@ -310,7 +310,7 @@ void NingerEntity::Update(uint32 pmDiff)
         case NingerEntityState::NingerEntityState_Initialize:
         {
             ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-            if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+            if (Player* me = ObjectAccessor::FindConnectedPlayer(playerGuid))
             {
                 if (me->IsInWorld())
                 {
@@ -328,6 +328,9 @@ void NingerEntity::Update(uint32 pmDiff)
                     me->strategyMap[585] = new NingerStrategy_Magisters_Terrace();
                     me->strategyMap[585]->me = me;
                     me->strategyMap[585]->Reset();
+                    me->strategyMap[601] = new NingerStrategy_Azjol_Nerub();
+                    me->strategyMap[601]->me = me;
+                    me->strategyMap[601]->Reset();
                     switch (target_class)
                     {
                     case Classes::CLASS_DEATH_KNIGHT:
@@ -392,7 +395,7 @@ void NingerEntity::Update(uint32 pmDiff)
                     replyStream << "ninger initialized : account - " << account_id << " character - " << character_id << " " << me->GetName();
                     std::string replyString = replyStream.str();
                     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyString.c_str());
-                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
+                    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, replyString.c_str());
                     entityState = NingerEntityState::NingerEntityState_Equip;
                     break;
                 }
@@ -403,7 +406,7 @@ void NingerEntity::Update(uint32 pmDiff)
         case NingerEntityState::NingerEntityState_Equip:
         {
             ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-            if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+            if (Player* me = ObjectAccessor::FindConnectedPlayer(playerGuid))
             {
                 if (me->IsInWorld())
                 {
@@ -435,7 +438,7 @@ void NingerEntity::Update(uint32 pmDiff)
             {
                 checkDelay = urand(10 * MINUTE * IN_MILLISECONDS, 20 * MINUTE * IN_MILLISECONDS);
                 ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-                if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+                if (Player* me = ObjectAccessor::FindConnectedPlayer(playerGuid))
                 {
                     if (me->IsInWorld())
                     {
@@ -466,7 +469,7 @@ void NingerEntity::Update(uint32 pmDiff)
         case NingerEntityState::NingerEntityState_Exit:
         {
             ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-            if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+            if (Player* me = ObjectAccessor::FindConnectedPlayer(playerGuid))
             {
                 if (me->IsInWorld())
                 {
@@ -477,7 +480,7 @@ void NingerEntity::Update(uint32 pmDiff)
                     }
                 }
             }
-            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "Ninger %d is ready to go offline.", ninger_id);
+            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger {} is ready to go offline.", ninger_id);
             entityState = NingerEntityState::NingerEntityState_DoLogoff;
             break;
         }
@@ -485,7 +488,7 @@ void NingerEntity::Update(uint32 pmDiff)
         {
             checkDelay = urand(10 * IN_MILLISECONDS, 20 * IN_MILLISECONDS);
             ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-            if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+            if (Player* me = ObjectAccessor::FindConnectedPlayer(playerGuid))
             {
                 if (me->IsInWorld())
                 {
@@ -504,9 +507,9 @@ void NingerEntity::Update(uint32 pmDiff)
         case NingerEntityState::NingerEntityState_CheckLogoff:
         {
             ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-            if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+            if (Player* me = ObjectAccessor::FindConnectedPlayer(playerGuid))
             {
-                sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_ERROR, "Log out ninger %s failed", me->GetName());
+                sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_ERROR, "Log out ninger {} failed", me->GetName());
                 entityState = NingerEntityState::NingerEntityState_None;
                 break;
             }

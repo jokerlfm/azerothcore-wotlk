@@ -750,6 +750,35 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
             break;
     }
 
+    // lfm dummy scripts
+    if (m_spellInfo->Id == 55647)
+    {
+        if (effIndex == SpellEffIndex::EFFECT_1)
+        {
+            if (gameObjTarget)
+            {
+                gameObjTarget->DespawnOrUnsummon(1000ms);
+            }
+        }
+    }
+    else if (m_spellInfo->Id == 56393)
+    {
+        if (effIndex == SpellEffIndex::EFFECT_0)
+        {
+            bool validCast = false;
+            if (Creature* casterTarget = ObjectAccessor::GetCreature(*m_caster, m_caster->GetTarget()))
+            {
+                if (casterTarget->GetEntry() == 29854)
+                {
+                    if (m_caster->GetDistance(casterTarget) < 20.0f)
+                    {
+                        casterTarget->DespawnOrUnsummon(500);
+                    }
+                }
+            }
+        }
+    }
+
     // pet auras
     if (PetAura const* petSpell = sSpellMgr->GetPetAura(m_spellInfo->Id, effIndex))
     {
@@ -1329,6 +1358,21 @@ void Spell::EffectTeleportUnits(SpellEffIndex /*effIndex*/)
 
 void Spell::EffectApplyAura(SpellEffIndex effIndex)
 {
+    // lfm aura dummy scripts
+    if (m_spellInfo->Id == 56393)
+    {
+        if (effIndex == SpellEffIndex::EFFECT_0)
+        {
+            if (Creature* targetC = ObjectAccessor::GetCreature(*m_caster, m_caster->GetTarget()))
+            {
+                if (targetC->GetEntry() == 29854)
+                {
+                    targetC->DespawnOrUnsummon(50ms, 300s);
+                }
+            }
+        }
+    }
+
     if (effectHandleMode != SPELL_EFFECT_HANDLE_HIT_TARGET)
         return;
 

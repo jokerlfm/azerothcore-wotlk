@@ -2168,6 +2168,20 @@ void ObjectMgr::LoadCreatures()
                 data.equipmentId = 0;
             }
         }
+
+        // lfm all should have equipments
+        if (data.equipmentId == 0)
+        {
+            data.equipmentId = -1;
+            if (!GetEquipmentInfo(data.id1, data.equipmentId))
+            {                
+                if (!GetEquipmentInfo(data.id2, data.equipmentId))
+                {                    
+                    GetEquipmentInfo(data.id3, data.equipmentId);
+                }
+            }
+        }
+
         if ((cInfo->flags_extra & CREATURE_FLAG_EXTRA_INSTANCE_BIND) || (data.id2 && cInfo2->flags_extra & CREATURE_FLAG_EXTRA_INSTANCE_BIND) || (data.id3 && cInfo3->flags_extra & CREATURE_FLAG_EXTRA_INSTANCE_BIND))
         {
             if (!mapEntry->IsDungeon())

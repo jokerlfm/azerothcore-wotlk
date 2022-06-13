@@ -62,6 +62,7 @@ void NingerAction_Mage::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpeci
 
         ResetTalent();
         RemoveEquipments();
+        myLevel = me->getLevel();
     }
     spell_ArcaneIntellect = 1459;
     spell_Fireball = 133;

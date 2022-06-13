@@ -1805,7 +1805,7 @@ void WorldSession::HandlePacket(WorldPacket pmPacket)
         {
             _player->ResurectUsingRequestData();
             _player->ClearInCombat();
-            _player->ningerMovement->ResetMovement();
+            _player->ningerAction->nm->ResetMovement();
             _player->ningerAction->ClearTarget();
         }
         break;

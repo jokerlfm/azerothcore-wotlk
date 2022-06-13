@@ -51,6 +51,7 @@ void NingerAction_Druid::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpec
 
 		ResetTalent();
 		RemoveEquipments();
+        myLevel = me->getLevel();
 	}
 	spell_Wrath = 5176;
 	spell_Mark_Of_The_Wild = 1126;

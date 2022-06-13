@@ -82,6 +82,7 @@ void NingerAction_Warrior::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSp
 
         ResetTalent();
         RemoveEquipments();
+        myLevel = me->getLevel();
     }
     me->learnSpell(201, false);
     me->learnSpell(2567, false);
@@ -662,16 +663,19 @@ bool NingerAction_Warrior::Tank(Unit* pmTarget, bool pmAOE, float pmDistanceMax,
                         {
                             if (CastSpell(pmTarget, spell_Charge))
                             {
+                                nm->moveCheckDelay = 1000;
                                 return true;
                             }
                             if (CastSpell(pmTarget, spell_intercept))
                             {
+                                nm->moveCheckDelay = 1000;
                                 return true;
                             }
                             if (spell_Intervene > 0)
                             {
                                 if (CastSpell(pmTarget, spell_Intervene))
                                 {
+                                    nm->moveCheckDelay = 1000;
                                     return true;
                                 }
                             }

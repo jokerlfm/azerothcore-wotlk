@@ -6,7 +6,7 @@
 #endif
 
 #ifndef DEFAULT_MOVEMENT_UPDATE_DELAY
-#define DEFAULT_MOVEMENT_UPDATE_DELAY 500
+#define DEFAULT_MOVEMENT_UPDATE_DELAY 200
 #endif
 
 #include "NingerConfig.h"

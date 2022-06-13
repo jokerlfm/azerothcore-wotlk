@@ -25,7 +25,7 @@ void MingerManager::InitializeManager()
 		} while (icQR->NextRow());
 	}
 	heroicCreatureEntrySet.clear();
-	QueryResult hcQR = WorldDatabase.Query("SELECT difficulty_entry_1 FROM creature_template where difficulty_entry_1 > 0 and entry in (SELECT distinct id FROM creature where map in (269,540,542,543,545,546,547,552,553,554,555,556,557,558,560,574,575,576,578,585,595,599,600,601,602,604,608,619,631,632,649,650,658,668,724) and id1 > 0);");
+	QueryResult hcQR = WorldDatabase.Query("SELECT difficulty_entry_1 FROM creature_template where difficulty_entry_1 > 0 and entry in (SELECT distinct id1 FROM creature where map in (269,540,542,543,545,546,547,552,553,554,555,556,557,558,560,574,575,576,578,585,595,599,600,601,602,604,608,619,631,632,649,650,658,668,724) and id1 > 0);");
 	if (hcQR)
 	{
 		do
@@ -131,9 +131,14 @@ void MingerManager::InitializeManager()
 	herbGOEntrySet.insert(190169);
 	herbGOEntrySet.insert(190170);
 	herbGOEntrySet.insert(191019);
+    herbGOEntrySet.insert(190170);
+    herbGOEntrySet.insert(190171);
+    herbGOEntrySet.insert(190172);
 	herbGOEntrySet.insert(190173);
 	herbGOEntrySet.insert(190174);
 	herbGOEntrySet.insert(190175);
+    herbGOEntrySet.insert(190176);
+    herbGOEntrySet.insert(191303);
 
     sLog->outMessage(MINGER_MARK, LogLevel::LOG_LEVEL_INFO, "minger initialized");
 }
@@ -179,8 +184,7 @@ bool MingerManager::NearHerb(uint32 pmMapId, Position pmPos, float pmDistance)
 		{
 			if (eachSO->mapId == pmMapId)
 			{
-				float distance = eachSO->pos.GetExactDist(pmPos);
-				distance = std::sqrt(distance);
+				float distance = eachSO->pos.GetExactDist(pmPos);				
 				if (distance < pmDistance)
 				{
 					return true;

@@ -55,6 +55,8 @@ void NingerAction_Hunter::InitializeCharacter(uint32 pmTarGetLevel, uint32 pmSpe
         me->learnQuestRewardedSpells();
 
         ResetTalent();
+        RemoveEquipments();
+        myLevel = me->getLevel();
     }
     spell_AutoShot = 75;
     me->learnSpell(197, true);

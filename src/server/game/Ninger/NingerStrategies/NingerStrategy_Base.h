@@ -104,7 +104,6 @@ public:
 	int pvpDelay;
 
 	uint32 basicStrategyType;
-	int combatAngleINT;
 	bool cure;
 	bool aoe;
 	bool rushing;
@@ -117,6 +116,9 @@ public:
 	ObjectGuid ogActionTarget;
 	ObjectGuid ogTank;
 	ObjectGuid ogHealer;
+    uint32 vipEntry;
+    ObjectGuid ogVip;
+    int vipCheckDelay;
 
 	std::unordered_map<std::string, std::unordered_set<uint32>> cautionSpellMap;
 	std::unordered_set<Position*> cautionPosSet;
@@ -153,5 +155,22 @@ public:
 	bool DoHeal(Unit* pmTarget, bool pmForceInstantOnly);
 
 	bool kael;
+};
+
+class NingerStrategy_Azjol_Nerub :public NingerStrategy_Base
+{
+public:
+    NingerStrategy_Azjol_Nerub();
+
+    void Update(uint32 pmDiff);
+    bool TryTank();
+    bool DoTank(Unit* pmTarget);
+    bool DoDPS(Unit* pmTarget, bool pmForceInstantOnly, bool pmChasing);
+    bool DoHeal(Unit* pmTarget, bool pmForceInstantOnly);
+
+    bool arak;
+    Position center;
+    int centerCheckDelay;
+    int spawnCheckDelay;
 };
 #endif

@@ -53,6 +53,8 @@ public:
 
     bool IsPolymorphed(Unit* pmTarget);
 
+    Position PredictPosition(Unit* target);
+
     void HandleChatCommand(Player* pmCommander, std::string pmContent, Player* pmTargetPlayer = nullptr, Group* pmTargetGroup = nullptr);    
     void HandleNingerPacket(const WorldSession* pmSession, WorldPacket pmPacket);
 

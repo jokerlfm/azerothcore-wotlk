@@ -38,6 +38,7 @@ NingerStrategy_Base::NingerStrategy_Base()
     ogActionTarget = ObjectGuid();
     ogTank = ObjectGuid();
     ogHealer = ObjectGuid();
+    vipEntry = 0;
     actionType = ActionType::ActionType_None;
 
     dpsDistance = MELEE_MIN_DISTANCE;
@@ -92,7 +93,7 @@ void NingerStrategy_Base::Reset()
     ogTank = ObjectGuid();
     ogHealer = ObjectGuid();
     actionType = ActionType::ActionType_None;
-
+    vipEntry = 0;
     cautionSpellMap.clear();
 
     dpsDistance = MELEE_MIN_DISTANCE;
@@ -109,7 +110,7 @@ void NingerStrategy_Base::Reset()
     case Classes::CLASS_HUNTER:
     {
         aoe = false;
-        followDistance = FOLLOW_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
         dpsDistance = RANGE_FAR_DISTANCE;
         dpsDistanceMin = RANGE_MIN_DISTANCE;
         break;
@@ -125,8 +126,8 @@ void NingerStrategy_Base::Reset()
     case Classes::CLASS_WARLOCK:
     {
         aoe = false;
-        followDistance = FOLLOW_NORMAL_DISTANCE;
-        dpsDistance = RANGE_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        dpsDistance = RANGE_FAR_DISTANCE;
         break;
     }
     case Classes::CLASS_PRIEST:
@@ -134,7 +135,7 @@ void NingerStrategy_Base::Reset()
         aoe = false;
         me->groupRole = GroupRole::GroupRole_Healer;
         followDistance = FOLLOW_FAR_DISTANCE;
-        dpsDistance = RANGE_NORMAL_DISTANCE;
+        dpsDistance = RANGE_FAR_DISTANCE;
         break;
     }
     case Classes::CLASS_ROGUE:
@@ -144,16 +145,16 @@ void NingerStrategy_Base::Reset()
     case Classes::CLASS_MAGE:
     {
         aoe = false;
-        followDistance = FOLLOW_NORMAL_DISTANCE;
-        dpsDistance = RANGE_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        dpsDistance = RANGE_FAR_DISTANCE;
         dpsDistanceMin = RANGE_NEAR_DISTANCE;
         break;
     }
     case Classes::CLASS_DRUID:
     {
         aoe = false;
-        followDistance = FOLLOW_NORMAL_DISTANCE;
-        dpsDistance = RANGE_NORMAL_DISTANCE;
+        followDistance = FOLLOW_FAR_DISTANCE;
+        dpsDistance = RANGE_FAR_DISTANCE;
         break;
     }
     default:
@@ -177,10 +178,6 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
     {
         return;
     }
-    //if (me->HasUnitState(UnitState::UNIT_STATE_ROAMING_MOVE))
-    //{
-    //	return;
-    //}
     me->ningerAction->Update(pmDiff);
     if (actionLimit > 0)
     {
@@ -288,6 +285,24 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
         }
         if (GroupInCombat())
         {
+            if (vipEntry > 0)
+            {
+                if (vipCheckDelay > 0)
+                {
+                    vipCheckDelay -= pmDiff;
+                    if (vipCheckDelay <= 0)
+                    {
+                        vipCheckDelay = 2000;
+                        if (ogVip.IsEmpty())
+                        {
+                            if (Creature* vipC = me->FindNearestCreature(vipEntry, VISIBILITY_DISTANCE_NORMAL))
+                            {
+                                ogVip = vipC->GetGUID();
+                            }
+                        }
+                    }
+                }
+            }
             combatDuration += pmDiff;
             restLimit = 0;
             if (basicStrategyType == BasicStrategyType::BasicStrategyType_Freeze)
@@ -350,7 +365,6 @@ void NingerStrategy_Base::Update(uint32 pmDiff)
         {
             rushing = false;
             combatDuration = 0;
-            combatAngleINT = 0;
             if (restLimit > 0)
             {
                 restLimit -= pmDiff;
@@ -585,7 +599,7 @@ bool NingerStrategy_Base::TryTank()
             {
                 if (ogTankTarget->GetTarget() != me->GetGUID())
                 {
-                    if (me->ningerAction->Tank(ogTankTarget, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
+                    if (DoTank(ogTankTarget))
                     {
                         return true;
                     }
@@ -599,7 +613,7 @@ bool NingerStrategy_Base::TryTank()
             {
                 if (myTarget->GetTarget() != me->GetGUID())
                 {
-                    if (me->ningerAction->Tank(myTarget, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
+                    if (DoTank(myTarget))
                     {
                         myGroup->SetTargetIcon(7, me->GetGUID(), myTarget->GetGUID());
                         return true;
@@ -655,13 +669,13 @@ bool NingerStrategy_Base::TryTank()
         }
         if (nearestOTUnit)
         {
-            if (me->ningerAction->Tank(nearestOTUnit, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
+            if (DoTank(nearestOTUnit))
             {
                 myGroup->SetTargetIcon(7, me->GetGUID(), nearestOTUnit->GetGUID());
                 return true;
             }
         }
-        if (me->ningerAction->Tank(ogTankTarget, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
+        if (DoTank(ogTankTarget))
         {
             return true;
         }
@@ -669,7 +683,7 @@ bool NingerStrategy_Base::TryTank()
         {
             if (!sNingerManager->IsPolymorphed(myTarget))
             {
-                if (me->ningerAction->Tank(myTarget, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
+                if (DoTank(myTarget))
                 {
                     myGroup->SetTargetIcon(7, me->GetGUID(), myTarget->GetGUID());
                     return true;
@@ -705,7 +719,7 @@ bool NingerStrategy_Base::TryTank()
         }
         if (nearestAttacker)
         {
-            if (me->ningerAction->Tank(nearestAttacker, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
+            if (DoTank(nearestAttacker))
             {
                 myGroup->SetTargetIcon(7, me->GetGUID(), nearestAttacker->GetGUID());
                 return true;
@@ -722,19 +736,9 @@ bool NingerStrategy_Base::DoTank(Unit* pmTarget)
     {
         return false;
     }
-    if (Group* myGroup = me->GetGroup())
+    if (me->ningerAction->Tank(pmTarget, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
     {
-        if (me->groupRole == GroupRole::GroupRole_Tank)
-        {
-            if (me->ningerAction->Tank(pmTarget, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
-            {
-                if (myGroup->GetGuidByTargetIcon(7) != pmTarget->GetGUID())
-                {
-                    myGroup->SetTargetIcon(7, me->GetGUID(), pmTarget->GetGUID());
-                }
-                return true;
-            }
-        }
+        return true;
     }
 
     return false;
@@ -757,6 +761,28 @@ bool NingerStrategy_Base::TryDPS(bool pmDelay, bool pmForceInstantOnly, bool pmC
     else if (!me->IsAlive())
     {
         return false;
+    }
+
+    if (!ogVip.IsEmpty())
+    {
+        if (Unit* vip = ObjectAccessor::GetUnit(*me, ogVip))
+        {
+            if (vip->IsAlive())
+            {
+                if (DoDPS(vip, pmForceInstantOnly, pmChasing))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                ogVip.Clear();
+            }
+        }
+        else
+        {
+            ogVip.Clear();
+        }
     }
 
     if (Group* myGroup = me->GetGroup())
@@ -1452,12 +1478,6 @@ void NingerStrategy_Magisters_Terrace::Update(uint32 pmDiff)
             return;
         }
     }
-    if (!me->HasAura(44227))
-    {
-        me->SetCanFly(false);
-        me->m_movementInfo.RemoveMovementFlag(MovementFlags::MOVEMENTFLAG_FLYING);
-        me->m_movementInfo.RemoveMovementFlag(MovementFlags::MOVEMENTFLAG_CAN_FLY);
-    }
     if (basicStrategyType == BasicStrategyType::BasicStrategyType_Glue)
     {
         switch (me->groupRole)
@@ -1492,17 +1512,7 @@ void NingerStrategy_Magisters_Terrace::Update(uint32 pmDiff)
                     {
                         me->ningerAction->nm->ResetMovement();
                         me->InterruptNonMeleeSpells(false);
-                        if (me->HasAura(44227))
-                        {
-                            me->SetCanFly(true);
-                            me->m_movementInfo.AddMovementFlag(MovementFlags::MOVEMENTFLAG_FLYING);
-                            me->m_movementInfo.AddMovementFlag(MovementFlags::MOVEMENTFLAG_CAN_FLY);
-                            me->GetMotionMaster()->MovePoint(0, leader->GetPosition());
-                        }
-                        else
-                        {
-                            me->GetMotionMaster()->MovePoint(0, leader->GetPosition());
-                        }
+                        me->GetMotionMaster()->MovePoint(0, leader->GetPosition());
                     }
                     return;
                 }
@@ -1697,6 +1707,323 @@ bool NingerStrategy_Magisters_Terrace::DoHeal(Unit* pmTarget, bool pmForceInstan
             {
                 kael = true;
             }
+        }
+    }
+
+    return NingerStrategy_Base::DoHeal(pmTarget, pmForceInstantOnly);
+}
+
+NingerStrategy_Azjol_Nerub::NingerStrategy_Azjol_Nerub() : NingerStrategy_Base()
+{
+    arak = false;
+    center.m_positionX = 551;
+    center.m_positionY = 253;
+    center.m_positionZ = 224;
+    centerCheckDelay = 0;
+    spawnCheckDelay = 0;
+}
+
+void NingerStrategy_Azjol_Nerub::Update(uint32 pmDiff)
+{
+    if (!me)
+    {
+        arak = false;
+    }
+    else if (!me->IsAlive())
+    {
+        arak = false;
+    }
+    else if (!me->IsInCombat())
+    {
+        arak = false;
+    }
+    else if (arak)
+    {
+        me->ningerAction->Update(pmDiff);
+        if (actionLimit > 0)
+        {
+            actionLimit -= pmDiff;
+            if (actionLimit < 0)
+            {
+                actionLimit = 0;
+            }
+            return;
+        }
+        if (spawnCheckDelay > 0)
+        {
+            spawnCheckDelay -= pmDiff;
+        }
+        Creature* boss = me->FindNearestCreature(29120, VISIBILITY_DISTANCE_NORMAL);
+        if (!boss)
+        {
+            boss = me->FindNearestCreature(31610, VISIBILITY_DISTANCE_NORMAL);
+        }
+        if (boss)
+        {
+            if (Spell* pounding = boss->GetCurrentSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL))
+            {
+                if (pounding->m_spellInfo->Id == 53472 || pounding->m_spellInfo->Id == 59433)
+                {
+                    float bossDistance = me->GetDistance(boss);
+                    if (boss->isInFront(me, FOLLOW_NORMAL_DISTANCE))
+                    {
+                        Position dodgePos;
+                        boss->GetNearPoint(boss, dodgePos.m_positionX, dodgePos.m_positionY, dodgePos.m_positionZ, 0.0f, FOLLOW_NEAR_DISTANCE, boss->GetOrientation() + M_PI);
+                        actionLimit = 2000;
+                        actionType = ActionType::ActionType_Move;
+                        me->ningerAction->nm->Point(dodgePos, actionLimit);
+                        return;
+                    }
+                }
+            }
+        }
+        if (Creature* impale = me->FindNearestCreature(29184, INTERACTION_DISTANCE))
+        {
+            Position dodgePos;
+            impale->GetNearPoint(impale, dodgePos.m_positionX, dodgePos.m_positionY, dodgePos.m_positionZ, 0.0f, FOLLOW_NORMAL_DISTANCE, impale->GetAngle(&center));
+            actionLimit = 1000;
+            actionType = ActionType::ActionType_Move;
+            me->ningerAction->nm->Point(dodgePos, actionLimit);
+            return;
+        }
+
+        if (centerCheckDelay > 0)
+        {
+            centerCheckDelay -= pmDiff;
+        }
+        else
+        {
+            centerCheckDelay = 5000;
+            return;
+            float centerDistance = me->GetDistance(center);
+            if (centerDistance > RANGE_FAR_DISTANCE)
+            {
+                centerDistance = centerDistance - RANGE_FAR_DISTANCE;
+                Position inPos;
+                me->GetNearPoint(me, inPos.m_positionX, inPos.m_positionY, inPos.m_positionZ, 0.0f, centerDistance, me->GetAngle(&center));
+                actionLimit = 2000;
+                actionType = ActionType::ActionType_Move;
+                me->ningerAction->nm->Point(inPos, actionLimit);
+                return;
+            }
+        }
+    }
+
+    NingerStrategy_Base::Update(pmDiff);
+}
+
+bool NingerStrategy_Azjol_Nerub::TryTank()
+{
+    if (arak)
+    {
+        Unit* myTarget = me->GetSelectedUnit();
+        if (spawnCheckDelay <= 0)
+        {
+            spawnCheckDelay = 3000;
+            uint32 myTargetEntry = 0;
+            if (myTarget)
+            {
+                myTargetEntry = myTarget->GetEntry();
+            }
+            if (Group* myGroup = me->GetGroup())
+            {
+                if (Creature* spawn = me->FindNearestCreature(29216, RANGE_NORMAL_DISTANCE))
+                {
+                    if (spawn->GetDistance(center) < RANGE_FAR_DISTANCE)
+                    {
+                        if (myTargetEntry == 29216)
+                        {
+                            if (DoTank(myTarget))
+                            {
+                                return true;
+                            }
+                        }
+                        if (DoTank(spawn))
+                        {
+                            myGroup->SetTargetIcon(7, me->GetGUID(), spawn->GetGUID());
+                            return true;
+                        }
+                    }
+                }
+                if (Creature* spawn = me->FindNearestCreature(29217, RANGE_NORMAL_DISTANCE))
+                {
+                    if (spawn->GetDistance(center) < RANGE_FAR_DISTANCE)
+                    {
+                        if (myTargetEntry == 29217)
+                        {
+                            if (DoTank(myTarget))
+                            {
+                                return true;
+                            }
+                        }
+                        if (DoTank(spawn))
+                        {
+                            myGroup->SetTargetIcon(7, me->GetGUID(), spawn->GetGUID());
+                            return true;
+                        }
+                    }
+                }
+                if (Creature* spawn = me->FindNearestCreature(29214, RANGE_NORMAL_DISTANCE))
+                {
+                    if (spawn->GetDistance(center) < RANGE_FAR_DISTANCE)
+                    {
+                        if (myTargetEntry == 29214)
+                        {
+                            if (DoTank(myTarget))
+                            {
+                                return true;
+                            }
+                        }
+                        if (DoTank(spawn))
+                        {
+                            myGroup->SetTargetIcon(7, me->GetGUID(), spawn->GetGUID());
+                            return true;
+                        }
+                    }
+                }
+                if (Creature* spawn = me->FindNearestCreature(29213, RANGE_NORMAL_DISTANCE))
+                {
+                    if (spawn->GetDistance(center) < RANGE_FAR_DISTANCE)
+                    {
+                        if (myTargetEntry == 29213)
+                        {
+                            if (DoTank(myTarget))
+                            {
+                                return true;
+                            }
+                        }
+                        if (DoTank(spawn))
+                        {
+                            myGroup->SetTargetIcon(7, me->GetGUID(), spawn->GetGUID());
+                            return true;
+                        }
+                    }
+                }
+                if (Creature* boss = me->FindNearestCreature(29120, RANGE_NORMAL_DISTANCE))
+                {
+                    if (boss->GetDistance(center) < RANGE_FAR_DISTANCE)
+                    {
+                        if (myTargetEntry == 29120)
+                        {
+                            if (DoTank(myTarget))
+                            {
+                                return true;
+                            }
+                        }
+                        if (DoTank(boss))
+                        {
+                            myGroup->SetTargetIcon(7, me->GetGUID(), boss->GetGUID());
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        if (DoTank(myTarget))
+        {
+            return true;
+        }
+    }
+
+    return NingerStrategy_Base::TryTank();
+}
+
+bool NingerStrategy_Azjol_Nerub::DoTank(Unit* pmTarget)
+{
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        return false;
+    }
+    if (pmTarget->GetEntry() == 29120 || pmTarget->GetEntry() == 31610)
+    {
+        arak = true;
+        if (pmTarget->HasAura(53421))
+        {
+            return false;
+        }
+        //if (me->IsWithinMeleeRange(pmTarget, MELEE_MAX_DISTANCE))
+        //{
+        //    if (!me->isMoving())
+        //    {
+        //        if (Group* myGroup = me->GetGroup())
+        //        {
+        //            if (Player* leader = myGroup->GetLeader())
+        //            {
+        //                if (!me->isInFront(leader, M_PI_4))
+        //                {
+        //                    Position tankPos;
+        //                    pmTarget->GetNearPoint(pmTarget, tankPos.m_positionX, tankPos.m_positionY, tankPos.m_positionZ, pmTarget->GetCombatReach() / 2.0f, MELEE_MAX_DISTANCE, leader->GetAngle(pmTarget));
+        //                    actionLimit = 2000;
+        //                    actionType = ActionType::ActionType_Move;
+        //                    me->ningerAction->nm->Point(tankPos, actionLimit);
+        //                    return true;
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
+    }
+    //if (arak)
+    //{
+    //    float zGap = me->GetPositionZ() - pmTarget->GetPositionZ();
+    //    if (zGap < -2.0f || zGap > 2.0f)
+    //    {
+    //        return false;
+    //    }
+    //}
+
+    return NingerStrategy_Base::DoTank(pmTarget);
+}
+
+bool NingerStrategy_Azjol_Nerub::DoDPS(Unit* pmTarget, bool pmForceInstantOnly, bool pmChasing)
+{
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        return false;
+    }
+    if (pmTarget->GetEntry() == 29120 || pmTarget->GetEntry() == 31610)
+    {
+        arak = true;
+        if (pmTarget->HasAura(53421))
+        {
+            return false;
+        }
+    }
+    //if (arak)
+    //{
+    //    float zGap = me->GetPositionZ() - pmTarget->GetPositionZ();
+    //    if (zGap < -2.0f || zGap > 2.0f)
+    //    {
+    //        return false;
+    //    }
+    //}
+
+    return NingerStrategy_Base::DoDPS(pmTarget, pmForceInstantOnly, pmChasing);
+}
+
+bool NingerStrategy_Azjol_Nerub::DoHeal(Unit* pmTarget, bool pmForceInstantOnly)
+{
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        return false;
+    }
+    if (Unit* targetTarget = pmTarget->GetMap()->GetCreature(pmTarget->GetTarget()))
+    {
+        if (targetTarget->GetEntry() == 29120 || targetTarget->GetEntry() == 31610)
+        {
+            arak = true;
         }
     }
 

@@ -794,8 +794,12 @@ BOOL WheatyExceptionReport::GetLogicalAddress(
             i++, pSection++)
     {
         DWORD_PTR sectionStart = pSection->VirtualAddress;
-        DWORD_PTR sectionEnd = sectionStart
-                               + DWORD_PTR(std::max(pSection->SizeOfRawData, pSection->Misc.VirtualSize));
+        DWORD maxOne = pSection->SizeOfRawData;
+        if (pSection->Misc.VirtualSize > maxOne)
+        {
+            maxOne = pSection->Misc.VirtualSize;
+        }
+        DWORD_PTR sectionEnd = sectionStart + DWORD_PTR(maxOne);
 
         // Is the address in this section???
         if ((rva >= sectionStart) && (rva <= sectionEnd))

@@ -155,8 +155,17 @@ void TempSummon::Update(uint32 diff)
                 // if m_deathState is DEAD, CORPSE was skipped
                 if (m_deathState == CORPSE)
                 {
-                    UnSummon();
-                    return;
+                    // lfm corpse will do respawn count down
+                    if (m_timer <= diff)
+                    {
+                        UnSummon();
+                        return;
+                    }
+                    else
+                    {
+                        m_timer -= diff;
+                        return;
+                    }
                 }
 
                 if (!IsInCombat())

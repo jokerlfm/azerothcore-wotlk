@@ -688,6 +688,13 @@ void Creature::Update(uint32 diff)
             }
         case ALIVE:
             {
+                // lfm debug
+                //uint32 myEntry = GetEntry();
+                //if (myEntry == 29861)
+                //{
+                //    bool bp = true;
+                //}
+
                 Unit::Update(diff);
 
                 // creature can be dead after Unit::Update call
@@ -1456,34 +1463,35 @@ void Creature::SelectLevel(bool changelevel)
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:
         {
-            CreatureTemplate const* cinfo = ci;
-            for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
+            if (ci->expansion < 2)
             {
-                // we already have valid Map pointer for current creature!
-                if (ci->DifficultyEntry[diff - 1])
+                CreatureTemplate const* cinfo = ci;
+                for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
                 {
-                    cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
-                    if (cinfo)
-                        break;                                      // template found
+                    // we already have valid Map pointer for current creature!
+                    if (ci->DifficultyEntry[diff - 1])
+                    {
+                        cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
+                        if (cinfo)
+                            break;                                      // template found
 
-                    // check and reported at startup, so just ignore (restore normalInfo)
-                    cinfo = ci;
+                        // check and reported at startup, so just ignore (restore normalInfo)
+                        cinfo = ci;
+                    }
+
+                    // for instances heroic to normal, other cases attempt to retrieve previous difficulty
+                    if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
+                        diff -= 2;                                      // to normal raid difficulty cases
+                    else
+                        --diff;
                 }
-
-                // for instances heroic to normal, other cases attempt to retrieve previous difficulty
-                if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
-                    diff -= 2;                                      // to normal raid difficulty cases
-                else
-                    --diff;
+                if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
+                {
+                    lfmMultiplier = 1.5f;
+                    break;
+                }
             }
-            if (sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
-            {
-                lfmMultiplier = 1.25f;
-            }
-            else
-            {
-                lfmMultiplier = 1.5f;
-            }
+            lfmMultiplier = 1.25f;
             break;
         }
         case CreatureEliteType::CREATURE_ELITE_RARE:
@@ -1798,6 +1806,12 @@ void Creature::LoadEquipment(int8 id, bool force /*= false*/)
     m_equipmentId = id;
     for (uint8 i = 0; i < 3; ++i)
         SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + i, einfo->ItemEntry[i]);
+
+    // lfm same item in both hands will enable creature dual
+    if (GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID) > 0 && GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID) == GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1))
+    {
+        SetCanDualWield(true);
+    }
 }
 
 bool Creature::hasQuest(uint32 quest_id) const

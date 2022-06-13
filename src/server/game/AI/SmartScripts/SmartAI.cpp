@@ -523,8 +523,11 @@ void SmartAI::UpdateAI(uint32 diff)
             mFollowArrivedTimer -= diff;
     }
 
-    if (!IsAIControlled())
-        return;
+    // lfm smart ai will do attack checking 
+    //if (!IsAIControlled())
+    //{
+    //    return;
+    //}
 
     if (!UpdateVictim())
         return;

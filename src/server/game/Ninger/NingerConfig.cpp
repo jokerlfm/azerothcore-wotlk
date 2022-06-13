@@ -476,10 +476,10 @@ bool NingerConfig::StartNinger()
 
     if (Enable == 0)
     {
-        sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "ninger is disabled.");
+        sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "ninger is disabled.");
         return false;
     }
-    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_INFO, "ninger started.");
+    sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "ninger started.");
     return true;
 }
 

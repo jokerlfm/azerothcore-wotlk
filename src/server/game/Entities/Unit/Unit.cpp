@@ -11335,29 +11335,32 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 }
                 case CreatureEliteType::CREATURE_ELITE_ELITE:
                 {
-                    CreatureTemplate const* cinfo = ci;
-                    for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
+                    if (ci->expansion < 2)
                     {
-                        // we already have valid Map pointer for current creature!
-                        if (ci->DifficultyEntry[diff - 1])
+                        CreatureTemplate const* cinfo = ci;
+                        for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
                         {
-                            cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
-                            if (cinfo)
-                                break;                                      // template found
+                            // we already have valid Map pointer for current creature!
+                            if (ci->DifficultyEntry[diff - 1])
+                            {
+                                cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
+                                if (cinfo)
+                                    break;                                      // template found
 
-                            // check and reported at startup, so just ignore (restore normalInfo)
-                            cinfo = ci;
+                                // check and reported at startup, so just ignore (restore normalInfo)
+                                cinfo = ci;
+                            }
+
+                            // for instances heroic to normal, other cases attempt to retrieve previous difficulty
+                            if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
+                                diff -= 2;                                      // to normal raid difficulty cases
+                            else
+                                --diff;
                         }
-
-                        // for instances heroic to normal, other cases attempt to retrieve previous difficulty
-                        if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
-                            diff -= 2;                                      // to normal raid difficulty cases
-                        else
-                            --diff;
-                    }
-                    if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
-                    {
-                        tmpDamage = tmpDamage * 1.5f;
+                        if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
+                        {
+                            tmpDamage = tmpDamage * 1.5f;
+                        }
                     }
                     break;
                 }

@@ -1583,7 +1583,9 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                 // Alchemy: Mixology
                 if (caster && caster->HasAura(53042) && caster->GetTypeId() == TYPEID_PLAYER && !caster->ToPlayer()->GetSession()->PlayerLoading())
                 {
-                    if (sSpellMgr->GetSpellGroup(GetId()) == 1) /*Elixirs*/
+                    // lfm elixir should be 1 and 2
+                    uint32 spellGroup = sSpellMgr->GetSpellGroup(GetId());
+                    if (spellGroup == 1 || spellGroup == 2) /*Elixirs*/
                     {
                         if (caster->HasSpell(GetSpellInfo()->Effects[EFFECT_0].TriggerSpell))
                         {
