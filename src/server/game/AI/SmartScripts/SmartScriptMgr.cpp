@@ -242,6 +242,12 @@ void SmartAIMgr::LoadSmartAIFromDB()
         temp.target.z = fields[27].Get<float>();
         temp.target.o = fields[28].Get<float>();
 
+        // lfm smart target none will set to self
+        if (temp.target.type == SMARTAI_TARGETS::SMART_TARGET_NONE)
+        {
+            temp.target.type = SMARTAI_TARGETS::SMART_TARGET_SELF;
+        }
+
         //check target
         if (!IsTargetValid(temp))
             continue;

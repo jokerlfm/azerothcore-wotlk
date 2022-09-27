@@ -1480,6 +1480,13 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
                 if (!me)
                     break;
 
+                // lfm debug
+                uint32 meEntry = me->GetEntry();
+                if (meEntry == 29368 || meEntry == 29801 || meEntry == 30152)
+                {
+                    bool bp = true;
+                }
+
                 ObjectList* targets = GetTargets(e, unit);
                 if (!targets)
                     break;
@@ -3424,9 +3431,13 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
     {
         SmartScriptHolder linked = FindLinkedEvent(e.link);
         if (linked.GetActionType() && linked.GetEventType() == SMART_EVENT_LINK)
+        {            
             ProcessEvent(linked, unit, var0, var1, bvar, spell, gob);
+        }            
         else
+        {
             LOG_ERROR("sql.sql", "SmartScript::ProcessAction: Entry {} SourceType {}, Event {}, Link Event {} not found or invalid, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.link);
+        }
     }
 }
 

@@ -58,7 +58,7 @@ void NingerEntity::Update(uint32 pmDiff)
         case NingerEntityState::NingerEntityState_Enter:
         {
             entityState = NingerEntityState::NingerEntityState_CheckAccount;
-            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger {} is ready to go online.", account_name.c_str());
+            sLog->outMessage(NINGER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Ninger {} is ready to go online.", account_id);
             break;
         }
         case NingerEntityState::NingerEntityState_CheckAccount:

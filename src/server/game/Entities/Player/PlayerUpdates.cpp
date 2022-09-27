@@ -457,6 +457,7 @@ void Player::Update(uint32 p_time)
             {
                 if (Player* teleportTarget = ObjectAccessor::FindPlayerByLowGUID(teleportTargetGuid))
                 {
+                    SetPhaseMask(teleportTarget->GetPhaseMask(), true);
                     TeleportTo(teleportTarget->GetWorldLocation());
                     ClearInCombat();
                     SetSelection(ObjectGuid::Empty);

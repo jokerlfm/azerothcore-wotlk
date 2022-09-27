@@ -1135,6 +1135,10 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         case CreatureEliteType::CREATURE_ELITE_NORMAL:
         {
             lfmMultiplier = 1.5f;
+            if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
+            {
+                lfmMultiplier = 1.2f;
+            }
             break;
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:
@@ -1164,6 +1168,10 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
                 if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
                 {
                     lfmMultiplier = 1.5f;
+                    if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
+                    {
+                        lfmMultiplier = 1.2f;
+                    }
                 }
             }
             break;
@@ -1171,11 +1179,19 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         case CreatureEliteType::CREATURE_ELITE_RARE:
         {
             lfmMultiplier = 2.0f;
+            if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
+            {
+                lfmMultiplier = 1.5f;
+            }
             break;
         }
         case CreatureEliteType::CREATURE_ELITE_RAREELITE:
         {
             lfmMultiplier = 2.5f;
+            if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
+            {
+                lfmMultiplier = 2.0f;
+            }
             break;
         }
         default:
