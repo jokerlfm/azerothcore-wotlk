@@ -22,6 +22,7 @@
 #include "Define.h"
 #include "SharedDefines.h"
 #include "Util.h"
+#include <array>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -977,6 +978,13 @@ struct FactionTemplateEntry
         return hostileMask == 0 && friendlyMask == 0;
     }
     [[nodiscard]] bool IsContestedGuardFaction() const { return (factionFlags & FACTION_TEMPLATE_FLAG_ATTACK_PVP_ACTIVE_PLAYERS) != 0; }
+};
+
+struct GameObjectArtKitEntry
+{
+    uint32 ID;                                              // 0
+    //char* TextureVariation[3]                             // 1-3 m_textureVariations[3]
+    //char* AttachModel[4]                                  // 4-8 m_attachModels[4]
 };
 
 struct GameObjectDisplayInfoEntry
@@ -2196,6 +2204,7 @@ typedef std::map<uint32, TaxiPathSetForSource> TaxiPathSetBySource;
 typedef std::vector<TaxiPathNodeEntry const*> TaxiPathNodeList;
 typedef std::vector<TaxiPathNodeList> TaxiPathNodesByPath;
 
-#define TaxiMaskSize 14
-typedef uint32 TaxiMask[TaxiMaskSize];
+static constexpr size_t TaxiMaskSize = 14;
+typedef std::array<uint32, TaxiMaskSize> TaxiMask;
+
 #endif

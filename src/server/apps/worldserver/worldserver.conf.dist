@@ -869,6 +869,14 @@ StartHeroicPlayerLevel = 55
 StartPlayerMoney = 0
 
 #
+#    StartHeroicPlayerMoney
+#        Description: Amount of money (in Copper) that heroic class characters have after creation.
+#        Default:     2000
+#                     2000 - (20 Silver)
+
+StartHeroicPlayerMoney = 2000
+
+#
 #    MaxHonorPoints
 #        Description: Maximum honor points a character can have.
 #        Default:     75000
@@ -1881,8 +1889,23 @@ ChatFlood.MessageCount = 10
 ChatFlood.MessageDelay = 1
 
 #
+#    ChatFlood.AddonMessageCount
+#        Description: Chat flood protection, number of addon messages before player gets muted.
+#        Default:     100 - (Enabled)
+#                     0  - (Disabled)
+
+ChatFlood.AddonMessageCount = 100
+
+#
+#    ChatFlood.AddonMessageDelay
+#        Description: Time (in seconds) between addon messages to be counted into ChatFlood.AddonMessageCount.
+#        Default:     1
+
+ChatFlood.AddonMessageDelay = 1
+
+#
 #    ChatFlood.MuteTime
-#        Description: Time (in seconds) characters get muted for violating ChatFlood.MessageCount.
+#        Description: Time (in seconds) characters get muted for violating ChatFlood.MessageCount / ChatFlood.AddonMessageCount.
 #        Default:     10
 
 ChatFlood.MuteTime = 10
@@ -2132,6 +2155,22 @@ Visibility.Distance.BGArenas = 180
 Visibility.Notify.Period.OnContinents = 1000
 Visibility.Notify.Period.InInstances  = 1000
 Visibility.Notify.Period.InBGArenas   = 1000
+
+#
+#    Visibility.ObjectSparkles
+#        Description: Whether or not to display sparkles on gameobjects related to active quests.
+#        Default:     1 - (Show Sparkles)
+#                     0 - (Hide Sparkles)
+
+Visibility.ObjectSparkles = 1
+
+#
+#    Visibility.ObjectQuestMarkers
+#        Description: Show quest icons above game objects in the same way as creature quest givers.
+#        Default:     1 - (Show quest markers, post patch 2.3 behavior)
+#                     0 - (Hide quest markers, pre patch 2.3 behavior)
+
+Visibility.ObjectQuestMarkers = 1
 
 #
 ###################################################################################################
@@ -2423,7 +2462,16 @@ Rate.InstanceResetTime = 1
 #       The lower the rate the less experience is required.
 #        Default:     0.05
 #
+
 Rate.Pet.LevelXP = 0.05
+
+#
+#    WaterBreath.Timer
+#        Description: The timer for player's breath underwater in milliseconds
+#        Default:     180000 (3 minutes)
+#
+
+WaterBreath.Timer = 180000
 
 #
 #    SkillGain.Crafting
@@ -3587,6 +3635,16 @@ Calculate.Creature.Zone.Area.Data = 0
 #
 
 Calculate.Gameoject.Zone.Area.Data = 0
+
+#
+#    Group.Raid.LevelRestriction
+#
+#     The Group members need to the same, or higher level than the specified value.
+#     Minimum level is 10.
+#        Default: 10
+#
+
+Group.Raid.LevelRestriction = 10
 
 #
 #    LFG.Location.All
