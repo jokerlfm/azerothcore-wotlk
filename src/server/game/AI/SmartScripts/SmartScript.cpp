@@ -3171,7 +3171,6 @@ void SmartScript::GetTargets(ObjectVector& targets, SmartScriptHolder const& e, 
             GameObject* target = GetClosestGameObjectWithEntry(ref, e.target.goClosest.entry, (float)(e.target.goClosest.dist ? e.target.goClosest.dist : 100), e.target.goClosest.onlySpawned);
             if (target)
                 targets.push_back(target);
-            }
             break;
         }
         case SMART_TARGET_CLOSEST_PLAYER:

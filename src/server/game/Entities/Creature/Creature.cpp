@@ -2474,9 +2474,12 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
     if (HasUnitState(UNIT_STATE_STUNNED))
         return false;
 
+    // lfm neutral units will do assist
     // is it true?
-    if (!HasReactState(REACT_AGGRESSIVE))
-        return false;
+    //if (!HasReactState(REACT_AGGRESSIVE))
+    //{
+    //    return false;
+    //}
 
     // we don't need help from zombies :)
     if (!IsAlive())
@@ -2517,9 +2520,16 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
             return false;
     }
 
+    // lfm neutral units will do assist
     // skip non hostile to caster enemy creatures
-    if (!IsHostileTo(enemy))
+    //if (!IsHostileTo(enemy))
+    //{
+    //    return false;
+    //}
+    if (IsFriendlyTo(enemy))
+    {
         return false;
+    }
 
     // Check if can see the enemy
     if (!CanSeeOrDetect(enemy))

@@ -5025,7 +5025,10 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
         // Spell is not using explicit target - no generated path
         if (!m_preGeneratedPath)
         {
-            Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
+            // lfm charge to a little further 
+            //Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
+            Position pos;
+            unitTarget->GetNearPoint(unitTarget, pos.m_positionX, pos.m_positionY, pos.m_positionZ, unitTarget->GetCombatReach(), MELEE_RANGE, unitTarget->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
             m_caster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed, EVENT_CHARGE, nullptr, false, 0.0f, targetGUID);
 
             if (m_caster->GetTypeId() == TYPEID_PLAYER)

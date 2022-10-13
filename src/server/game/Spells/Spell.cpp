@@ -6233,7 +6233,12 @@ SpellCastResult Spell::CheckCast(bool strict)
                         m_preGeneratedPath->SetPathLengthLimit(range);
 
                         // first try with raycast, if it fails fall back to normal path
-                        bool result = m_preGeneratedPath->CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
+                        // lfm charge to a little further 
+                        //bool result = m_preGeneratedPath->CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
+                        Position pos;
+                        target->GetNearPoint(target, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, MELEE_RANGE, target->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
+                        bool result = m_preGeneratedPath->CalculatePath(pos.m_positionX, pos.m_positionY, pos.m_positionZ, false);
+
                         if (m_preGeneratedPath->GetPathType() & PATHFIND_SHORT)
                             return SPELL_FAILED_NOPATH;
                         else if (!result || m_preGeneratedPath->GetPathType() & (PATHFIND_NOPATH | PATHFIND_INCOMPLETE))

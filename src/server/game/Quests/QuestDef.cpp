@@ -61,8 +61,25 @@ Quest::Quest(Field* questRecord)
 
     for (int i = 0; i < QUEST_REWARDS_COUNT; ++i)
     {
-        RewardItemId[i] = questRecord[28 + i * 2].Get<uint32>();
-        RewardItemIdCount[i] = questRecord[29 + i * 2].Get<uint16>();
+        // lfm no common equip rewards
+        uint32 itemEntry = questRecord[28 + i * 2].Get<uint32>();
+        uint32 itemCount = questRecord[29 + i * 2].Get<uint16>();
+        if (const ItemTemplate* it = sObjectMgr->GetItemTemplate(itemEntry))
+        {
+            if (it->Class == ItemClass::ITEM_CLASS_WEAPON || it->Class == ItemClass::ITEM_CLASS_ARMOR)
+            {
+                if (it->Quality < ItemQualities::ITEM_QUALITY_RARE)
+                {
+                    itemEntry = 0;
+                    itemCount = 0;
+                }
+            }
+        }
+
+        //RewardItemId[i] = questRecord[28 + i * 2].Get<uint32>();
+        //RewardItemIdCount[i] = questRecord[29 + i * 2].Get<uint16>();
+        RewardItemId[i] = itemEntry;
+        RewardItemIdCount[i] = itemCount;
 
         if (RewardItemId[i])
             ++_rewItemsCount;
@@ -70,8 +87,25 @@ Quest::Quest(Field* questRecord)
 
     for (int i = 0; i < QUEST_REWARD_CHOICES_COUNT; ++i)
     {
-        RewardChoiceItemId[i] = questRecord[36 + i * 2].Get<uint32>();
-        RewardChoiceItemCount[i] = questRecord[37 + i * 2].Get<uint16>();
+        // lfm no common equip rewards
+        uint32 itemEntry = questRecord[36 + i * 2].Get<uint32>();
+        uint32 itemCount = questRecord[37 + i * 2].Get<uint16>();
+        if (const ItemTemplate* it = sObjectMgr->GetItemTemplate(itemEntry))
+        {
+            if (it->Class == ItemClass::ITEM_CLASS_WEAPON || it->Class == ItemClass::ITEM_CLASS_ARMOR)
+            {
+                if (it->Quality < ItemQualities::ITEM_QUALITY_RARE)
+                {
+                    itemEntry = 0;
+                    itemCount = 0;
+                }
+            }
+        }
+
+        //RewardChoiceItemId[i] = questRecord[36 + i * 2].Get<uint32>();
+        //RewardChoiceItemCount[i] = questRecord[37 + i * 2].Get<uint16>();
+        RewardChoiceItemId[i] = itemEntry;
+        RewardChoiceItemCount[i] = itemCount;
 
         if (RewardChoiceItemId[i])
             ++_rewChoiceItemsCount;
