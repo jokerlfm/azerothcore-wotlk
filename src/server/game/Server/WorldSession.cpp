@@ -52,8 +52,8 @@
 #include "WorldSocket.h"
 #include <zlib.h>
 
-// lfm ninger
-#include "NingerAction_Rogue.h"
+// lfm nier
+#include "NierAction_Rogue.h"
 
 namespace
 {
@@ -154,8 +154,8 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
         LoginDatabase.Execute("UPDATE account SET online = 1 WHERE id = {};", GetAccountId()); // One-time query
     }
 
-    // lfm ninger
-    isNinger = false;
+    // lfm nier
+    isNier = false;
 }
 
 /// WorldSession destructor
@@ -219,11 +219,11 @@ void WorldSession::SendPacket(WorldPacket const* packet)
         return;
     }
 
-    // lfm ninger    
-    if (isNinger)
+    // lfm nier    
+    if (isNier)
     {
         WorldPacket eachCopy(*packet);
-        HandlePacket(eachCopy);
+        sNierManager->HandlePacket(this, eachCopy);
         return;
     }
 
@@ -303,13 +303,13 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
-    // lfm ninger    
-    if (isNinger)
+    // lfm nier    
+    if (isNier)
     {
         ProcessQueryCallbacks();
         if (_player)
         {
-            if (_player->strategyMap.size() > 0)
+            if (_player->nierStrategyMap.size() > 0)
             {
                 if (_player->IsBeingTeleportedNear())
                 {
@@ -1672,185 +1672,4 @@ void WorldSession::SendTimeSync()
     // Schedule next sync in 10 sec (except for the 2 first packets, which are spaced by only 5s)
     _timeSyncTimer = _timeSyncNextCounter == 0 ? 5000 : 10000;
     _timeSyncNextCounter++;
-}
-
-// lfm ninger
-void WorldSession::HandlePacket(WorldPacket pmPacket)
-{
-    switch (pmPacket.GetOpcode())
-    {
-    case SMSG_CHAR_ENUM:
-    {
-        std::unordered_set<uint32> myCharacterIdSet;
-        QueryResult characterQR = CharacterDatabase.Query("SELECT guid FROM characters where account = {}", GetAccountId());
-        if (characterQR)
-        {
-            Field* characterFields = characterQR->Fetch();
-            uint32 character_id = characterFields[0].Get<uint32>();
-            if (character_id > 0)
-            {
-                myCharacterIdSet.insert(character_id);
-            }
-        }
-        for (std::unordered_set<NingerEntity*>::iterator reIT = sNingerManager->ningerEntitySet.begin(); reIT != sNingerManager->ningerEntitySet.end(); reIT++)
-        {
-            if (NingerEntity* re = *reIT)
-            {
-                if (myCharacterIdSet.find(re->character_id) != myCharacterIdSet.end())
-                {
-                    re->entityState = NingerEntityState::NingerEntityState_DoLogin;
-                }
-            }
-        }
-        break;
-    }
-    case SMSG_SPELL_FAILURE:
-    {
-        break;
-    }
-    case SMSG_SPELL_DELAYED:
-    {
-        break;
-    }
-    case SMSG_GROUP_INVITE:
-    {
-        if (!_player)
-        {
-            break;
-        }
-        else if (!_player->IsInWorld())
-        {
-            break;
-        }
-        else if (!_player->ningerAction)
-        {
-            break;
-        }
-        if (Group* myGroup = _player->GetGroup())
-        {
-            _player->RemoveFromGroup();
-            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, false);
-            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, true);
-        }
-        if (Group* grp = _player->GetGroupInvite())
-        {
-            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, false);
-            _player->ResetInstances(_player->GetGUID(), InstanceResetMethod::INSTANCE_RESET_ALL, true);
-            WorldPacket wpAccept(CMSG_GROUP_ACCEPT, 4);
-            wpAccept << uint32(0);
-            _player->GetSession()->HandleGroupAcceptOpcode(wpAccept);
-            std::ostringstream replyStream_Talent;
-            _player->ningerAction->Reset();
-            replyStream_Talent << sNingerManager->characterTalentTabNameMap[_player->getClass()][_player->ningerAction->specialty];
-            if (Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID()))
-            {
-                _player->Whisper(replyStream_Talent.str(), Language::LANG_UNIVERSAL, inviter);
-            }            
-            if (_player->getClass() == Classes::CLASS_ROGUE)
-            {
-                if (NingerAction_Rogue* nar = (NingerAction_Rogue*)_player->ningerAction)
-                {
-                    nar->CancelAura(nar->spell_Stealth);
-                }
-            }
-        }
-        break;
-    }
-    case BUY_ERR_NOT_ENOUGHT_MONEY:
-    {
-        break;
-    }
-    case BUY_ERR_REPUTATION_REQUIRE:
-    {
-        break;
-    }
-    case MSG_RAID_READY_CHECK:
-    {
-        break;
-    }
-    case SMSG_GROUP_SET_LEADER:
-    {
-        //std::string leaderName = "";
-        //pmPacket >> leaderName;
-        //Player* newLeader = ObjectAccessor::FindPlayerByName(leaderName);
-        //if (newLeader)
-        //{
-        //    if (newLeader->GetGUID() == me->GetGUID())
-        //    {
-        //        WorldPacket data(CMSG_GROUP_SET_LEADER, 8);
-        //        data << master->GetGUID().WriteAsPacked();
-        //        me->GetSession()->HandleGroupSetLeaderOpcode(data);
-        //    }
-        //    else
-        //    {
-        //        if (!newLeader->isninger)
-        //        {
-        //            master = newLeader;
-        //        }
-        //    }
-        //}
-        break;
-    }
-    case SMSG_RESURRECT_REQUEST:
-    {
-        if (!_player)
-        {
-            break;
-        }
-        else if (!_player->IsInWorld())
-        {
-            break;
-        }
-        else if (!_player->ningerAction)
-        {
-            break;
-        }
-        if (_player->isResurrectRequested())
-        {
-            _player->ResurectUsingRequestData();
-            _player->ClearInCombat();
-            _player->ningerAction->nm->ResetMovement();
-            _player->ningerAction->ClearTarget();
-        }
-        break;
-    }
-    case SMSG_INVENTORY_CHANGE_FAILURE:
-    {
-        break;
-    }
-    case SMSG_TRADE_STATUS:
-    {
-        break;
-    }
-    case SMSG_LOOT_RESPONSE:
-    {
-        break;
-    }
-    case SMSG_ITEM_PUSH_RESULT:
-    {
-        break;
-    }
-    case SMSG_PARTY_COMMAND_RESULT:
-    {
-        break;
-    }
-    case SMSG_DUEL_REQUESTED:
-    {
-        if (!_player)
-        {
-            break;
-        }
-        if (!_player->duel)
-        {
-            break;
-        }
-        _player->DuelComplete(DuelCompleteType::DUEL_INTERRUPTED);
-        _player->Whisper("Not interested", Language::LANG_UNIVERSAL, _player->duel->Opponent);
-        break;
-    }
-    default:
-    {
-        break;
-    }
-    }
 }

@@ -54,8 +54,8 @@
 #include "StringConvert.h"
 #include "Tokenize.h"
 
- // lfm minger
-#include "MingerManager.h"
+ // lfm ming
+#include "MingManager.h"
 
 ScriptMapMap sSpellScripts;
 ScriptMapMap sEventScripts;
@@ -2558,11 +2558,11 @@ void ObjectMgr::LoadGameobjects()
         //{
         //    AddGameobjectToGrid(guid, &data);
         //}
-
         if (gameEvent == 0)
         {
             AddGameobjectToGrid(guid, &data);
         }
+
         ++count;
     } while (result->NextRow());
 
@@ -4326,6 +4326,10 @@ void ObjectMgr::BuildPlayerLevelInfo(uint8 race, uint8 _class, uint8 level, Play
 void ObjectMgr::LoadQuests()
 {
     uint32 oldMSTime = getMSTime();
+
+    // lfm no reward quest exceptions
+    noRewardQuestExceptions.insert(1682);
+    noRewardQuestExceptions.insert(1667);
 
     // For reload case
     for (QuestMap::const_iterator itr = _questTemplates.begin(); itr != _questTemplates.end(); ++itr)
@@ -9424,6 +9428,12 @@ void ObjectMgr::LoadCreatureClassLevelStats()
             }
 
             stats.BaseDamage[i] = fields[9 + i].Get<float>();
+            // lfm min damage base set to 0.5
+            if (stats.BaseDamage[i] < 0.5f)
+            {
+                stats.BaseDamage[i] = 0.5f;
+            }
+
             if (stats.BaseDamage[i] < 0.0f)
             {
                 LOG_ERROR("sql.sql", "Creature base stats for class {}, level {} has invalid negative base damage[{}] - set to 0.0", Class, Level, i);

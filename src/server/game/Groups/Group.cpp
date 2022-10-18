@@ -1613,7 +1613,7 @@ void Group::SetTargetIcon(uint8 id, ObjectGuid whoGuid, ObjectGuid targetGuid)
     BroadcastPacket(&data, true);
 }
 
-// lfm ninger
+// lfm nier
 uint32 Group::GetTargetIconByGuid(ObjectGuid ogTarget)
 {
     for (uint32 i = 0; i < TARGETICONCOUNT; ++i)

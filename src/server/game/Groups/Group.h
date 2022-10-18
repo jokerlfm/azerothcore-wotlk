@@ -257,7 +257,7 @@ public:
     void SetGroupMemberFlag(ObjectGuid guid, bool apply, GroupMemberFlags flag);
     void RemoveUniqueGroupMemberFlag(GroupMemberFlags flag);
 
-    // lfm ninger
+    // lfm nier
     uint32 GetTargetIconByGuid(ObjectGuid ogTarget);
     ObjectGuid GetGuidByTargetIcon(uint32 icon);
 

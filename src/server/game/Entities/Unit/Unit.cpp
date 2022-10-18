@@ -72,8 +72,8 @@
 #include "StringConvert.h"
 #include <math.h>
 
-// lfm minger
-#include "MingerManager.h"
+// lfm ming
+#include "MingManager.h"
 
 float baseMoveSpeed[MAX_MOVE_TYPE] =
 {
@@ -2680,10 +2680,10 @@ bool Unit::GetMeleeAttackPoint(Unit* attacker, Position& pos)
     float distance = meleeReach - GetObjectSize();
 
     // lfm melee attack closer
-    if (distance > 2.0f)
-    {
-        distance = distance - frand(0.5f, 1.0f);
-    }
+    //if (distance > 2.0f)
+    //{
+    //    distance = distance - frand(0.5f, 1.0f);
+    //}
 
     GetNearPoint(attacker, x, y, z, distance, 0.0f, absAngle);
 
@@ -11688,30 +11688,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 {
                     if (ci->expansion < 2)
                     {
-                        CreatureTemplate const* cinfo = ci;
-                        for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
-                        {
-                            // we already have valid Map pointer for current creature!
-                            if (ci->DifficultyEntry[diff - 1])
-                            {
-                                cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
-                                if (cinfo)
-                                    break;                                      // template found
-
-                                // check and reported at startup, so just ignore (restore normalInfo)
-                                cinfo = ci;
-                            }
-
-                            // for instances heroic to normal, other cases attempt to retrieve previous difficulty
-                            if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
-                                diff -= 2;                                      // to normal raid difficulty cases
-                            else
-                                --diff;
-                        }
-                        if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
-                        {
-                            tmpDamage = tmpDamage * 1.5f;
-                        }
+                        tmpDamage = tmpDamage * 1.2f;
                     }
                     break;
                 }

@@ -364,10 +364,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 else if (type == CHAT_MSG_YELL)
                     sender->Yell(msg, Language(lang));
 
-                // lfm ninger 
-                if (!GetPlayer()->GetSession()->isNinger)
+                // lfm nier 
+                if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNingerManager->HandleChatCommand(GetPlayer(), msg);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg);
                 }
             }
             break;
@@ -414,10 +414,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
 
                 GetPlayer()->Whisper(msg, Language(lang), receiver);
 
-                // lfm ninger 
-                if (!GetPlayer()->GetSession()->isNinger)
+                // lfm nier 
+                if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNingerManager->HandleChatCommand(GetPlayer(), msg, receiver);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg, receiver);
                 }
             }
             break;
@@ -447,10 +447,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
 
-                // lfm ninger 
-                if (!GetPlayer()->GetSession()->isNinger)
+                // lfm nier 
+                if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNingerManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
                 }
             }
             break;
@@ -535,10 +535,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID_LEADER, Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false);
 
-                // lfm ninger 
-                if (!GetPlayer()->GetSession()->isNinger)
+                // lfm nier 
+                if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNingerManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
                 }
             }
             break;
@@ -598,10 +598,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 ChatHandler::BuildChatPacket(data, CHAT_MSG_BATTLEGROUND_LEADER, Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false);
 
-                // lfm ninger 
-                if (!GetPlayer()->GetSession()->isNinger)
+                // lfm nier 
+                if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNingerManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
                 }
             }
             break;

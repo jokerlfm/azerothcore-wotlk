@@ -45,12 +45,12 @@
 #include <string>
 #include <vector>
 
- // lfm ninger
-#include "NingerStrategy_Base.h"
-#include "NingerAction_Base.h"
-class NingerStrategy_Base;
-class NingerAction_Base;
-class NingerMovement;
+ // lfm nier
+#include "NierStrategy_Base.h"
+#include "NierAction_Base.h"
+class NierStrategy_Base;
+class NierAction_Base;
+class NierMovement;
 
 struct CreatureTemplate;
 struct Mail;
@@ -1064,12 +1064,11 @@ public:
 
     // 0 dps, 1 tank, 2 healer
     uint32 groupRole;    
-    NingerAction_Base* ningerAction;
-    std::unordered_map<uint32, NingerStrategy_Base*> strategyMap;
-    uint32 activeStrategyIndex;
-    uint32 teleportTargetGuid;
-    int teleportDelay;
-    int reviveDelay;
+    NierAction_Base* nierAction;
+    std::unordered_map<uint32, NierStrategy_Base*> nierStrategyMap;
+    uint32 activeStrategyIndex;    
+
+    bool isNier;
 
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 

@@ -269,7 +269,7 @@ class CharacterCreateInfo
     friend class WorldSession;
     friend class Player;
 
-    // lfm ninger
+    // lfm nier
 //protected:
 public:
     /// User specified variables
@@ -334,9 +334,8 @@ public:
     WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime);
     ~WorldSession();
 
-    // lfm ninger
-    bool isNinger;
-    void HandlePacket(WorldPacket pmPacket);
+    // lfm nier
+    bool isNier;
 
     bool PlayerLoading() const { return m_playerLoading; }
     bool PlayerLogout() const { return m_playerLogout; }
@@ -1135,6 +1134,12 @@ private:
     // EnumData helpers
     bool IsLegitCharacterForAccount(ObjectGuid guid)
     {
+        // lfm nier is always legit
+        if (isNier)
+        {
+            return true;
+        }
+
         return _legitCharacters.find(guid) != _legitCharacters.end();
     }
 

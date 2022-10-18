@@ -57,7 +57,9 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     Creature* cOwner = owner->ToCreature();
 
     // the owner might be unable to move (rooted or casting), or we have lost the target, pause movement
-    if (owner->HasUnitState(UNIT_STATE_NOT_MOVE) || HasLostTarget(owner) || (cOwner && cOwner->IsMovementPreventedByCasting()))
+    // lfm chase will not for victim only
+    //if (owner->HasUnitState(UNIT_STATE_NOT_MOVE) || HasLostTarget(owner) || (cOwner && cOwner->IsMovementPreventedByCasting()))
+    if (owner->HasUnitState(UNIT_STATE_NOT_MOVE) || (cOwner && cOwner->IsMovementPreventedByCasting()))
     {
         owner->StopMoving();
         _lastTargetPosition.reset();
@@ -78,8 +80,9 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     Unit* target = i_target.getTarget();
 
     bool const mutualChase = IsMutualChase(owner, target);
-    // lfm should be closer 
-    float hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
+    // lfm use melee range 
+    float hitboxSum = owner->GetMeleeRange(target);
+    hitboxSum = hitboxSum / 2.0f;
     float maxRange = hitboxSum;
     if (_range)
     {
@@ -186,10 +189,8 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     }
     else
     {
-        // otherwise, we fall back to nearpoint finding
-        // lfm move toward should be the same
-        //target->GetNearPoint(owner, x, y, z, (moveToward ? maxTarget : minTarget) - hitboxSum, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));
-        target->GetNearPoint(owner, x, y, z, minTarget, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));
+        // otherwise, we fall back to nearpoint finding        
+        target->GetNearPoint(owner, x, y, z, (moveToward ? maxTarget : minTarget) - hitboxSum, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));        
         shortenPath = false;
     }
 

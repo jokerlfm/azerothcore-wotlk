@@ -39,7 +39,7 @@
 #include <G3D/CoordinateFrame.h>
 #include <G3D/Quat.h>
 
-#include "MingerManager.h"
+#include "MingManager.h"
 
 GameObject::GameObject() : WorldObject(false), MovableMapObject(),
 m_model(nullptr), m_goValue(), m_AI(nullptr)
@@ -164,6 +164,40 @@ void GameObject::AddToWorld()
         loot.sourceWorldObjectGUID = GetGUID();
 
         sScriptMgr->OnGameObjectAddWorld(this);
+
+        // lfm veins add to world 
+        if (sMingManager->IsVein(GetEntry()))
+        {
+            std::list<GameObject*> gameobjectList;
+            Acore::AllGameObjectsInRange check(this, VISIBILITY_DISTANCE_SMALL);
+            Acore::GameObjectListSearcher<Acore::AllGameObjectsInRange> searcher(this, gameobjectList, check);
+            Cell::VisitGridObjects(this, searcher, VISIBILITY_DISTANCE_SMALL);
+            uint32 replaceRate = urand(0, 100);
+            for (std::list<GameObject*>::const_iterator iter = gameobjectList.begin(); iter != gameobjectList.end(); ++iter)
+            {
+                if (GameObject* go = *iter)
+                {
+                    if (sMingManager->IsVein(go->GetEntry()))
+                    {
+                        if (go->GetSpawnId() != GetSpawnId())
+                        {
+                            if (go->IsInWorld())
+                            {
+                                if (replaceRate < 30)
+                                {
+                                    go->DespawnOrUnsummon(1000ms);                                    
+                                }
+                                else
+                                {
+                                    this->DespawnOrUnsummon(1000ms);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1119,13 +1153,13 @@ bool GameObject::LoadGameObjectFromDB(ObjectGuid::LowType spawnId, Map* map, boo
     float ang = data->orientation;
 
     // lfm spawn checking 
-    if (sMingerManager->IsHerb(entry))
+    if (sMingManager->IsHerb(entry))
     {
         Position pos;
         pos.m_positionX = x;
         pos.m_positionY = y;
         pos.m_positionZ = z;
-        if (!sMingerManager->AddHerb(spawnId, map->GetId(), pos, VISIBILITY_DISTANCE_NORMAL))
+        if (!sMingManager->AddHerb(spawnId, map->GetId(), pos, VISIBILITY_DISTANCE_NORMAL))
         {
             return false;
         }
@@ -1752,17 +1786,9 @@ void GameObject::Use(Unit* user)
                 LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
 
             // lfm zone fishing skill will be higher 
-            if (zone_skill < 25)
+            if (zone_skill < 0)
             {
-                zone_skill = 25;
-            }
-            else if (zone_skill < 50)
-            {
-                zone_skill = 50;
-            }
-            else
-            {
-                zone_skill = zone_skill + 50;
+                zone_skill = 0;
             }
 
             int32 skill = player->GetSkillValue(SKILL_FISHING);
@@ -1782,30 +1808,29 @@ void GameObject::Use(Unit* user)
             // lfm fish chance will not be lower
             if (skill < zone_skill)
             {
-                chance = urand(1, 5);
+                chance = 5;
             }
             else
             {
-                float maxRootRate = zone_skill * 2;
-                if (maxRootRate > 150.0f)
-                {
-                    maxRootRate = 150.0f;
-                }
-                chance = (skill + 10 - zone_skill) * 100 / maxRootRate;
+                chance = skill + 10 - zone_skill;
             }
-            if (chance > 95)
+            if (chance < 25)
             {
-                chance = 95;
-            }        
+                chance = 25;
+            }
+            else if (chance > 80)
+            {
+                chance = 80;
+            }
 
             int32 roll = irand(1, 100);
 
             LOG_DEBUG("entities.gameobject", "Fishing check (skill: {} zone min skill: {} chance {} roll: {}", skill, zone_skill, chance, roll);
 
-                            if (sScriptMgr->OnUpdateFishingSkill(player, skill, zone_skill, chance, roll))
-                            {
-                                player->UpdateFishingSkill();
-                            }
+            if (sScriptMgr->OnUpdateFishingSkill(player, skill, zone_skill, chance, roll))
+            {
+                player->UpdateFishingSkill();
+            }
             // but you will likely cause junk in areas that require a high fishing skill (not yet implemented)
             if (chance >= roll)
             {
@@ -1826,7 +1851,12 @@ void GameObject::Use(Unit* user)
                     player->SendLoot(GetGUID(), LOOT_FISHING);
             }
             else // else: junk
+            {
                 player->SendLoot(GetGUID(), LOOT_FISHING_JUNK);
+                std::ostringstream notificationStream;
+                notificationStream << "Require fishing skill more than " << zone_skill;
+                player->GetSession()->SendNotification(notificationStream.str().c_str());
+            }                
 
             tmpfish = true;
             break;

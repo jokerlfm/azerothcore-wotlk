@@ -432,67 +432,15 @@ void Player::Update(uint32 p_time)
         }
     }
 
-    // lfm ninger
-    if (m_session->isNinger)
+    // lfm nier
+    if (m_session->isNier)
     {
-        if (strategyMap.size() > 0)
+        if (nierStrategyMap.size() > 0)
         {
-            if (strategyMap[activeStrategyIndex]->initialized)
+            if (nierStrategyMap[activeStrategyIndex]->initialized)
             {
-                strategyMap[activeStrategyIndex]->Update(p_time);
+                nierStrategyMap[activeStrategyIndex]->Update(p_time);
             }
-        }
-    }
-
-    if (teleportDelay > 0)
-    {
-        teleportDelay -= p_time;
-        if (teleportDelay <= 0)
-        {
-            teleportDelay = 0;
-            if (IsBeingTeleported())
-            {
-                teleportDelay = 1000;
-            }
-            else
-            {
-                if (Player* teleportTarget = ObjectAccessor::FindPlayerByLowGUID(teleportTargetGuid))
-                {
-                    SetPhaseMask(teleportTarget->GetPhaseMask(), true);
-                    TeleportTo(teleportTarget->GetWorldLocation());
-                    ClearInCombat();
-                    SetSelection(ObjectGuid::Empty);
-                    SetTarget(ObjectGuid::Empty);
-                    if (IsAlive())
-                    {
-                        GetMotionMaster()->Clear();
-                        if (getStandState() != UnitStandStateType::UNIT_STAND_STATE_STAND)
-                        {
-                            SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
-                        }
-                        Say("Arrived", Language::LANG_UNIVERSAL);
-                    }
-                    else
-                    {
-                        Say("I will revive in 5 seconds", Language::LANG_UNIVERSAL);
-                        reviveDelay = 5000;
-                    }
-                }
-            }
-        }
-    }
-
-    if (reviveDelay > 0)
-    {
-        reviveDelay -= p_time;
-        if (reviveDelay <= 0)
-        {
-            reviveDelay = 0;
-            ResurrectPlayer(0.1f);
-            ClearInCombat();
-            SetSelection(ObjectGuid::Empty);
-            SetTarget(ObjectGuid::Empty);
-            GetMotionMaster()->Clear();
         }
     }
 }
@@ -927,8 +875,8 @@ bool Player::UpdateFishingSkill()
         return false;
     }
 
-    // lfm fishing skill increase rate will always be 10%
-    int chance = 10;
+    // lfm fishing skill increase rate will always be 20%
+    int chance = 20;
 
     /* Whenever the player clicks on the fishing gameobject the
      * core will decide based on a probability if the skill raises or not.

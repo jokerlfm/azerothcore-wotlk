@@ -96,11 +96,11 @@
 #include <boost/asio/ip/address.hpp>
 #include <cmath>
 
-// lfm minger
-#include "MingerManager.h"
+// lfm ming
+#include "MingManager.h"
 
-// lfm ninger
-#include "NingerManager.h"
+// lfm nier
+#include "NierManager.h"
 
 namespace
 {
@@ -1580,8 +1580,8 @@ void World::SetInitialWorldSettings()
     MMAP::MMapMgr* mmmgr = MMAP::MMapFactory::createOrGetMMapMgr();
     mmmgr->InitializeThreadUnsafe(mapIds);
 
-    // lfm minger
-    sMingerManager->InitializeManager();
+    // lfm ming
+    sMingManager->InitializeManager();
 
     LOG_INFO("server.loading", "Loading Game Graveyard...");
     sGraveyard->LoadGraveyardFromDB();
@@ -2176,10 +2176,10 @@ void World::SetInitialWorldSettings()
 
     METRIC_EVENT("events", "World initialized", "World Initialized In " + std::to_string(startupDuration / 60000) + " Minutes " + std::to_string((startupDuration % 60000) / 1000) + " Seconds");
 
-    // lfm ninger
-    if (sNingerConfig->StartNinger())
+    // lfm nier
+    if (sNierConfig->StartNier())
     {
-        sNingerManager->InitializeManager();
+        sNierManager->InitializeManager();
     }
 
     if (sConfigMgr->isDryRun())
@@ -2535,9 +2535,9 @@ void World::Update(uint32 diff)
         METRIC_VALUE("update_time_diff", diff);
     }
 
-    // lfm ninger
-    sNingerManager->UpdateNingerManager(diff);
-    sNingerManager->UpdateNingerEntities(diff);
+    // lfm nier
+    sNierManager->UpdateNierManager(diff);
+    sNierManager->UpdateNierEntities(diff);
 }
 
 void World::ForceGameEventUpdate()
@@ -2805,8 +2805,8 @@ void World::_UpdateGameTime()
 /// Shutdown the server
 void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, const std::string& reason)
 {
-    // lfm ninger
-    sNingerManager->LogoutNingers(true);
+    // lfm nier
+    sNierManager->LogoutNiers(true);
 
     // ignore if server shutdown at next tick
     if (IsStopped())

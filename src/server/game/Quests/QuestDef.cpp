@@ -61,54 +61,78 @@ Quest::Quest(Field* questRecord)
 
     for (int i = 0; i < QUEST_REWARDS_COUNT; ++i)
     {
-        // lfm no common equip rewards
-        uint32 itemEntry = questRecord[28 + i * 2].Get<uint32>();
-        uint32 itemCount = questRecord[29 + i * 2].Get<uint16>();
-        if (const ItemTemplate* it = sObjectMgr->GetItemTemplate(itemEntry))
-        {
-            if (it->Class == ItemClass::ITEM_CLASS_WEAPON || it->Class == ItemClass::ITEM_CLASS_ARMOR)
-            {
-                if (it->Quality < ItemQualities::ITEM_QUALITY_RARE)
-                {
-                    itemEntry = 0;
-                    itemCount = 0;
-                }
-            }
-        }
-
-        //RewardItemId[i] = questRecord[28 + i * 2].Get<uint32>();
-        //RewardItemIdCount[i] = questRecord[29 + i * 2].Get<uint16>();
-        RewardItemId[i] = itemEntry;
-        RewardItemIdCount[i] = itemCount;
+        RewardItemId[i] = questRecord[28 + i * 2].Get<uint32>();
+        RewardItemIdCount[i] = questRecord[29 + i * 2].Get<uint16>();
 
         if (RewardItemId[i])
             ++_rewItemsCount;
     }
 
+    // lfm quest reward choice index
+    for (int i = 0; i < QUEST_REWARD_CHOICES_COUNT; ++i)
+    {
+        RewardChoiceItemId[i] = 0;
+        RewardChoiceItemCount[i] = 0;
+    }
+    uint32 questRewardFilledIndex = 0;
     for (int i = 0; i < QUEST_REWARD_CHOICES_COUNT; ++i)
     {
         // lfm no common equip rewards
         uint32 itemEntry = questRecord[36 + i * 2].Get<uint32>();
         uint32 itemCount = questRecord[37 + i * 2].Get<uint16>();
-        if (const ItemTemplate* it = sObjectMgr->GetItemTemplate(itemEntry))
+
+        if (ClassByQuestSort(-ZoneOrSort) == 0)
         {
-            if (it->Class == ItemClass::ITEM_CLASS_WEAPON || it->Class == ItemClass::ITEM_CLASS_ARMOR)
+            if (sObjectMgr->noRewardQuestExceptions.find(Id) == sObjectMgr->noRewardQuestExceptions.end())
             {
-                if (it->Quality < ItemQualities::ITEM_QUALITY_RARE)
+                if (const ItemTemplate* it = sObjectMgr->GetItemTemplate(itemEntry))
                 {
-                    itemEntry = 0;
-                    itemCount = 0;
+                    bool weaponOrArmor = false;
+                    if (it->Class == ItemClass::ITEM_CLASS_WEAPON)
+                    {
+                        if (it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_AXE || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_AXE2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_BOW || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_CROSSBOW ||
+                            it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_DAGGER || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_FIST || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_GUN ||
+                            it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_POLEARM ||
+                            it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD2)
+                        {
+                            weaponOrArmor = true;
+                        }
+                    }
+                    else if (it->Class == ItemClass::ITEM_CLASS_ARMOR)
+                    {
+                        if (it->SubClass == ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_CLOTH || it->SubClass == ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_LEATHER || it->SubClass == ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_MAIL || it->SubClass == ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_PLATE || it->SubClass == ItemSubclassArmor::ITEM_SUBCLASS_ARMOR_SHIELD)
+                        {
+                            weaponOrArmor = true;
+                        }
+                    }
+                    if (weaponOrArmor)
+                    {
+                        if (it->Quality == ItemQualities::ITEM_QUALITY_UNCOMMON)
+                        {
+                            itemEntry = 0;
+                            itemCount = 0;
+                            // lfm reward money for none equips
+                            if (RewardMoney == 0)
+                            {
+                                RewardMoney = Level * 50;
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        //RewardChoiceItemId[i] = questRecord[36 + i * 2].Get<uint32>();
-        //RewardChoiceItemCount[i] = questRecord[37 + i * 2].Get<uint16>();
-        RewardChoiceItemId[i] = itemEntry;
-        RewardChoiceItemCount[i] = itemCount;
+        if (itemEntry > 0)
+        {
+            RewardChoiceItemId[questRewardFilledIndex] = itemEntry;
+            RewardChoiceItemCount[questRewardFilledIndex] = itemCount;
 
-        if (RewardChoiceItemId[i])
-            ++_rewChoiceItemsCount;
+            if (RewardChoiceItemId[questRewardFilledIndex])
+            {
+                ++_rewChoiceItemsCount;
+            }
+            questRewardFilledIndex++;
+        }
     }
 
     for (int i = 0; i < QUEST_REPUTATIONS_COUNT; ++i)

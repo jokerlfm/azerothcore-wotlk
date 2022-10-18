@@ -25,8 +25,8 @@
 #include "SpellMgr.h"
 #include "Unit.h"
 
-// lfm minger
-#include "MingerManager.h"
+// lfm ming
+#include "MingManager.h"
 
 inline bool _ModifyUInt32(bool apply, uint32& baseValue, int32& amount)
 {
@@ -1174,34 +1174,7 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         {
             if (ci->expansion < 2)
             {
-                CreatureTemplate const* cinfo = ci;
-                for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
-                {
-                    // we already have valid Map pointer for current creature!
-                    if (ci->DifficultyEntry[diff - 1])
-                    {
-                        cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
-                        if (cinfo)
-                            break;                                      // template found
-
-                        // check and reported at startup, so just ignore (restore normalInfo)
-                        cinfo = ci;
-                    }
-
-                    // for instances heroic to normal, other cases attempt to retrieve previous difficulty
-                    if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
-                        diff -= 2;                                      // to normal raid difficulty cases
-                    else
-                        --diff;
-                }
-                if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
-                {
-                    lfmMultiplier = 1.5f;
-                    if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
-                    {
-                        lfmMultiplier = 1.2f;
-                    }
-                }
+                lfmMultiplier = 1.2f;
             }
             break;
         }

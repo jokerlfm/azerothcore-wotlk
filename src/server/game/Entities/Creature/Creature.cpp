@@ -50,8 +50,8 @@
 #include "World.h"
 #include "WorldPacket.h"
 
-// lfm minger
-#include "MingerManager.h"
+// lfm ming
+#include "MingManager.h"
 
 // TODO: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
@@ -458,6 +458,36 @@ bool Creature::InitEntry(uint32 Entry, const CreatureData* data)
         LoadEquipment(data->equipmentId);
     }
 
+    // lfm item in both hands will enable creature dual
+    if (uint32 mainId = GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+    {
+        if (mainId > 0)
+        {
+            if (uint32 offId = GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1))
+            {
+                if (offId > 0)
+                {
+                    if (mainId == offId)
+                    {
+                        SetCanDualWield(true);
+                        const_cast<CreatureTemplate*>(cinfo)->flags_extra = cinfo->flags_extra | CreatureFlagsExtra::CREATURE_FLAG_EXTRA_UNUSED_12;
+                    }
+                    else
+                    {
+                        if (ItemTemplate const* it = sObjectMgr->GetItemTemplate(offId))
+                        {
+                            if (it->Class == ITEM_CLASS_WEAPON)
+                            {
+                                SetCanDualWield(true);
+                                const_cast<CreatureTemplate*>(cinfo)->flags_extra = cinfo->flags_extra | CreatureFlagsExtra::CREATURE_FLAG_EXTRA_UNUSED_12;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     SetName(normalInfo->Name);                              // at normal entry always
 
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
@@ -743,11 +773,17 @@ void Creature::Update(uint32 diff)
             {
                 // If we are closer than 50% of the combat reach we are going to reposition the victim
                 if (diff >= m_moveBackwardsMovementTime)
-                {
-                    float MaxRange = GetCollisionRadius() + GetVictim()->GetCollisionRadius();
-
-                    if (IsInDist(victim, MaxRange))
+                {                    
+                    // lfm move backwards distance
+                    //float MaxRange = GetCollisionRadius() + GetVictim()->GetCollisionRadius();
+                    //if (IsInDist(victim, MaxRange))
+                    //{
+                    //    AI()->MoveBackwardsChecks();
+                    //}                    
+                    if (GetExactDist(victim) < GetMeleeRange(victim) / 4.0f)
+                    {
                         AI()->MoveBackwardsChecks();
+                    }
 
                     m_moveBackwardsMovementTime = urand(MOVE_BACKWARDS_CHECK_INTERVAL, MOVE_BACKWARDS_CHECK_INTERVAL * 3);
                 }
@@ -1507,35 +1543,7 @@ void Creature::SelectLevel(bool changelevel)
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:
         {
-            if (ci->expansion < 2)
-            {
-                CreatureTemplate const* cinfo = ci;
-                for (uint8 diff = uint8(GetMap()->GetSpawnMode()); diff > 0 && !IsPet();)
-                {
-                    // we already have valid Map pointer for current creature!
-                    if (ci->DifficultyEntry[diff - 1])
-                    {
-                        cinfo = sObjectMgr->GetCreatureTemplate(ci->DifficultyEntry[diff - 1]);
-                        if (cinfo)
-                            break;                                      // template found
-
-                        // check and reported at startup, so just ignore (restore normalInfo)
-                        cinfo = ci;
-                    }
-
-                    // for instances heroic to normal, other cases attempt to retrieve previous difficulty
-                    if (diff >= RAID_DIFFICULTY_10MAN_HEROIC && GetMap()->IsRaid())
-                        diff -= 2;                                      // to normal raid difficulty cases
-                    else
-                        --diff;
-                }
-                if (!sMingerManager->IsMingerExceptionEntry(cinfo->Entry))
-                {
-                    lfmMultiplier = 1.5f;
-                    break;
-                }
-            }
-            lfmMultiplier = 1.25f;
+            lfmMultiplier = 1.5f;
             break;
         }
         case CreatureEliteType::CREATURE_ELITE_RARE:
@@ -1850,12 +1858,6 @@ void Creature::LoadEquipment(int8 id, bool force /*= false*/)
     m_equipmentId = id;
     for (uint8 i = 0; i < 3; ++i)
         SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + i, einfo->ItemEntry[i]);
-
-    // lfm same item in both hands will enable creature dual
-    if (GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID) > 0 && GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID) == GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1))
-    {
-        SetCanDualWield(true);
-    }
 }
 
 bool Creature::hasQuest(uint32 quest_id) const

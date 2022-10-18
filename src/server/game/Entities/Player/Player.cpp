@@ -410,13 +410,11 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     _wasOutdoor = true;
     // lfm auto fish
     fishingDelay = 0;
-    // lfm ninger
+    // lfm nier
     groupRole = 0;
-    teleportTargetGuid = 0;
-    teleportDelay = 0;
-    reviveDelay = 0;    
-    ningerAction = nullptr;
-    strategyMap.clear();
+    isNier = false;
+    nierAction = nullptr;
+    nierStrategyMap.clear();
     activeStrategyIndex = 0;
 
     sScriptMgr->OnConstructPlayer(this);
@@ -1354,26 +1352,30 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         return false;
     }
 
+    // lfm map without expansion check 
     // client without expansion support
-    if (GetSession()->Expansion() < mEntry->Expansion())
-    {
-        LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
+    //if (GetSession()->Expansion() < mEntry->Expansion())
+    //{
+    //    LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
 
-        if (GetTransport())
-        {
-            m_transport->RemovePassenger(this);
-            m_transport = nullptr;
-            m_movementInfo.transport.Reset();
-            m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
-            RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
-        }
+    //    if (GetTransport())
+    //    {
+    //        m_transport->RemovePassenger(this);
+    //        m_transport = nullptr;
+    //        m_movementInfo.transport.Reset();
+    //        m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+    //        RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
+    //    }
 
-        SendTransferAborted(mapid, TRANSFER_ABORT_INSUF_EXPAN_LVL, mEntry->Expansion());
+    //    SendTransferAborted(mapid, TRANSFER_ABORT_INSUF_EXPAN_LVL, mEntry->Expansion());
 
-        return false;                                       // normal client can't teleport to this map...
-    }
-    else
-        LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
+    //    return false;                                       // normal client can't teleport to this map...
+    //}
+    //else
+    //{
+    //    LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
+    //}
+    LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
 
     // xinef: do this here in case teleport failed in above checks
     if (!(options & TELE_TO_NOT_LEAVE_TAXI) && IsInFlight())

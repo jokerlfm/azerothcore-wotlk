@@ -1456,6 +1456,23 @@ namespace Acore
         float m_fRange;
     };
 
+    // lfm all gambeobjects
+    class AllGameObjectsInRange
+    {
+    public:
+        AllGameObjectsInRange(WorldObject const* object, float maxRange) : m_pObject(object), m_fRange(maxRange) {}
+        bool operator() (GameObject* go)
+        {
+            if (m_pObject->IsWithinDist(go, m_fRange, false))
+                return true;
+
+            return false;
+        }
+    private:
+        WorldObject const* m_pObject;
+        float m_fRange;
+    };
+
     class AllCreaturesOfEntryInRange
     {
     public:
