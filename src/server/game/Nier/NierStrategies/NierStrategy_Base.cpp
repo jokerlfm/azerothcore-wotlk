@@ -199,17 +199,30 @@ void NierStrategy_Base::Update(uint32 pmDiff)
                             me->SetSelection(ObjectGuid::Empty);
                             me->SetPhaseMask(leader->GetPhaseMask(), true);
                             me->GetMotionMaster()->Clear();
-                            if (me->TeleportTo(leader->GetWorldLocation()))
+                            if (me->IsAlive())
                             {
-                                if (me->IsAlive())
+                                if (me->TeleportTo(leader->GetWorldLocation()))
                                 {
                                     me->Whisper("In position.", Language::LANG_UNIVERSAL, leader);
                                 }
-                                else
+                            }
+                            else
+                            {
+                                if (Map* leaderMap = leader->GetMap())
                                 {
-                                    me->Whisper("Revive in 5 seconds", Language::LANG_UNIVERSAL, leader);
-                                    reviveDelay = 5000;
+                                    if (leaderMap->Instanceable())
+                                    {
+                                        if (me->GetMapId() != leaderMap->GetId())
+                                        {
+                                            me->Whisper("Revive first", Language::LANG_UNIVERSAL, leader);
+                                            reviveDelay = 500;
+                                            assembleDelay = 5000;
+                                            return;
+                                        }
+                                    }
                                 }
+                                me->Whisper("Revive in 5 seconds", Language::LANG_UNIVERSAL, leader);
+                                reviveDelay = 5000;
                             }
                         }
                     }

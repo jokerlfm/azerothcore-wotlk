@@ -43,8 +43,7 @@ public:
 	NierMovement(Player* pmMe);
 	void ResetMovement();
 	void Update_Direct(uint32 pmDiff);
-	void Update_Motion(uint32 pmDiff);
-	void Update_Follow(uint32 pmDiff);
+	void Update_Chase(uint32 pmDiff);
 
 	void Run();
 	bool Tank(Unit* pmTankTarget, float pmDistanceMax, float pmDistanceMin, bool pmHolding);

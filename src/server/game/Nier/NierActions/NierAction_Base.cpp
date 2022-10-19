@@ -401,7 +401,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
     }
 }
 
-void NierMovement::Update_Motion(uint32 pmDiff)
+void NierMovement::Update_Chase(uint32 pmDiff)
 {
     if (moveCheckDelay > 0)
     {
@@ -545,12 +545,8 @@ void NierMovement::Update_Motion(uint32 pmDiff)
             else
             {
                 float chaseDistance = distanceMax;
-                if (chaseDistance > MELEE_RANGE)
-                {
-                    chaseDistance = chaseDistance - MELEE_RANGE;
-                }
                 float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
-                if (me->IsWithinLOSInMap(chaseTarget) && targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
+                if (me->IsWithinLOSInMap(chaseTarget) && targetDistance < chaseTarget->GetCombatReach() + me->GetCombatReach() + chaseDistance)
                 {
                     if (!me->isInFront(chaseTarget, M_PI / 8))
                     {
@@ -566,22 +562,7 @@ void NierMovement::Update_Motion(uint32 pmDiff)
                         {
                             if (mgTarget->GetGUID() == chaseTarget->GetGUID())
                             {
-                                if (distanceMin > 0.0f)
-                                {
-                                    if (targetDistance > chaseTarget->GetCombatReach() + distanceMin)
-                                    {
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        chaseDistance = distanceMin + (distanceMax - distanceMin) / 2.0f;
-                                    }
-                                }
-                                else
-                                {
-                                    return;
-                                }
-                                break;
+                                return;
                             }
                         }
                     }
@@ -626,12 +607,8 @@ void NierMovement::Update_Motion(uint32 pmDiff)
             else
             {
                 float followDistance = distanceMax;
-                if (followDistance > MELEE_RANGE)
-                {
-                    followDistance = followDistance - MELEE_RANGE;
-                }
                 float targetDistance = me->GetExactDist(followTarget->GetPosition());
-                if (me->IsWithinLOSInMap(followTarget) && targetDistance < followTarget->GetCombatReach() + followDistance)
+                if (me->IsWithinLOSInMap(followTarget) && targetDistance < followTarget->GetCombatReach() + me->GetCombatReach() + followDistance)
                 {
                     if (!me->isInFront(followTarget, M_PI / 8))
                     {
@@ -647,10 +624,7 @@ void NierMovement::Update_Motion(uint32 pmDiff)
                         {
                             if (mgTarget->GetGUID() == followTarget->GetGUID())
                             {
-                                if (me->isMoving())
-                                {
-                                    break;
-                                }
+                                return;
                             }
                         }
                     }
@@ -659,324 +633,6 @@ void NierMovement::Update_Motion(uint32 pmDiff)
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
                 me->GetMotionMaster()->MoveChase(followTarget, followDistance);
-            }
-            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
-        }
-        else
-        {
-            ResetMovement();
-        }
-        break;
-    }
-    default:
-    {
-        break;
-    }
-    }
-}
-
-void NierMovement::Update_Follow(uint32 pmDiff)
-{
-    if (moveCheckDelay > 0)
-    {
-        moveCheckDelay -= pmDiff;
-        return;
-    }
-    if (!me)
-    {
-        return;
-    }
-    if (!me->IsAlive())
-    {
-        return;
-    }
-    if (me->HasAuraType(SPELL_AURA_MOD_PACIFY))
-    {
-        return;
-    }
-    if (me->HasAuraType(SPELL_AURA_MOD_PACIFY))
-    {
-        return;
-    }
-    if (me->HasUnitState(UnitState::UNIT_STATE_NOT_MOVE))
-    {
-        return;
-    }
-    //if (me->HasUnitState(UnitState::UNIT_STATE_ROAMING_MOVE))
-    //{
-    //	return;
-    //}
-    if (me->IsNonMeleeSpellCast(false, false, true))
-    {
-        return;
-    }
-    if (me->IsBeingTeleported())
-    {
-        return;
-    }
-    switch (activeMovementType)
-    {
-    case NierMovementType::NierMovementType_None:
-    {
-        break;
-    }
-    case NierMovementType::NierMovementType_Point:
-    {
-        float distance = me->GetDistance(positionTarget);
-        if (distance > VISIBILITY_DISTANCE_LARGE)
-        {
-            ResetMovement();
-        }
-        else
-        {
-            if (distance < CONTACT_DISTANCE)
-            {
-                activeMovementType = NierMovementType::NierMovementType_None;
-            }
-            else
-            {
-                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::POINT_MOTION_TYPE)
-                {
-                    me->StopMoving();
-                    me->GetMotionMaster()->Clear();
-                    me->GetMotionMaster()->MovePoint(0, positionTarget);
-                }
-                moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
-            }
-        }
-        break;
-    }
-    case NierMovementType::NierMovementType_Tank:
-    {
-        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogTankTarget))
-        {
-            if (holding)
-            {
-                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
-                {
-                    me->StopMoving();
-                    me->GetMotionMaster()->Clear();
-                }
-                if (!me->isInFront(chaseTarget, M_PI / 8))
-                {
-                    me->SetFacingToObject(chaseTarget);
-                }
-            }
-            else
-            {
-                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
-                {
-                    if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
-                    {
-                        if (Unit* mgTarget = mg->GetTarget())
-                        {
-                            if (mgTarget->GetGUID() == chaseTarget->GetGUID())
-                            {
-                                if (me->isMoving())
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                float chaseDistance = distanceMax;
-                if (chaseDistance > MELEE_RANGE)
-                {
-                    chaseDistance = chaseDistance - MELEE_RANGE;
-                }
-                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
-                if (targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
-                {
-                    if (me->IsWithinLOSInMap(chaseTarget))
-                    {
-                        if (me->isMoving())
-                        {
-                            me->StopMoving();
-                            me->GetMotionMaster()->Clear();
-                        }
-                        if (!me->isInFront(chaseTarget, M_PI / 8))
-                        {
-                            me->SetFacingToObject(chaseTarget);
-                        }
-                        return;
-                    }
-                    else
-                    {
-                        chaseDistance = chaseDistance / 2.0f;
-                    }
-                }
-                Run();
-                me->StopMoving();
-                me->GetMotionMaster()->Clear();
-                me->GetMotionMaster()->MoveFollow(chaseTarget, chaseDistance, 0.0f);
-            }
-            //moveCheckDelay = 100;
-        }
-        else
-        {
-            ResetMovement();
-        }
-        break;
-    }
-    case NierMovementType::NierMovementType_Chase:
-    {
-        if (Unit* chaseTarget = ObjectAccessor::GetUnit(*me, ogChaseTarget))
-        {
-            if (holding)
-            {
-                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
-                {
-                    me->StopMoving();
-                    me->GetMotionMaster()->Clear();
-                }
-                if (!me->isInFront(chaseTarget, M_PI / 8))
-                {
-                    me->SetFacingToObject(chaseTarget);
-                }
-            }
-            else
-            {
-                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
-                {
-                    if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
-                    {
-                        if (Unit* mgTarget = mg->GetTarget())
-                        {
-                            if (mgTarget->GetGUID() == chaseTarget->GetGUID())
-                            {
-                                if (me->isMoving())
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                float chaseDistance = distanceMax;
-                if (chaseDistance > MELEE_RANGE)
-                {
-                    chaseDistance = chaseDistance - MELEE_RANGE;
-                }
-                float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
-                if (targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
-                {
-                    bool minValid = true;
-                    if (distanceMin > 0.0f)
-                    {
-                        if (targetDistance < chaseTarget->GetCombatReach() + distanceMin)
-                        {
-                            minValid = false;
-                            chaseDistance = distanceMin + (chaseDistance - distanceMin) / 2.0f;
-                        }
-                    }
-                    if (minValid)
-                    {
-                        if (me->IsWithinLOSInMap(chaseTarget))
-                        {
-                            if (me->isMoving())
-                            {
-                                me->StopMoving();
-                                me->GetMotionMaster()->Clear();
-                            }
-                            if (!me->isInFront(chaseTarget, M_PI / 8))
-                            {
-                                me->SetFacingToObject(chaseTarget);
-                            }
-                            return;
-                        }
-                        else
-                        {
-                            chaseDistance = chaseDistance / 2.0f;
-                        }
-                    }
-                }
-                float chaseAngle = 0.0f;
-                if (forceBack)
-                {
-                    if (chaseTarget->GetTarget() != me->GetGUID())
-                    {
-                        chaseAngle = frand(M_PI - M_PI / 8, M_PI + M_PI / 8);
-                    }
-                }
-                Run();
-                me->StopMoving();
-                me->GetMotionMaster()->Clear();
-                me->GetMotionMaster()->MoveFollow(chaseTarget, chaseDistance, chaseAngle);
-            }
-            moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
-        }
-        else
-        {
-            ResetMovement();
-        }
-        break;
-    }
-    case NierMovementType::NierMovementType_Follow:
-    {
-        if (Unit* followTarget = ObjectAccessor::GetUnit(*me, ogFollowTarget))
-        {
-            if (holding)
-            {
-                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() != MovementGeneratorType::IDLE_MOTION_TYPE)
-                {
-                    me->StopMoving();
-                    me->GetMotionMaster()->Clear();
-                }
-                if (!me->isInFront(followTarget, M_PI / 8))
-                {
-                    me->SetFacingToObject(followTarget);
-                }
-            }
-            else
-            {
-                if (me->GetMotionMaster()->GetCurrentMovementGeneratorType() == MovementGeneratorType::FOLLOW_MOTION_TYPE)
-                {
-                    if (const FollowMovementGenerator<Player>* mg = static_cast<FollowMovementGenerator<Player> const*>(me->GetMotionMaster()->top()))
-                    {
-                        if (Unit* mgTarget = mg->GetTarget())
-                        {
-                            if (mgTarget->GetGUID() == followTarget->GetGUID())
-                            {
-                                if (me->isMoving())
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                float followDistance = distanceMax;
-                if (followDistance > MELEE_RANGE)
-                {
-                    followDistance = followDistance - MELEE_RANGE;
-                }
-                float targetDistance = me->GetExactDist(followTarget->GetPosition());
-                if (targetDistance < followTarget->GetCombatReach() + followDistance)
-                {
-                    if (me->IsWithinLOSInMap(followTarget))
-                    {
-                        if (me->isMoving())
-                        {
-                            me->StopMoving();
-                            me->GetMotionMaster()->Clear();
-                        }
-                        if (!me->isInFront(followTarget, M_PI / 8))
-                        {
-                            me->SetFacingToObject(followTarget);
-                        }
-                        return;
-                    }
-                    else
-                    {
-                        followDistance = followDistance / 2.0f;
-                    }
-                }
-                Run();
-                me->StopMoving();
-                me->GetMotionMaster()->Clear();
-                me->GetMotionMaster()->MoveFollow(followTarget, distanceMax, 0.0f);
-
             }
             moveCheckDelay = DEFAULT_MOVEMENT_UPDATE_DELAY;
         }
@@ -1226,7 +882,7 @@ void NierAction_Base::Reset()
 void NierAction_Base::Update(uint32 pmDiff)
 {
     //nm->Update_Direct(pmDiff);
-    nm->Update_Motion(pmDiff);
+    nm->Update_Chase(pmDiff);
 }
 
 bool NierAction_Base::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack)
