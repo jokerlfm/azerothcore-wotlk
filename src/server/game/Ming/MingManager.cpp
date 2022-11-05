@@ -2,17 +2,57 @@
 
 MingManager::MingManager()
 {
+    dkItemExceptionSet.clear();
+    dkSpellsExceptionSet.clear();
     herbGOEntrySet.clear();
     spawnedHerbSet.clear();
     veinGOEntrySet.clear();
     spawnedVeinSet.clear();
     instanceEncounterEntrySet.clear();
     veinsMap.clear();
+    vendorEquipsMap.clear();
+
+    checkDelay = 0;
 }
 
 void MingManager::InitializeManager()
 {
     sLog->outMessage(MING_MARK, LogLevel::LOG_LEVEL_DEBUG, "Initialize ming");
+
+    dkSpellsExceptionSet.clear();
+    dkSpellsExceptionSet.insert(48266);
+    dkSpellsExceptionSet.insert(49410);
+    dkSpellsExceptionSet.insert(45477);
+    dkSpellsExceptionSet.insert(3274);
+    dkSpellsExceptionSet.insert(7924);
+    dkSpellsExceptionSet.insert(10846);
+    dkSpellsExceptionSet.insert(19902);
+    dkSpellsExceptionSet.insert(10847);
+    dkSpellsExceptionSet.insert(3280);
+    dkSpellsExceptionSet.insert(19903);
+    dkSpellsExceptionSet.insert(54254);
+    dkSpellsExceptionSet.insert(7925);
+    dkSpellsExceptionSet.insert(61455);
+    dkSpellsExceptionSet.insert(59921);
+    dkSpellsExceptionSet.insert(59879);
+    dkSpellsExceptionSet.insert(49576);
+    dkSpellsExceptionSet.insert(47541);
+    dkSpellsExceptionSet.insert(45462);
+    
+    dkItemExceptionSet.clear();
+    dkItemExceptionSet.insert(34658);
+    dkItemExceptionSet.insert(38147);
+    dkItemExceptionSet.insert(34657);
+    dkItemExceptionSet.insert(38145);
+    dkItemExceptionSet.insert(41751);
+    dkItemExceptionSet.insert(34652);
+
+    noRewardQuestExceptions.clear();
+    noRewardQuestExceptions.insert(1682);
+    noRewardQuestExceptions.insert(1667);
+    noRewardQuestExceptions.insert(9560);
+    noRewardQuestExceptions.insert(9571);
+    noRewardQuestExceptions.insert(9667);
 
     instanceEncounterEntrySet.clear();
     QueryResult icQR = WorldDatabase.Query("SELECT distinct creditEntry FROM instance_encounters");
@@ -148,6 +188,8 @@ void MingManager::InitializeManager()
     veinGOEntrySet.insert(189981);
     veinGOEntrySet.insert(195036);
 
+    checkDelay = 10000;
+
     sLog->outMessage(MING_MARK, LogLevel::LOG_LEVEL_DEBUG, "ming initialized");
 }
 
@@ -155,6 +197,24 @@ MingManager* MingManager::instance()
 {
     static MingManager instance;
     return &instance;
+}
+
+bool MingManager::IsDKSpellsException(uint32 pmSpellId)
+{
+    if (dkSpellsExceptionSet.find(pmSpellId) == dkSpellsExceptionSet.end())
+    {
+        return false;
+    }
+    return true;
+}
+
+bool MingManager::IsDKItemException(uint32 pmItemId)
+{
+    if (dkItemExceptionSet.find(pmItemId) == dkItemExceptionSet.end())
+    {
+        return false;
+    }
+    return true;
 }
 
 bool MingManager::IsMingerExceptionEntry(uint32 pmEntry)
@@ -219,6 +279,30 @@ bool MingManager::IsVein(uint32 pmEntry)
     }
 
     return false;
+}
+
+void MingManager::UpdateMingManager(uint32 pmDiff)
+{
+    if (sMingConfig->Enable == 0)
+    {
+        return;
+    }
+
+    if (checkDelay > 0)
+    {
+        checkDelay -= pmDiff;
+    }
+    else
+    {
+        checkDelay = sMingConfig->ManagerCheckDelay;
+        // vendor replacement
+
+    }
+}
+
+void MingManager::ReplaceVendor(Unit* pmVendor)
+{
+
 }
 
 bool MingManager::StringEndWith(const std::string& str, const std::string& tail)

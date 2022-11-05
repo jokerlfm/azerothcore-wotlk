@@ -307,21 +307,22 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
         return;
     }
 
+    // lfm race and class has no exp limit
     // prevent character creating Expansion race without Expansion account
-    if (raceEntry->expansion > Expansion())
-    {
-        SendCharCreate(CHAR_CREATE_EXPANSION);
-        LOG_ERROR("network.opcode", "Expansion {} account:[{}] tried to Create character with expansion {} race ({})", Expansion(), GetAccountId(), raceEntry->expansion, createInfo->Race);
-        return;
-    }
+    //if (raceEntry->expansion > Expansion())
+    //{
+    //    SendCharCreate(CHAR_CREATE_EXPANSION);
+    //    LOG_ERROR("network.opcode", "Expansion {} account:[{}] tried to Create character with expansion {} race ({})", Expansion(), GetAccountId(), raceEntry->expansion, createInfo->Race);
+    //    return;
+    //}
 
     // prevent character creating Expansion class without Expansion account
-    if (classEntry->expansion > Expansion())
-    {
-        SendCharCreate(CHAR_CREATE_EXPANSION_CLASS);
-        LOG_ERROR("network.opcode", "Expansion {} account:[{}] tried to Create character with expansion {} class ({})", Expansion(), GetAccountId(), classEntry->expansion, createInfo->Class);
-        return;
-    }
+    //if (classEntry->expansion > Expansion())
+    //{
+    //    SendCharCreate(CHAR_CREATE_EXPANSION_CLASS);
+    //    LOG_ERROR("network.opcode", "Expansion {} account:[{}] tried to Create character with expansion {} class ({})", Expansion(), GetAccountId(), classEntry->expansion, createInfo->Class);
+    //    return;
+    //}
 
     if (AccountMgr::IsPlayerAccount(GetSecurity()))
     {

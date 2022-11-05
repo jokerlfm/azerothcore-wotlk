@@ -288,6 +288,7 @@ public:
                 _duelInProgress = true;
 
                 timer = 600000; // clear playerGUIDs after 10 minutes if no one initiates a duel
+                me->SetFacingToObject(caster);
                 me->GetMotionMaster()->MoveFollow(caster, 2.0f, 0.0f);
 
                 events.ScheduleEvent(EVENT_SPEAK, 3000);
@@ -365,8 +366,11 @@ public:
                     me->CastSpell(me, 7267, true);
                     break;
                 case EVENT_DUEL_LOST+1:
-                    EnterEvadeMode();
+                {
+                    me->DespawnOrUnsummon(500);
+                    //EnterEvadeMode();
                     return;
+                }
             }
 
             if (!events.Empty() || !UpdateVictim())
@@ -662,10 +666,16 @@ enum UnworthyInitiate
     SPELL_SOUL_PRISON_CHAIN         = 54612,
     SPELL_DK_INITIATE_VISUAL        = 51519,
 
-    SPELL_ICY_TOUCH                 = 52372,
-    SPELL_PLAGUE_STRIKE             = 52373,
-    SPELL_BLOOD_STRIKE              = 52374,
-    SPELL_DEATH_COIL                = 52375,
+    // lfm dk
+    //SPELL_ICY_TOUCH                 = 52372,
+    //SPELL_PLAGUE_STRIKE             = 52373,
+    //SPELL_BLOOD_STRIKE              = 52374,
+    //SPELL_DEATH_COIL                = 52375,
+
+    SPELL_ICY_TOUCH = 45477,
+    SPELL_PLAGUE_STRIKE = 45462,
+    SPELL_BLOOD_STRIKE = 45902,
+    SPELL_DEATH_COIL = 52375,
 
     SAY_EVENT_START                 = 0,
     SAY_EVENT_ATTACK                = 1,
@@ -863,26 +873,26 @@ public:
                     {
                         switch (eventId)
                         {
-                            case EVENT_ICY_TOUCH:
-                                DoCastVictim(SPELL_ICY_TOUCH);
-                                events.DelayEvents(1000, GCD_CAST);
-                                events.ScheduleEvent(EVENT_ICY_TOUCH, 5000, GCD_CAST);
-                                break;
-                            case EVENT_PLAGUE_STRIKE:
-                                DoCastVictim(SPELL_PLAGUE_STRIKE);
-                                events.DelayEvents(1000, GCD_CAST);
-                                events.ScheduleEvent(EVENT_PLAGUE_STRIKE, 5000, GCD_CAST);
-                                break;
+                            //case EVENT_ICY_TOUCH:
+                            //    DoCastVictim(SPELL_ICY_TOUCH);
+                            //    events.DelayEvents(1000, GCD_CAST);
+                            //    events.ScheduleEvent(EVENT_ICY_TOUCH, 5000, GCD_CAST);
+                            //    break;
+                            //case EVENT_PLAGUE_STRIKE:
+                            //    DoCastVictim(SPELL_PLAGUE_STRIKE);
+                            //    events.DelayEvents(1000, GCD_CAST);
+                            //    events.ScheduleEvent(EVENT_PLAGUE_STRIKE, 5000, GCD_CAST);
+                            //    break;
                             case EVENT_BLOOD_STRIKE:
                                 DoCastVictim(SPELL_BLOOD_STRIKE);
                                 events.DelayEvents(1000, GCD_CAST);
                                 events.ScheduleEvent(EVENT_BLOOD_STRIKE, 5000, GCD_CAST);
                                 break;
-                            case EVENT_DEATH_COIL:
-                                DoCastVictim(SPELL_DEATH_COIL);
-                                events.DelayEvents(1000, GCD_CAST);
-                                events.ScheduleEvent(EVENT_DEATH_COIL, 5000, GCD_CAST);
-                                break;
+                            //case EVENT_DEATH_COIL:
+                            //    DoCastVictim(SPELL_DEATH_COIL);
+                            //    events.DelayEvents(1000, GCD_CAST);
+                            //    events.ScheduleEvent(EVENT_DEATH_COIL, 5000, GCD_CAST);
+                            //    break;
                         }
                     }
 

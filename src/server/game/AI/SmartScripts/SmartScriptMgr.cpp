@@ -157,6 +157,12 @@ void SmartAIMgr::LoadSmartAIFromDB()
             continue;
         }
 
+        // lfm some smart_scripts will be ignored 
+        if (temp.entryOrGuid == 3678)
+        {
+            continue;
+        }
+
         SmartScriptType source_type = (SmartScriptType)fields[1].Get<uint8>();
         if (source_type >= SMART_SCRIPT_TYPE_MAX)
         {

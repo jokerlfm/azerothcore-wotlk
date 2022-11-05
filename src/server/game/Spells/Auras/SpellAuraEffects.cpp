@@ -4063,6 +4063,12 @@ void AuraEffect::HandleModPercentStat(AuraApplication const* aurApp, uint8 mode,
     if (target->GetTypeId() != TYPEID_PLAYER)
         return;
 
+    // lfm debug
+    if (m_spellInfo->Id == 7353)
+    {
+        bool breakPoint = true;
+    }
+
     for (int32 i = STAT_STRENGTH; i < MAX_STATS; ++i)
     {
         if (GetMiscValue() == i || GetMiscValue() == -1)

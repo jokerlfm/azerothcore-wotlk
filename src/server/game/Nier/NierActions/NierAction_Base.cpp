@@ -23,7 +23,9 @@ NierMovement::NierMovement(Player* pmMe)
     holding = false;
     forceBack = false;
     moveCheckDelay = 0;
-    activeMovementType = NierMovementType::NierMovementType_None;
+    backwardCheckDelay = 0;
+    circleCheckDelay = 0;
+    activeMovementType = NierMovementType::NierMovementType_None;    
 }
 
 void NierMovement::ResetMovement()
@@ -217,17 +219,37 @@ void NierMovement::Update_Direct(uint32 pmDiff)
             else
             {
                 float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
+                if (backwardCheckDelay < 0)
+                {
+                    if (targetDistance < me->GetMeleeRange(chaseTarget) / 4.0f)
+                    {
+                        float moveDist = me->GetMeleeRange(chaseTarget) / 2.0f;
+                        me->GetMotionMaster()->MoveBackwards(chaseTarget, moveDist);
+                        break;
+                    }
+
+                    backwardCheckDelay = 20;
+                }
+                else
+                {
+                    backwardCheckDelay -= 1;
+                }
+                if (circleCheckDelay < 0)
+                {
+                    me->GetMotionMaster()->MoveCircleTarget(chaseTarget);
+                    circleCheckDelay = 20;
+                }
+                else
+                {
+                    circleCheckDelay -= 1;
+                }
                 if (targetDistance > VISIBILITY_DISTANCE_LARGE)
                 {
                     ResetMovement();
                     break;
                 }
                 float chaseDistance = distanceMax;
-                if (chaseDistance > MELEE_RANGE)
-                {
-                    chaseDistance = chaseDistance - MELEE_RANGE;
-                }
-                if (targetDistance < chaseTarget->GetCombatReach() + me->GetCombatReach() + distanceMax)
+                if (targetDistance < (chaseTarget->GetCombatReach() + me->GetCombatReach()) / 2.0f + distanceMax)
                 {
                     bool minValid = true;
                     if (distanceMin > 0.0f)
@@ -263,7 +285,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                 {
                     bool ptValid = true;
                     float ptDistance = chaseTarget->GetExactDist(positionTarget);
-                    if (ptDistance > chaseTarget->GetCombatReach() + distanceMax)
+                    if (ptDistance > (chaseTarget->GetCombatReach() + me->GetCombatReach()) / 2.0f + distanceMax)
                     {
                         ptValid = false;
                     }
@@ -283,8 +305,9 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                         break;
                     }
                 }
-                Position predict = sNierManager->PredictPosition(chaseTarget);
-                chaseTarget->GetNearPoint(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, chaseDistance, chaseTarget->GetAbsoluteAngle(me->GetPosition()));
+                //Position predict = sNierManager->PredictPosition(chaseTarget);
+                //chaseTarget->GetNearPoint(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, chaseDistance, chaseTarget->GetAbsoluteAngle(me->GetPosition()));
+                positionTarget = chaseTarget->GetPosition();
                 Run();
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
@@ -316,17 +339,22 @@ void NierMovement::Update_Direct(uint32 pmDiff)
             else
             {
                 float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
+                if (circleCheckDelay < 0)
+                {
+                    me->GetMotionMaster()->MoveCircleTarget(chaseTarget);
+                    circleCheckDelay = 20;
+                }
+                else
+                {
+                    circleCheckDelay -= pmDiff;
+                }
                 if (targetDistance > VISIBILITY_DISTANCE_LARGE)
                 {
                     ResetMovement();
                     break;
                 }
                 float chaseDistance = distanceMax;
-                if (chaseDistance > MELEE_RANGE)
-                {
-                    chaseDistance = chaseDistance - MELEE_RANGE;
-                }
-                if (targetDistance < chaseTarget->GetCombatReach() + me->GetCombatReach() + distanceMax)
+                if (targetDistance < distanceMax)
                 {
                     if (me->IsWithinLOSInMap(chaseTarget))
                     {
@@ -350,7 +378,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                 {
                     bool ptValid = true;
                     float ptDistance = chaseTarget->GetExactDist(positionTarget);
-                    if (ptDistance > chaseTarget->GetCombatReach() + distanceMax)
+                    if (ptDistance > distanceMax)
                     {
                         ptValid = false;
                     }
@@ -370,18 +398,9 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                         break;
                     }
                 }
-                Position predict = sNierManager->PredictPosition(chaseTarget);
-                float moveDistance = me->GetExactDist(predict);
-                if (moveDistance > chaseDistance)
-                {
-                    moveDistance = moveDistance - chaseDistance;
-                }
-                if (moveDistance > chaseTarget->GetCombatReach())
-                {
-                    moveDistance = moveDistance - chaseTarget->GetCombatReach();
-                }
-                me->GetNearPoint(me, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, moveDistance, me->GetAbsoluteAngle(&predict));
+                //Position predict = sNierManager->PredictPosition(chaseTarget);                
                 //chaseTarget->GetNearPoint(chaseTarget, positionTarget.m_positionX, positionTarget.m_positionY, positionTarget.m_positionZ, 0.0f, chaseDistance, chaseTarget->GetAngle(me), 0.0f, &predict);
+                positionTarget = chaseTarget->GetPosition();
                 Run();
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
@@ -881,8 +900,8 @@ void NierAction_Base::Reset()
 
 void NierAction_Base::Update(uint32 pmDiff)
 {
-    //nm->Update_Direct(pmDiff);
-    nm->Update_Chase(pmDiff);
+    nm->Update_Direct(pmDiff);
+    //nm->Update_Chase(pmDiff);
 }
 
 bool NierAction_Base::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack)
@@ -1177,74 +1196,67 @@ void NierAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32
         inventoryTypeQueryStream << " InventoryType = " << inventoryType;
     }
     std::string inventoryTypeQuery = inventoryTypeQueryStream.str();
-    int activeReqLevel = me->getLevel();
-    int minReqLevel = activeReqLevel - 3;
-    while (minReqLevel > 0)
+    int maxReqLevel = me->getLevel();
+    int minReqLevel = maxReqLevel - 5;    
+    while (minReqLevel > 0 && maxReqLevel > 1)
     {
-        int activeQuality = ItemQualities::ITEM_QUALITY_EPIC;
-        while (activeQuality >= pmMinQuality)
+        if (sNierManager->equipsMap.find(inventoryType) != sNierManager->equipsMap.end())
         {
-            std::unordered_set<uint32> availableItemEntrySet;
-            std::ostringstream queryStream;
-            queryStream << "SELECT entry FROM item_template where " << inventoryTypeQuery << " and class = " << pmClass << " and subclass = " << pmSubclass << " and Quality = " << activeQuality << " and RequiredLevel >= " << minReqLevel << " and RequiredLevel <= " << activeReqLevel << " and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand()";
-            QueryResult itemQR = WorldDatabase.Query(queryStream.str().c_str());
-            if (itemQR)
+            int activeLevel = urand(minReqLevel, maxReqLevel);
+            if (sNierManager->equipsMap[inventoryType].find(activeLevel) != sNierManager->equipsMap[inventoryType].end())
             {
-                do
+                int itemsSize = sNierManager->equipsMap[inventoryType][activeLevel].size();
+                if (itemsSize > 0)
                 {
-                    Field* fields = itemQR->Fetch();
-                    availableItemEntrySet.insert(fields[0].Get<uint32>());
-                } while (itemQR->NextRow());
-            }
-            for (std::unordered_set<uint32>::iterator entryIt = availableItemEntrySet.begin(); entryIt != availableItemEntrySet.end(); entryIt++)
-            {
-                if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(*entryIt))
-                {
-                    bool hasStat = false;
-                    if (checkStat)
+                    int itemIndex = urand(0, itemsSize - 1);
+                    uint32 itemEntry = sNierManager->equipsMap[inventoryType][activeLevel][itemIndex];
+                    if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(itemEntry))
                     {
-                        if (pProto->RandomProperty > 0 || pProto->RandomSuffix > 0)
+                        bool hasStat = false;
+                        if (checkStat)
                         {
-                            hasStat = true;
-                        }
-                        else
-                        {
-                            for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
+                            if (pProto->RandomProperty > 0 || pProto->RandomSuffix > 0)
                             {
-                                if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
+                                hasStat = true;
+                            }
+                            else
+                            {
+                                for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
                                 {
-                                    hasStat = true;
-                                    break;
+                                    if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
+                                    {
+                                        hasStat = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                    }
-                    else
-                    {
-                        hasStat = true;
-                    }
-                    if (hasStat)
-                    {
-                        if (Item* pItem = Item::CreateItem(*entryIt, 1))
+                        else
                         {
-                            uint16 dest = 0;
-                            if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                            hasStat = true;
+                        }
+                        if (hasStat)
+                        {
+                            if (Item* pItem = Item::CreateItem(itemEntry, 1))
                             {
-                                me->EquipItem(dest, pItem, true);
-                                std::ostringstream msgStream;
-                                msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
-                                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
-                                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, msgStream.str().c_str());
-                                return;
+                                uint16 dest = 0;
+                                if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                                {
+                                    me->EquipItem(dest, pItem, true);
+                                    std::ostringstream msgStream;
+                                    msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
+                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+                                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, msgStream.str().c_str());
+                                    return;
+                                }
                             }
                         }
                     }
                 }
             }
-            activeQuality--;
         }
-        activeReqLevel -= 4;
-        minReqLevel = activeReqLevel - 3;
+        maxReqLevel = maxReqLevel - 1;
+        minReqLevel = maxReqLevel - 5;
     }
 }
 

@@ -1581,7 +1581,10 @@ void World::SetInitialWorldSettings()
     mmmgr->InitializeThreadUnsafe(mapIds);
 
     // lfm ming
-    sMingManager->InitializeManager();
+    if (sMingConfig->StartMing())
+    {
+        sMingManager->InitializeManager();
+    }
 
     LOG_INFO("server.loading", "Loading Game Graveyard...");
     sGraveyard->LoadGraveyardFromDB();
@@ -2534,6 +2537,9 @@ void World::Update(uint32 diff)
         sMetric->Update();
         METRIC_VALUE("update_time_diff", diff);
     }
+
+    // lfm ming
+    sMingManager->UpdateMingManager(diff);
 
     // lfm nier
     sNierManager->UpdateNierManager(diff);

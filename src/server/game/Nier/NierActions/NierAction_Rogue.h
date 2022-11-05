@@ -39,5 +39,6 @@ public:
     uint32 spell_Cloak_Of_Shadows;
 
     uint32 item_InstantPoison;
+    uint32 item_SlowPoison;
 };
 #endif

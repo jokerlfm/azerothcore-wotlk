@@ -407,9 +407,12 @@ struct Areas
 
 enum RuneCooldowns
 {
-    RUNE_BASE_COOLDOWN  = 10000,
+    // lfm dk rune cooldowns 
+    //RUNE_BASE_COOLDOWN  = 10000,
+    //RUNE_MISS_COOLDOWN = 1500,     // cooldown applied on runes when the spell misses
+    RUNE_BASE_COOLDOWN = 20000,
+    RUNE_MISS_COOLDOWN = 20000,     // cooldown applied on runes when the spell misses
     RUNE_GRACE_PERIOD   = 2500,     // xinef: maximum possible grace period
-    RUNE_MISS_COOLDOWN  = 1500,     // cooldown applied on runes when the spell misses
 };
 
 enum RuneType

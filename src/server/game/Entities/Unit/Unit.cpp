@@ -335,6 +335,9 @@ m_comboPoints(0)
     _isWalkingBeforeCharm = false;
 
     _lastExtraAttackSpell = 0;
+
+    // lfm vendor replacement
+    vendorReplaceCheckDelay = urand(10000, 30000);
 }
 
 ////////////////////////////////////////////////////////////
@@ -532,6 +535,64 @@ void Unit::Update(uint32 p_time)
 
     UpdateSplineMovement(p_time);
     GetMotionMaster()->UpdateMotion(p_time);
+
+    // lfm vendor replacement
+    if (vendorReplaceCheckDelay > 0)
+    {
+        vendorReplaceCheckDelay -= p_time;
+    }
+    else
+    {
+        vendorReplaceCheckDelay = urand(sMingConfig->VenderReplaceDelay_Min, sMingConfig->VenderReplaceDelay_Max);
+
+        VendorItemData const* vItems = sObjectMgr->GetNpcVendorItemList(GetEntry());
+        if (!vItems || vItems->Empty())
+        {
+            return;
+        }
+        for (VendorItemList::const_iterator itr = vItems->m_items.begin(); itr != vItems->m_items.end(); ++itr)
+        {
+            if (const ItemTemplate* proto = sObjectMgr->GetItemTemplate((*itr)->item))
+            {
+                if (proto->Class == ItemClass::ITEM_CLASS_WEAPON || proto->Class == ItemClass::ITEM_CLASS_ARMOR)
+                {
+                    if (proto->Quality == ItemQualities::ITEM_QUALITY_NORMAL)
+                    {
+                        std::unordered_map<uint32, uint32> replaceMap;
+                        int equipLevel = proto->RequiredLevel;
+                        if (equipLevel > 0)
+                        {
+                            int minLevel = equipLevel - 3;
+                            int maxLevel = equipLevel + 3;
+                            if (minLevel < 1)
+                            {
+                                minLevel = 1;
+                            }
+                            if (maxLevel > 80)
+                            {
+                                maxLevel = 80;
+                            }
+                            for (int checkLevel = minLevel; checkLevel <= maxLevel; checkLevel++)
+                            {
+                                for (std::unordered_set<uint32>::iterator entryIT = sMingManager->vendorEquipsMap[proto->Class][proto->SubClass][checkLevel].begin(); entryIT != sMingManager->vendorEquipsMap[proto->Class][proto->SubClass][checkLevel].end(); entryIT++)
+                                {
+                                    replaceMap[replaceMap.size()] = *entryIT;
+                                }
+                            }
+                            if (replaceMap.size() > 0)
+                            {
+                                uint32 replaceEntry = urand(0, replaceMap.size());
+                                replaceEntry = replaceMap[replaceEntry];
+                                (*itr)->item = replaceEntry;
+                                (*itr)->maxcount = 1;
+                                (*itr)->incrtime = 7200000;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 bool Unit::haveOffhandWeapon() const
@@ -2680,10 +2741,11 @@ bool Unit::GetMeleeAttackPoint(Unit* attacker, Position& pos)
     float distance = meleeReach - GetObjectSize();
 
     // lfm melee attack closer
-    //if (distance > 2.0f)
-    //{
-    //    distance = distance - frand(0.5f, 1.0f);
-    //}
+    distance = GetMeleeRange(attacker);
+    if (distance > 2.0f)
+    {
+        distance = distance - 2.0f;
+    }
 
     GetNearPoint(attacker, x, y, z, distance, 0.0f, absAngle);
 
@@ -9317,10 +9379,17 @@ bool Unit::HandleProcTriggerSpell(Unit* victim, uint32 damage, AuraEffect* trigg
             else if (auraSpellInfo->Id == 63611)
             {
                 if (GetTypeId() != TYPEID_PLAYER)
+                {
                     return false;
-
+                }
                 trigger_spell_id = 50475;
                 basepoints0 = CalculatePct(int32(damage), triggerAmount);
+
+                // lfm blood presence fix 
+                if (basepoints0 == 0)
+                {
+                    basepoints0 = 1;
+                }
             }
             break;
         }
@@ -11686,9 +11755,22 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 }
                 case CreatureEliteType::CREATURE_ELITE_ELITE:
                 {
-                    if (ci->expansion < 2)
+                    if (ci->expansion < 1)
                     {
-                        tmpDamage = tmpDamage * 1.2f;
+                        if (ci->maxlevel < 63)
+                        {
+                            tmpDamage = tmpDamage * 1.2f;
+                        }
+                    }
+                    else if (ci->expansion < 2)
+                    {
+                        if (ci->maxlevel < 73)
+                        {
+                            if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+                            {
+                                tmpDamage = tmpDamage * 1.2f;
+                            }
+                        }
                     }
                     break;
                 }
@@ -20168,6 +20250,9 @@ void Unit::RewardRage(uint32 damage, uint32 weaponSpeedHitFactor, bool attacker)
     }
 
     addRage *= sWorld->getRate(RATE_POWER_RAGE_INCOME);
+
+    // lfm half rage gain
+    addRage = addRage / 2;
 
     ModifyPower(POWER_RAGE, uint32(addRage * 10));
 }

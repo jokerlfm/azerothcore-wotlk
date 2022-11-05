@@ -6,7 +6,7 @@
 #endif
 
 #ifndef DEFAULT_MOVEMENT_UPDATE_DELAY
-#define DEFAULT_MOVEMENT_UPDATE_DELAY 200
+#define DEFAULT_MOVEMENT_UPDATE_DELAY 100
 #endif
 
 #include "NierConfig.h"
@@ -66,6 +66,8 @@ public:
 	bool holding;
 	bool forceBack;
 	int moveCheckDelay;
+    int backwardCheckDelay;
+    int circleCheckDelay;
 };
 
 class NierAction_Base

@@ -74,6 +74,9 @@ m_model(nullptr), m_goValue(), m_AI(nullptr)
     ResetLootMode(); // restore default loot mode
     loot.sourceGameObject = this;
     m_stationaryPosition.Relocate(0.0f, 0.0f, 0.0f, 0.0f);
+
+    // lfm vein check
+    veinCheckDelay = 0;
 }
 
 GameObject::~GameObject()
@@ -165,39 +168,38 @@ void GameObject::AddToWorld()
 
         sScriptMgr->OnGameObjectAddWorld(this);
 
-        // lfm veins add to world 
-        if (sMingManager->IsVein(GetEntry()))
-        {
-            std::list<GameObject*> gameobjectList;
-            Acore::AllGameObjectsInRange check(this, VISIBILITY_DISTANCE_SMALL);
-            Acore::GameObjectListSearcher<Acore::AllGameObjectsInRange> searcher(this, gameobjectList, check);
-            Cell::VisitGridObjects(this, searcher, VISIBILITY_DISTANCE_SMALL);
-            uint32 replaceRate = urand(0, 100);
-            for (std::list<GameObject*>::const_iterator iter = gameobjectList.begin(); iter != gameobjectList.end(); ++iter)
-            {
-                if (GameObject* go = *iter)
-                {
-                    if (sMingManager->IsVein(go->GetEntry()))
-                    {
-                        if (go->GetSpawnId() != GetSpawnId())
-                        {
-                            if (go->IsInWorld())
-                            {
-                                if (replaceRate < 30)
-                                {
-                                    go->DespawnOrUnsummon(1000ms);                                    
-                                }
-                                else
-                                {
-                                    this->DespawnOrUnsummon(1000ms);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        //if (sMingManager->IsVein(GetEntry()))
+        //{
+        //    std::list<GameObject*> gameobjectList;
+        //    Acore::AllGameObjectsInRange check(this, VISIBILITY_DISTANCE_SMALL);
+        //    Acore::GameObjectListSearcher<Acore::AllGameObjectsInRange> searcher(this, gameobjectList, check);
+        //    Cell::VisitGridObjects(this, searcher, VISIBILITY_DISTANCE_SMALL);
+        //    uint32 replaceRate = urand(0, 100);
+        //    for (std::list<GameObject*>::const_iterator iter = gameobjectList.begin(); iter != gameobjectList.end(); ++iter)
+        //    {
+        //        if (GameObject* go = *iter)
+        //        {
+        //            if (sMingManager->IsVein(go->GetEntry()))
+        //            {
+        //                if (go->GetSpawnId() != GetSpawnId())
+        //                {
+        //                    if (go->IsInWorld())
+        //                    {
+        //                        if (replaceRate < 30)
+        //                        {
+        //                            go->DespawnOrUnsummon(1000ms);
+        //                        }
+        //                        else
+        //                        {
+        //                            this->DespawnOrUnsummon(1000ms);
+        //                            break;
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
     }
 }
 
@@ -372,19 +374,19 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
     {
         switch (GetStateSavedOnInstance())
         {
-            case 0:
-                SetGoState(GO_STATE_READY);
-                SwitchDoorOrButton(true);
-                break;
-            case 1:
-                SetGoState(GO_STATE_READY);
-                break;
-            case 2:
-                SetGoState(GO_STATE_ACTIVE_ALTERNATIVE);
-                break;
-            default:
-                SetGoState(go_state);
-                break;
+        case 0:
+            SetGoState(GO_STATE_READY);
+            SwitchDoorOrButton(true);
+            break;
+        case 1:
+            SetGoState(GO_STATE_READY);
+            break;
+        case 2:
+            SetGoState(GO_STATE_ACTIVE_ALTERNATIVE);
+            break;
+        default:
+            SetGoState(go_state);
+            break;
         }
     }
     else
@@ -474,6 +476,12 @@ bool GameObject::Create(ObjectGuid::LowType guidlow, uint32 name_id, Map* map, u
 
 void GameObject::Update(uint32 diff)
 {
+    // lfm debug
+    //if (GetSpawnId() == 69896 || GetSpawnId() == 69897)
+    //{
+    //    bool breakPoint = true;
+    //}
+
     if (AI())
         AI()->UpdateAI(diff);
     else if (!AIM_Initialize())
@@ -541,7 +549,7 @@ void GameObject::Update(uint32 diff)
                 if (caster && caster->GetTypeId() == TYPEID_PLAYER)
                 {
                     SetGoState(GO_STATE_ACTIVE);
-                                    ReplaceAllGameObjectFlags(GO_FLAG_NODESPAWN);
+                    ReplaceAllGameObjectFlags(GO_FLAG_NODESPAWN);
 
                     UpdateData udata;
                     WorldPacket packet;
@@ -721,7 +729,7 @@ void GameObject::Update(uint32 diff)
                 // Type 2 - Bomb (will go away after casting it's spell)
                 if (goInfo->trap.type == 2)
                 {
-                            SetLootState(GO_ACTIVATED);
+                    SetLootState(GO_ACTIVATED);
                     break;
                 }
 
@@ -732,9 +740,9 @@ void GameObject::Update(uint32 diff)
                 {
                     // Cast in other case (at some triggering/linked go/etc explicit call)
                     if (goInfo->trap.cooldown != 3 || m_respawnTime > 0)
-                            {
+                    {
                         break;
-                            }
+                    }
 
                     radius = 3.f;
                 }
@@ -747,8 +755,8 @@ void GameObject::Update(uint32 diff)
                 // search unfriendly creature
                 if (owner && goInfo->trap.autoCloseTime != -1) // hunter trap
                 {
-                            Acore::NearestAttackableNoTotemUnitInObjectRangeCheck checker(this, owner, radius);
-                            Acore::UnitSearcher<Acore::NearestAttackableNoTotemUnitInObjectRangeCheck> searcher(this, target, checker);
+                    Acore::NearestAttackableNoTotemUnitInObjectRangeCheck checker(this, owner, radius);
+                    Acore::UnitSearcher<Acore::NearestAttackableNoTotemUnitInObjectRangeCheck> searcher(this, target, checker);
                     Cell::VisitAllObjects(this, searcher, radius);
                 }
                 else                                        // environmental trap
@@ -764,7 +772,7 @@ void GameObject::Update(uint32 diff)
 
                 if (target)
                 {
-                            SetLootState(GO_ACTIVATED, target);
+                    SetLootState(GO_ACTIVATED, target);
                 }
             }
             else if (uint32 max_charges = goInfo->GetCharges())
@@ -791,7 +799,7 @@ void GameObject::Update(uint32 diff)
         case GAMEOBJECT_TYPE_GOOBER:
             if (GameTime::GetGameTimeMS().count() >= m_cooldownTime)
             {
-                            RemoveGameObjectFlag(GO_FLAG_IN_USE);
+                RemoveGameObjectFlag(GO_FLAG_IN_USE);
 
                 SetLootState(GO_JUST_DEACTIVATED);
             }
@@ -807,41 +815,41 @@ void GameObject::Update(uint32 diff)
                     m_groupLootTimer = 0;
                     lootingGroupLowGUID = 0;
                 }
-                            else
-                            {
-                                m_groupLootTimer -= diff;
-                            }
-                        }
-                        break;
-                    case GAMEOBJECT_TYPE_TRAP:
-                    {
-                        GameObjectTemplate const* goInfo = GetGOInfo();
-                        if (goInfo->trap.type == 2)
-                        {
-                            if (goInfo->trap.spellId)
-                                CastSpell(nullptr, goInfo->trap.spellId);  // FIXME: null target won't work for target type 1
-                            SetLootState(GO_JUST_DEACTIVATED);
-                        }
-                        else if (Unit* target = ObjectAccessor::GetUnit(*this, _lootStateUnitGUID))
-                        {
-                            if (goInfo->trap.spellId)
-                                CastSpell(target, goInfo->trap.spellId);
+                else
+                {
+                    m_groupLootTimer -= diff;
+                }
+            }
+            break;
+        case GAMEOBJECT_TYPE_TRAP:
+        {
+            GameObjectTemplate const* goInfo = GetGOInfo();
+            if (goInfo->trap.type == 2)
+            {
+                if (goInfo->trap.spellId)
+                    CastSpell(nullptr, goInfo->trap.spellId);  // FIXME: null target won't work for target type 1
+                SetLootState(GO_JUST_DEACTIVATED);
+            }
+            else if (Unit* target = ObjectAccessor::GetUnit(*this, _lootStateUnitGUID))
+            {
+                if (goInfo->trap.spellId)
+                    CastSpell(target, goInfo->trap.spellId);
 
-                            m_cooldownTime = GameTime::GetGameTimeMS().count() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS; // template or 4 seconds
+                m_cooldownTime = GameTime::GetGameTimeMS().count() + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4)) * IN_MILLISECONDS; // template or 4 seconds
 
-                            if (goInfo->trap.type == 1)
-                                SetLootState(GO_JUST_DEACTIVATED);
-                            else if (!goInfo->trap.type)
-                                SetLootState(GO_READY);
+                if (goInfo->trap.type == 1)
+                    SetLootState(GO_JUST_DEACTIVATED);
+                else if (!goInfo->trap.type)
+                    SetLootState(GO_READY);
 
-                            // Battleground gameobjects have data2 == 0 && data5 == 3
-                            if (!goInfo->trap.diameter && goInfo->trap.cooldown == 3)
-                                if (Player* player = target->ToPlayer())
-                                    if (Battleground* bg = player->GetBattleground())
-                                        bg->HandleTriggerBuff(this);
-                        }
-                        break;
-                    }
+                // Battleground gameobjects have data2 == 0 && data5 == 3
+                if (!goInfo->trap.diameter && goInfo->trap.cooldown == 3)
+                    if (Player* player = target->ToPlayer())
+                        if (Battleground* bg = player->GetBattleground())
+                            bg->HandleTriggerBuff(this);
+            }
+            break;
+        }
         default:
             break;
         }
@@ -896,7 +904,7 @@ void GameObject::Update(uint32 diff)
             SendObjectDeSpawnAnim(GetGUID());
             //reset flags
             if (GameObjectTemplateAddon const* addon = GetTemplateAddon())
-                        ReplaceAllGameObjectFlags((GameObjectFlags)addon->flags);
+                ReplaceAllGameObjectFlags((GameObjectFlags)addon->flags);
         }
 
         if (!m_respawnDelayTime)
@@ -921,6 +929,62 @@ void GameObject::Update(uint32 diff)
     }
 
     sScriptMgr->OnGameObjectUpdate(this, diff);
+
+    // lfm veins range check
+    if (sMingConfig->Enable)
+    {
+        if (veinCheckDelay > 0)
+        {
+            veinCheckDelay -= diff;
+        }
+        else
+        {
+            if (sMingManager->IsVein(GetEntry()))
+            {
+                if (IsInWorld())
+                {
+                    float rangeLimit = VISIBILITY_DISTANCE_TINY;
+                    if (Map* veinMap = GetMap())
+                    {
+                        if (IsOutdoors())
+                        {
+                            rangeLimit = VISIBILITY_DISTANCE_NORMAL;
+                        }
+                    }
+                    std::list<GameObject*> gameobjectList;
+                    Acore::AllGameObjectsInRange check(this, rangeLimit);
+                    Acore::GameObjectListSearcher<Acore::AllGameObjectsInRange> searcher(this, gameobjectList, check);
+                    Cell::VisitGridObjects(this, searcher, rangeLimit);
+                    uint32 replaceRate = urand(0, 100);
+                    for (std::list<GameObject*>::const_iterator iter = gameobjectList.begin(); iter != gameobjectList.end(); ++iter)
+                    {
+                        if (GameObject* go = *iter)
+                        {
+                            if (sMingManager->IsVein(go->GetEntry()))
+                            {
+                                if (go->GetSpawnId() != GetSpawnId())
+                                {
+                                    if (go->IsInWorld())
+                                    {
+                                        if (replaceRate < 30)
+                                        {
+                                            go->RemoveFromWorld();
+                                        }
+                                        else
+                                        {
+                                            RemoveFromWorld();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            veinCheckDelay = 5000;
+        }
+    }
 }
 
 GameObjectTemplateAddon const* GameObject::GetTemplateAddon() const
@@ -1152,16 +1216,19 @@ bool GameObject::LoadGameObjectFromDB(ObjectGuid::LowType spawnId, Map* map, boo
     float z = data->posZ;
     float ang = data->orientation;
 
-    // lfm spawn checking 
-    if (sMingManager->IsHerb(entry))
+    // lfm spawn checking
+    if (sMingConfig->Enable)
     {
-        Position pos;
-        pos.m_positionX = x;
-        pos.m_positionY = y;
-        pos.m_positionZ = z;
-        if (!sMingManager->AddHerb(spawnId, map->GetId(), pos, VISIBILITY_DISTANCE_NORMAL))
+        if (sMingManager->IsHerb(entry))
         {
-            return false;
+            Position pos;
+            pos.m_positionX = x;
+            pos.m_positionY = y;
+            pos.m_positionZ = z;
+            if (!sMingManager->AddHerb(spawnId, map->GetId(), pos, VISIBILITY_DISTANCE_NORMAL))
+            {
+                return false;
+            }
         }
     }
 
@@ -1661,7 +1728,7 @@ void GameObject::Use(Unit* user)
         GameObjectTemplate const* info = GetGOInfo();
 
         // xinef: Goober cannot be used with this flag, skip
-                if (HasGameObjectFlag(GO_FLAG_IN_USE))
+        if (HasGameObjectFlag(GO_FLAG_IN_USE))
             return;
 
         if (user->GetTypeId() == TYPEID_PLAYER)
@@ -1722,7 +1789,7 @@ void GameObject::Use(Unit* user)
 
         if (info->GetAutoCloseTime())
         {
-                    SetGameObjectFlag(GO_FLAG_IN_USE);
+            SetGameObjectFlag(GO_FLAG_IN_USE);
             SetLootState(GO_ACTIVATED, user);
             if (!info->goober.customAnim)
                 SetGoState(GO_STATE_ACTIVE);
@@ -1803,7 +1870,7 @@ void GameObject::Use(Unit* user)
             else
             {
                 chance = 100;
-            }                
+            }
 
             // lfm fish chance will not be lower
             if (skill < zone_skill)
@@ -1814,13 +1881,13 @@ void GameObject::Use(Unit* user)
             {
                 chance = skill + 10 - zone_skill;
             }
-            if (chance < 25)
+            if (chance < 10)
             {
-                chance = 25;
+                chance = 10;
             }
-            else if (chance > 80)
+            else if (chance > 70)
             {
-                chance = 80;
+                chance = 70;
             }
 
             int32 roll = irand(1, 100);
@@ -1856,7 +1923,7 @@ void GameObject::Use(Unit* user)
                 std::ostringstream notificationStream;
                 notificationStream << "Require fishing skill more than " << zone_skill;
                 player->GetSession()->SendNotification(notificationStream.str().c_str());
-            }                
+            }
 
             tmpfish = true;
             break;
@@ -2429,7 +2496,7 @@ void GameObject::SetDestructibleState(GameObjectDestructibleState state, Player*
     switch (state)
     {
     case GO_DESTRUCTIBLE_INTACT:
-            RemoveGameObjectFlag(GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
+        RemoveGameObjectFlag(GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
         SetDisplayId(m_goInfo->displayId);
         if (setHealth)
         {
@@ -2448,8 +2515,8 @@ void GameObject::SetDestructibleState(GameObjectDestructibleState state, Player*
             if (Battleground* bg = bgMap->GetBG())
                 bg->EventPlayerDamagedGO(eventInvoker, this, m_goInfo->building.damagedEvent);
 
-                RemoveGameObjectFlag(GO_FLAG_DESTROYED);
-                SetGameObjectFlag(GO_FLAG_DAMAGED);
+        RemoveGameObjectFlag(GO_FLAG_DESTROYED);
+        SetGameObjectFlag(GO_FLAG_DAMAGED);
 
         uint32 modelId = m_goInfo->building.damagedDisplayId;
         if (DestructibleModelDataEntry const* modelData = sDestructibleModelDataStore.LookupEntry(m_goInfo->building.destructibleData))
@@ -2483,8 +2550,8 @@ void GameObject::SetDestructibleState(GameObjectDestructibleState state, Player*
             }
         }
 
-                RemoveGameObjectFlag(GO_FLAG_DAMAGED);
-                SetGameObjectFlag(GO_FLAG_DESTROYED);
+        RemoveGameObjectFlag(GO_FLAG_DAMAGED);
+        SetGameObjectFlag(GO_FLAG_DESTROYED);
 
         uint32 modelId = m_goInfo->building.destroyedDisplayId;
         if (DestructibleModelDataEntry const* modelData = sDestructibleModelDataStore.LookupEntry(m_goInfo->building.destructibleData))
@@ -2503,7 +2570,7 @@ void GameObject::SetDestructibleState(GameObjectDestructibleState state, Player*
     case GO_DESTRUCTIBLE_REBUILDING:
     {
         EventInform(m_goInfo->building.rebuildingEvent);
-                RemoveGameObjectFlag(GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
+        RemoveGameObjectFlag(GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
 
         uint32 modelId = m_goInfo->displayId;
         if (DestructibleModelDataEntry const* modelData = sDestructibleModelDataStore.LookupEntry(m_goInfo->building.destructibleData))
@@ -2618,14 +2685,14 @@ bool GameObject::ValidateGameobjectType()
 {
     switch (m_goInfo->type)
     {
-        case GAMEOBJECT_TYPE_DOOR:
-        case GAMEOBJECT_TYPE_BUTTON:
-        case GAMEOBJECT_TYPE_TRAP:
-        case GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING:
-        case GAMEOBJECT_TYPE_TRAPDOOR:
-            return true;
-        default:
-            return false;
+    case GAMEOBJECT_TYPE_DOOR:
+    case GAMEOBJECT_TYPE_BUTTON:
+    case GAMEOBJECT_TYPE_TRAP:
+    case GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING:
+    case GAMEOBJECT_TYPE_TRAPDOOR:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -2637,15 +2704,15 @@ uint8 GameObject::GameobjectStateToInt(GOState* state)
     {
         switch (*state)
         {
-            case GO_STATE_ACTIVE:
-                m_state = 0;
-                return m_state;
-            case GO_STATE_READY:
-                m_state = 1;
-                return m_state;
-            case GO_STATE_ACTIVE_ALTERNATIVE:
-                m_state = 2;
-                return m_state;
+        case GO_STATE_ACTIVE:
+            m_state = 0;
+            return m_state;
+        case GO_STATE_READY:
+            m_state = 1;
+            return m_state;
+        case GO_STATE_ACTIVE_ALTERNATIVE:
+            m_state = 2;
+            return m_state;
         }
     }
 
@@ -2683,8 +2750,8 @@ void GameObject::SavingStateOnDB()
 
 void GameObject::SaveInstanceData(uint8 state)
 {
-    uint32 id       = GetInstanceId();
-    uint32 guid     = GetSpawnId();
+    uint32 id = GetInstanceId();
+    uint32 guid = GetSpawnId();
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INSERT_INSTANCE_SAVED_DATA);
     stmt->SetData(0, id);
@@ -2697,8 +2764,8 @@ void GameObject::SaveInstanceData(uint8 state)
 
 void GameObject::UpdateInstanceData(uint8 state)
 {
-    uint32 id       = GetInstanceId();
-    uint32 guid     = GetSpawnId();
+    uint32 id = GetInstanceId();
+    uint32 guid = GetSpawnId();
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPDATE_INSTANCE_SAVED_DATA);
     stmt->SetData(0, state);
@@ -2908,17 +2975,17 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* t
                 case GAMEOBJECT_TYPE_CHEST:
                 case GAMEOBJECT_TYPE_GOOBER:
                     if (ActivateToQuest(target))
-                        {
-                            dynFlags |= GO_DYNFLAG_LO_ACTIVATE;
-                            if (sWorld->getBoolConfig(CONFIG_OBJECT_SPARKLES))
-                                dynFlags |= GO_DYNFLAG_LO_SPARKLE;
-                        }
+                    {
+                        dynFlags |= GO_DYNFLAG_LO_ACTIVATE;
+                        if (sWorld->getBoolConfig(CONFIG_OBJECT_SPARKLES))
+                            dynFlags |= GO_DYNFLAG_LO_SPARKLE;
+                    }
                     else if (targetIsGM)
                         dynFlags |= GO_DYNFLAG_LO_ACTIVATE;
                     break;
                 case GAMEOBJECT_TYPE_SPELL_FOCUS:
                 case GAMEOBJECT_TYPE_GENERIC:
-                        if (ActivateToQuest(target) && sWorld->getBoolConfig(CONFIG_OBJECT_SPARKLES))
+                    if (ActivateToQuest(target) && sWorld->getBoolConfig(CONFIG_OBJECT_SPARKLES))
                         dynFlags |= GO_DYNFLAG_LO_SPARKLE;
                     break;
                 case GAMEOBJECT_TYPE_TRANSPORT:

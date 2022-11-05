@@ -1543,7 +1543,23 @@ void Creature::SelectLevel(bool changelevel)
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:
         {
-            lfmMultiplier = 1.5f;
+            if (ci->expansion < 1)
+            {
+                if (ci->maxlevel < 63)
+                {
+                    lfmMultiplier = 1.5f;
+                }
+            }
+            else if (ci->expansion < 2)
+            {
+                if (ci->maxlevel < 73)
+                {
+                    if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+                    {
+                        lfmMultiplier = 1.2f;
+                    }
+                }
+            }
             break;
         }
         case CreatureEliteType::CREATURE_ELITE_RARE:

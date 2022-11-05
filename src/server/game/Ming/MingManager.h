@@ -1,10 +1,6 @@
 #ifndef MING_MANAGER_H
 #define MING_MANAGER_H
 
-#ifndef MING_MARK
-# define MING_MARK "ming"
-#endif
-
 #define enum_to_string(x) #x
 
 #include <string>
@@ -16,6 +12,7 @@
 #include <unordered_map>
 
 #include "Common.h"
+#include "MingConfig.h"
 
 class SpawnedObject
 {
@@ -47,18 +44,32 @@ public:
     bool IsHerb(uint32 pmEntry);
     bool NearHerb(uint32 pmMapId, Position pmPos, float pmDistance);
     bool AddHerb(uint32 pmGuid, uint32 pmMapId, Position pmPos, float pmDistance);
-    bool IsVein(uint32 pmEntry);    
+    bool IsVein(uint32 pmEntry);
+    void UpdateMingManager(uint32 pmDiff);
+    void ReplaceVendor(Unit* pmVendor);
+    bool IsDKSpellsException(uint32 pmSpellId);
+    bool IsDKItemException(uint32 pmItemId);
     std::vector<std::string> SplitString(std::string srcStr, std::string delimStr, bool repeatedCharIgnored);
     std::string TrimString(std::string srcStr);
     static MingManager* instance();    
 
 public:
+    std::unordered_set<uint32> noRewardQuestExceptions;
+    std::unordered_set<uint32> dkSpellsExceptionSet;
+    std::unordered_set<uint32> dkItemExceptionSet;
     std::unordered_set<uint32> herbGOEntrySet;
     std::unordered_set<uint32> veinGOEntrySet;
     std::unordered_set<uint32> instanceEncounterEntrySet;
     std::unordered_set<SpawnedObject*> spawnedHerbSet;
     std::unordered_set<SpawnedObject*> spawnedVeinSet;
     std::unordered_map<uint32, SpawnedObject*> veinsMap;
+
+    /// <summary>
+    /// class, subclass, level, entry set
+    /// </summary>
+    std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_set<uint32>>>> vendorEquipsMap;
+
+    int checkDelay;
 };
 
 #define sMingManager MingManager::instance()

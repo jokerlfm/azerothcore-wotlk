@@ -126,5 +126,6 @@ public:
 
 void AddSC_instance_wailing_caverns()
 {
-    new instance_wailing_caverns();
+    // lfm instance_wailing_caverns to instance_wailing_caverns_lfm
+    //new instance_wailing_caverns();
 }

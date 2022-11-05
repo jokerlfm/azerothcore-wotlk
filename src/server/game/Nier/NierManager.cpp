@@ -32,6 +32,7 @@ NierManager::NierManager()
     nierNameMap.clear();
     nierEntitySet.clear();
     characterTalentTabNameMap.clear();
+    equipsMap.clear();
 }
 
 void NierManager::InitializeManager()

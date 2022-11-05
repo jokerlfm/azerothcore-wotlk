@@ -21,6 +21,9 @@
 #include "Player.h"
 #include "World.h"
 
+// lfm ming
+#include "MingManager.h"
+
 Quest::Quest(Field* questRecord)
 {
     EmoteOnIncomplete = 0;
@@ -83,7 +86,7 @@ Quest::Quest(Field* questRecord)
 
         if (ClassByQuestSort(-ZoneOrSort) == 0)
         {
-            if (sObjectMgr->noRewardQuestExceptions.find(Id) == sObjectMgr->noRewardQuestExceptions.end())
+            if (sMingManager->noRewardQuestExceptions.find(Id) == sMingManager->noRewardQuestExceptions.end())
             {
                 if (const ItemTemplate* it = sObjectMgr->GetItemTemplate(itemEntry))
                 {

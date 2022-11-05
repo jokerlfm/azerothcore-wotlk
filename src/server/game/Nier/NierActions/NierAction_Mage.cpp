@@ -636,7 +636,7 @@ bool NierAction_Mage::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, f
     }
     ChooseTarget(pmTarget);
     float targetDistance = me->GetDistance(pmTarget);
-    if (targetDistance > NIER_FAR_DISTANCE)
+    if (targetDistance > NIER_MAX_DISTANCE)
     {
         return true;
     }
@@ -943,7 +943,7 @@ bool NierAction_Mage::Cure(Unit* pmTarget)
                 }
                 if (spell_RemoveCurse > 0)
                 {
-                    if (pST->GetDispelMask() & DispelType::DISPEL_CURSE)
+                    if (pST->GetDispelMask() & SpellInfo::GetDispelMask(DispelType::DISPEL_CURSE))
                     {
                         if (CastSpell(pmTarget, spell_RemoveCurse))
                         {

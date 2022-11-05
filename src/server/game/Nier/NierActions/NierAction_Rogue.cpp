@@ -29,6 +29,7 @@ NierAction_Rogue::NierAction_Rogue(Player* pmMe) :NierAction_Base(pmMe)
     spell_Cloak_Of_Shadows = 0;
 
     item_InstantPoison = 0;
+    item_SlowPoison = 0;
 }
 
 void NierAction_Rogue::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex)
@@ -56,6 +57,7 @@ void NierAction_Rogue::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecia
     me->learnSpell(1180, false);
     me->learnSpell(15590, false);
     me->learnSpell(2567, false);
+    item_SlowPoison = 3775;
     if (myLevel >= 4)
     {
 
@@ -631,13 +633,13 @@ bool NierAction_Rogue::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, 
             {
                 return true;
             }
-            if (!me->HasAura(spell_Evasion))
-            {
-                if (CastSpell(me, spell_Vanish))
-                {
-                    return true;
-                }
-            }
+            //if (!me->HasAura(spell_Evasion))
+            //{
+            //    if (CastSpell(me, spell_Vanish))
+            //    {
+            //        return true;
+            //    }
+            //}
         }
         else
         {
@@ -774,16 +776,6 @@ bool NierAction_Rogue::Buff(Unit* pmTarget)
             }
             if (Item* poison = GetItemInInventory(item_InstantPoison))
             {
-                if (Item* mWeapon = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
-                {
-                    if (mWeapon->GetEnchantmentId(EnchantmentSlot::TEMP_ENCHANTMENT_SLOT) == 0)
-                    {
-                        if (UseItem(poison, mWeapon))
-                        {
-                            return true;
-                        }
-                    }
-                }
                 if (Item* oWeapon = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_OFFHAND))
                 {
                     if (oWeapon->GetEnchantmentId(EnchantmentSlot::TEMP_ENCHANTMENT_SLOT) == 0)
@@ -796,13 +788,33 @@ bool NierAction_Rogue::Buff(Unit* pmTarget)
                 }
             }
         }
-        if (!me->GetGroup())
+        if (item_SlowPoison > 0)
         {
-            if (CastSpell(me, spell_Stealth, true))
+            if (!me->HasItemCount(item_SlowPoison, 1))
             {
-                return true;
+                me->StoreNewItemInBestSlots(item_SlowPoison, 20);
+            }
+            if (Item* poison = GetItemInInventory(item_SlowPoison))
+            {
+                if (Item* mWeapon = me->GetItemByPos(INVENTORY_SLOT_BAG_0, EquipmentSlots::EQUIPMENT_SLOT_MAINHAND))
+                {
+                    if (mWeapon->GetEnchantmentId(EnchantmentSlot::TEMP_ENCHANTMENT_SLOT) == 0)
+                    {
+                        if (UseItem(poison, mWeapon))
+                        {
+                            return true;
+                        }
+                    }
+                }
             }
         }
+        //if (!me->GetGroup())
+        //{
+        //    if (CastSpell(me, spell_Stealth, true))
+        //    {
+        //        return true;
+        //    }
+        //}
     }
 
     return false;

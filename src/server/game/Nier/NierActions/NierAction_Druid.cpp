@@ -773,7 +773,7 @@ bool NierAction_Druid::AOE(Unit* pmTarget, bool pmRushing, float pmDistanceMax, 
     }
     ChooseTarget(pmTarget);
     float targetDistance = me->GetDistance(pmTarget);
-    if (targetDistance > NIER_FAR_DISTANCE)
+    if (targetDistance > NIER_MAX_DISTANCE)
     {
         return true;
     }
@@ -844,7 +844,7 @@ bool NierAction_Druid::Cure(Unit* pmTarget)
                 }
                 if (spell_RemoveCurse > 0)
                 {
-                    if (pST->GetDispelMask() & DispelType::DISPEL_CURSE)
+                    if (pST->GetDispelMask() & SpellInfo::GetDispelMask(DispelType::DISPEL_CURSE))
                     {
                         if (CastSpell(pmTarget, spell_RemoveCurse))
                         {
@@ -854,7 +854,7 @@ bool NierAction_Druid::Cure(Unit* pmTarget)
                 }
                 if (spell_CurePoison > 0)
                 {
-                    if (pST->GetDispelMask() & DispelType::DISPEL_POISON)
+                    if (pST->GetDispelMask() & SpellInfo::GetDispelMask(DispelType::DISPEL_POISON))
                     {
                         if (CastSpell(pmTarget, spell_CurePoison))
                         {

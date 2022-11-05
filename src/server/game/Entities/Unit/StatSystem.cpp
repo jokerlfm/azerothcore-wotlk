@@ -1172,9 +1172,22 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:
         {
-            if (ci->expansion < 2)
+            if (ci->expansion < 1)
             {
-                lfmMultiplier = 1.2f;
+                if (ci->maxlevel < 63)
+                {
+                    lfmMultiplier = 1.5f;
+                }
+            }
+            else if (ci->expansion < 2)
+            {
+                if (ci->maxlevel < 73)
+                {
+                    if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+                    {
+                        lfmMultiplier = 1.2f;
+                    }
+                }
             }
             break;
         }

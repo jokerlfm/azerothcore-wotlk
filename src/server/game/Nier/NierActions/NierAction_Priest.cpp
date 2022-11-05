@@ -1077,7 +1077,7 @@ bool NierAction_Priest::Cure(Unit* pmTarget)
                 }
                 if (spell_DispelMagic > 0)
                 {
-                    if (pST->GetDispelMask() & DispelType::DISPEL_MAGIC)
+                    if (pST->GetDispelMask() & SpellInfo::GetDispelMask(DispelType::DISPEL_MAGIC))
                     {
                         if (CastSpell(pmTarget, spell_DispelMagic))
                         {
@@ -1087,7 +1087,7 @@ bool NierAction_Priest::Cure(Unit* pmTarget)
                 }
                 if (spell_CureDisease > 0)
                 {
-                    if (pST->GetDispelMask() & DispelType::DISPEL_DISEASE)
+                    if (pST->GetDispelMask() & SpellInfo::GetDispelMask(DispelType::DISPEL_DISEASE))
                     {
                         if (CastSpell(pmTarget, spell_CureDisease))
                         {

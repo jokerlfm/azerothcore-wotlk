@@ -80,9 +80,12 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     Unit* target = i_target.getTarget();
 
     bool const mutualChase = IsMutualChase(owner, target);
-    // lfm use melee range 
+    // lfm hitboxSum - 1
     float hitboxSum = owner->GetMeleeRange(target);
-    hitboxSum = hitboxSum / 2.0f;
+    if (hitboxSum > 1.0f)
+    {
+        hitboxSum = hitboxSum - 1.0f;
+    }
     float maxRange = hitboxSum;
     if (_range)
     {

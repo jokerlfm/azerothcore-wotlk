@@ -771,9 +771,6 @@ private:
 public:
     static ObjectMgr* instance();
 
-    // lfm global defines 
-    std::unordered_set<uint32> noRewardQuestExceptions;
-
     typedef std::unordered_map<uint32, Item*> ItemMap;
 
     typedef std::unordered_map<uint32, Quest*> QuestMap;

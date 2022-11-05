@@ -2630,6 +2630,12 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         return;
     }
 
+    // lfm debug spell
+    //if (m_spellInfo->Id == 45902)
+    //{
+    //    bool breakPoint = true;
+    //}
+
     if (effectUnit->IsAlive() != target->alive)
         return;
 
@@ -5602,6 +5608,12 @@ void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGOT
     LOG_DEBUG("spells.aura", "Spell: {} Effect : {}", m_spellInfo->Id, eff);
 
     // we do not need DamageMultiplier here.
+
+    // lfm debug
+    if (m_spellInfo->Id == 50475)
+    {
+        bool breakPoint = true;
+    }
     damage = CalculateSpellDamage(i, nullptr);
 
     bool preventDefault = CallScriptEffectHandlers((SpellEffIndex)i, mode);
@@ -7453,7 +7465,14 @@ SpellCastResult Spell::CheckItems()
 
                     // xinef: required level has to be checked also! Exploit fix
                     if (targetItem->GetTemplate()->ItemLevel < m_spellInfo->BaseLevel || (targetItem->GetTemplate()->RequiredLevel && targetItem->GetTemplate()->RequiredLevel < m_spellInfo->BaseLevel))
-                        return SPELL_FAILED_LOWLEVEL;
+                    {
+                        // lfm dk
+                        //return SPELL_FAILED_LOWLEVEL;
+                        if (m_spellInfo->Id != 53343)
+                        {
+                            return SPELL_FAILED_LOWLEVEL;
+                        }                            
+                    }                        
 
                     bool isItemUsable = false;
                     for (uint8 e = 0; e < MAX_ITEM_PROTO_SPELLS; ++e)
@@ -7525,7 +7544,14 @@ SpellCastResult Spell::CheckItems()
                     if (m_CastItem && m_spellInfo->MaxLevel > 0)
                     {
                         if (item->GetTemplate()->ItemLevel < m_CastItem->GetTemplate()->RequiredLevel)
-                            return SPELL_FAILED_LOWLEVEL;
+                        {
+                            // lfm dk
+                            //return SPELL_FAILED_LOWLEVEL;
+                            if (m_spellInfo->Id != 53343)
+                            {
+                                return SPELL_FAILED_LOWLEVEL;
+                            }
+                        }                            
                         if (item->GetTemplate()->ItemLevel > m_spellInfo->MaxLevel)
                             return SPELL_FAILED_HIGHLEVEL;
                     }

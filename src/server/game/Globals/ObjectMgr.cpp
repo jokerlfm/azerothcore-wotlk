@@ -2787,6 +2787,28 @@ void ObjectMgr::LoadItemTemplates()
         itemTemplate.MaxMoneyLoot = fields[136].Get<uint32>();
         itemTemplate.FlagsCu = fields[137].Get<uint32>();
 
+        // lfm nier equips
+        if (itemTemplate.Quality > ItemQualities::ITEM_QUALITY_NORMAL && itemTemplate.Quality < ItemQualities::ITEM_QUALITY_EPIC)
+        {
+            int requiredLevel = itemTemplate.RequiredLevel;
+            if (requiredLevel == 0)
+            {
+                requiredLevel = itemTemplate.ItemLevel;
+            }
+            sNierManager->equipsMap[itemTemplate.InventoryType][requiredLevel][sNierManager->equipsMap[itemTemplate.InventoryType][requiredLevel].size()] = itemTemplate.ItemId;
+        }
+
+        if (itemTemplate.Class == ItemClass::ITEM_CLASS_WEAPON || itemTemplate.Class == ItemClass::ITEM_CLASS_ARMOR)
+        {
+            if (itemTemplate.Quality > ItemQualities::ITEM_QUALITY_NORMAL && itemTemplate.Quality < ItemQualities::ITEM_QUALITY_EPIC)
+            {
+                if (itemTemplate.RequiredLevel > 0)
+                {
+                    sMingManager->vendorEquipsMap[itemTemplate.Class][itemTemplate.SubClass][itemTemplate.RequiredLevel].insert(itemTemplate.ItemId);
+                }
+            }
+        }
+
         // Checks
         if (itemTemplate.Class >= MAX_ITEM_CLASS)
         {
@@ -4326,10 +4348,6 @@ void ObjectMgr::BuildPlayerLevelInfo(uint8 race, uint8 _class, uint8 level, Play
 void ObjectMgr::LoadQuests()
 {
     uint32 oldMSTime = getMSTime();
-
-    // lfm no reward quest exceptions
-    noRewardQuestExceptions.insert(1682);
-    noRewardQuestExceptions.insert(1667);
 
     // For reload case
     for (QuestMap::const_iterator itr = _questTemplates.begin(); itr != _questTemplates.end(); ++itr)

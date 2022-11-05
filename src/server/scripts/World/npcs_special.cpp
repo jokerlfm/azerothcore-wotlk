@@ -2852,6 +2852,598 @@ public:
     }
 };
 
+// lfm scripts 
+enum WCDataTypes
+{
+    TYPE_LORD_COBRAHN = 0,
+    TYPE_LORD_PYTHAS = 1,
+    TYPE_LADY_ANACONDRA = 2,
+    TYPE_LORD_SERPENTIS = 3,
+    TYPE_NARALEX_EVENT = 5,
+    TYPE_NARALEX_PART1 = 6,
+    TYPE_NARALEX_PART2 = 7,
+    TYPE_NARALEX_PART3 = 8,
+    TYPE_MUTANUS_THE_DEVOURER = 9,
+    TYPE_NARALEX_YELLED = 10,
+
+    DATA_NARALEX = 3679,
+    DATA_Disciple_of_NARALEX = 3678,
+};
+
+enum Enums
+{
+    SAY_AT_LAST = 0,
+    SAY_MAKE_PREPARATIONS = 1,
+    SAY_TEMPLE_OF_PROMISE = 2,
+    SAY_MUST_CONTINUE = 3,
+    SAY_BANISH_THE_SPIRITS = 4,
+    SAY_CAVERNS_PURIFIED = 5,
+    SAY_BEYOND_THIS_CORRIDOR = 6,
+    SAY_EMERALD_DREAM = 7,
+    EMOTE_AWAKENING_RITUAL = 8,
+    EMOTE_TROUBLED_SLEEP = 0,
+    EMOTE_WRITHE_IN_AGONY = 1,
+    EMOTE_HORRENDOUS_VISION = 2,
+    SAY_MUTANUS_THE_DEVOURER = 9,
+    SAY_I_AM_AWAKE = 3,
+    SAY_NARALEX_AWAKES = 10,
+    SAY_THANK_YOU = 4,
+    SAY_FAREWELL = 5,
+    SAY_ATTACKED = 11,
+
+    GOSSIP_OPTION_LET_EVENT_BEGIN = 201,
+    NPC_TEXT_NARALEX_SLEEPS_AGAIN = 698,
+    NPC_TEXT_FANGLORDS_ARE_DEAD = 699,
+
+    SPELL_MARK_OF_THE_WILD_RANK_2 = 5232,
+    SPELL_SERPENTINE_CLEANSING = 6270,
+    SPELL_NARALEXS_AWAKENING = 6271,
+    SPELL_FLIGHT_FORM = 33943,
+
+    NPC_DEVIATE_RAVAGER = 3636,
+    NPC_DEVIATE_VIPER = 5755,
+    NPC_DEVIATE_MOCCASIN = 5762,
+    NPC_NIGHTMARE_ECTOPLASM = 5763,
+    NPC_MUTANUS_THE_DEVOURER = 3654,
+};
+
+class npc_disciple_of_naralex_lfm : public CreatureScript
+{
+public:
+    npc_disciple_of_naralex_lfm() : CreatureScript("npc_disciple_of_naralex_lfm") { }
+
+    struct npc_disciple_of_naralex_lfmAI : public npc_escortAI
+    {
+        npc_disciple_of_naralex_lfmAI(Creature* creature) : npc_escortAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+            eventTimer = 0;
+            currentEvent = 0;
+            eventProgress = 0;
+            me->setActive(true);            
+            me->SetImmuneToPC(false);
+        }
+
+        uint32 eventTimer;
+        uint32 currentEvent;
+        uint32 eventProgress;
+        InstanceScript* instance;
+
+        void WaypointReached(uint32 waypointId) override
+        {
+            switch (waypointId)
+            {
+            case 4:
+                eventProgress = 1;
+                currentEvent = TYPE_NARALEX_PART1;
+                instance->SetData(TYPE_NARALEX_PART1, IN_PROGRESS);
+                break;
+            case 5:
+                Talk(SAY_MUST_CONTINUE);
+                instance->SetData(TYPE_NARALEX_PART1, DONE);
+                break;
+            case 11:
+                eventProgress = 1;
+                currentEvent = TYPE_NARALEX_PART2;
+                instance->SetData(TYPE_NARALEX_PART2, IN_PROGRESS);
+                break;
+            case 19:
+                Talk(SAY_BEYOND_THIS_CORRIDOR);
+                break;
+            case 24:
+                eventProgress = 1;
+                currentEvent = TYPE_NARALEX_PART3;
+                instance->SetData(TYPE_NARALEX_PART3, IN_PROGRESS);
+                break;
+            }
+        }
+
+        void Reset() override
+        {
+
+        }
+
+        void EnterCombat(Unit* who) override
+        {
+            Talk(SAY_ATTACKED, who);
+        }
+
+        void JustDied(Unit* /*killer*/) override
+        {
+            instance->SetData(TYPE_NARALEX_EVENT, FAIL);
+            instance->SetData(TYPE_NARALEX_PART1, FAIL);
+            instance->SetData(TYPE_NARALEX_PART2, FAIL);
+            instance->SetData(TYPE_NARALEX_PART3, FAIL);
+        }
+
+        void JustSummoned(Creature* summoned) override
+        {
+            summoned->AI()->AttackStart(me);
+        }
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (currentEvent != TYPE_NARALEX_PART3)
+                npc_escortAI::UpdateAI(diff);
+
+            if (eventTimer <= diff)
+            {
+                eventTimer = 0;
+                if (instance->GetData(currentEvent) == IN_PROGRESS)
+                {
+                    switch (currentEvent)
+                    {
+                    case TYPE_NARALEX_PART1:
+                        if (eventProgress == 1)
+                        {
+                            ++eventProgress;
+                            Talk(SAY_TEMPLE_OF_PROMISE);
+                            me->SummonCreature(NPC_DEVIATE_RAVAGER, -82.1763f, 227.874f, -93.3233f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000);
+                            me->SummonCreature(NPC_DEVIATE_RAVAGER, -72.9506f, 216.645f, -93.6756f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000);
+                        }
+                        break;
+                    case TYPE_NARALEX_PART2:
+                        if (eventProgress == 1)
+                        {
+                            ++eventProgress;
+                            eventTimer = 10000;
+                            Talk(SAY_BANISH_THE_SPIRITS);
+                            DoCast(me, SPELL_SERPENTINE_CLEANSING);
+                            //CAST_AI(EscortAI, me->AI())->SetCanDefend(false);
+                        }
+                        else
+                            if (eventProgress == 2)
+                            {
+                                ++eventProgress;
+                                eventTimer = 20000;
+                                me->SetReactState(ReactStates::REACT_PASSIVE);
+                                me->SummonCreature(NPC_DEVIATE_VIPER, -61.5261f, 273.676f, -92.8442f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000);
+                                me->SummonCreature(NPC_DEVIATE_VIPER, -58.4658f, 280.799f, -92.8393f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000);
+                                me->SummonCreature(NPC_DEVIATE_VIPER, -50.002f, 278.578f, -92.8442f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 5000);
+                            }
+                            else
+                                if (eventProgress == 3)
+                                {
+                                    //CAST_AI(EscortAI, me->AI())->SetCanDefend(true);
+                                    Talk(SAY_CAVERNS_PURIFIED);
+                                    instance->SetData(TYPE_NARALEX_PART2, DONE);
+                                    if (me->HasAura(SPELL_SERPENTINE_CLEANSING))
+                                    {
+                                        me->RemoveAura(SPELL_SERPENTINE_CLEANSING);
+                                    }
+                                    me->SetReactState(ReactStates::REACT_AGGRESSIVE);
+                                }
+                        break;
+                    case TYPE_NARALEX_PART3:
+                        if (eventProgress == 1)
+                        {
+                            ++eventProgress;
+                            eventTimer = 4000;
+                            me->SetStandState(UNIT_STAND_STATE_KNEEL);
+                            Talk(SAY_EMERALD_DREAM);
+                        }
+                        else
+                            if (eventProgress == 2)
+                            {
+                                ++eventProgress;
+                                eventTimer = 15000;
+                                //CAST_AI(EscortAI, me->AI())->SetCanDefend(false);
+                                if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                    DoCast(naralex, SPELL_NARALEXS_AWAKENING, true);
+                                Talk(EMOTE_AWAKENING_RITUAL);
+                            }
+                            else
+                                if (eventProgress == 3)
+                                {
+                                    ++eventProgress;
+                                    eventTimer = 15000;
+                                    if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                        naralex->AI()->Talk(EMOTE_TROUBLED_SLEEP);
+                                    //if (TempSummon* ts = me->SummonCreature(NPC_DEVIATE_MOCCASIN, 133.413f, 207.188f, -102.469f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                    //{
+                                    //    ts->EngageWithTarget(me);
+                                    //}
+                                    if (TempSummon* ts = me->SummonCreature(NPC_DEVIATE_MOCCASIN, 153.372f, 235.149f, -102.826f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                    {
+                                        if (me->IsAlive())
+                                        {
+                                            ts->CombatStart(me);
+                                        }
+                                        else
+                                        {
+                                            Position pos = me->GetPosition();
+                                            ts->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                        }
+                                    }
+                                    if (TempSummon* ts = me->SummonCreature(NPC_DEVIATE_MOCCASIN, 126.167f, 274.759f, -102.962f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                    {
+                                        if (me->IsAlive())
+                                        {
+                                            ts->CombatStart(me);
+                                        }
+                                        else
+                                        {
+                                            Position pos = me->GetPosition();
+                                            ts->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                        }
+                                    }
+                                }
+                                else
+                                    if (eventProgress == 4)
+                                    {
+                                        ++eventProgress;
+                                        eventTimer = 30000;
+                                        if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                            naralex->AI()->Talk(EMOTE_WRITHE_IN_AGONY);
+                                        if (TempSummon* ts = me->SummonCreature(NPC_NIGHTMARE_ECTOPLASM, 133.413f, 207.188f, -102.469f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                        {
+                                            if (me->IsAlive())
+                                            {
+                                                ts->CombatStart(me);
+                                            }
+                                            else
+                                            {
+                                                Position pos = me->GetPosition();
+                                                ts->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                            }
+                                        }
+                                        //if (TempSummon* ts = me->SummonCreature(NPC_NIGHTMARE_ECTOPLASM, 142.857f, 218.645f, -102.905f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                        //{
+                                            //if (me->IsAlive())
+                                            //{
+                                            //    ts->EngageWithTarget(me);
+                                            //}
+                                            //else
+                                            //{
+                                            //    Position pos = me->GetPosition();
+                                            //    ts->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                            //}
+                                        //}
+                                        if (TempSummon* ts = me->SummonCreature(NPC_NIGHTMARE_ECTOPLASM, 105.102f, 227.211f, -102.752f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                        {
+                                            if (me->IsAlive())
+                                            {
+                                                ts->CombatStart(me);
+                                            }
+                                            else
+                                            {
+                                                Position pos = me->GetPosition();
+                                                ts->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                            }
+                                        }
+                                        if (TempSummon* ts = me->SummonCreature(NPC_NIGHTMARE_ECTOPLASM, 153.372f, 235.149f, -102.826f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                        {
+                                            if (me->IsAlive())
+                                            {
+                                                ts->CombatStart(me);
+                                            }
+                                            else
+                                            {
+                                                Position pos = me->GetPosition();
+                                                ts->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                            }
+                                        }
+                                        if (TempSummon* ts = me->SummonCreature(NPC_NIGHTMARE_ECTOPLASM, 149.524f, 251.113f, -102.558f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                        {
+                                            if (me->IsAlive())
+                                            {
+                                                ts->CombatStart(me);
+                                            }
+                                            else
+                                            {
+                                                Position pos = me->GetPosition();
+                                                ts->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                            }
+                                        }
+                                        //if (TempSummon* ts = me->SummonCreature(NPC_NIGHTMARE_ECTOPLASM, 136.208f, 266.466f, -102.977f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                        //{
+                                        //    ts->EngageWithTarget(me);
+                                        //}
+                                        //if (TempSummon* ts = me->SummonCreature(NPC_NIGHTMARE_ECTOPLASM, 126.167f, 274.759f, -102.962f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 600000))
+                                        //{
+                                        //    ts->EngageWithTarget(me);
+                                        //}
+                                    }
+                                    else
+                                        if (eventProgress == 5)
+                                        {
+                                            ++eventProgress;
+                                            if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                                naralex->AI()->Talk(EMOTE_HORRENDOUS_VISION);
+                                            if (Creature* mutanus = me->SummonCreature(NPC_MUTANUS_THE_DEVOURER, 153.372f, 235.149f, -102.826f, 0, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 3600000))
+                                            {
+                                                Talk(SAY_MUTANUS_THE_DEVOURER, mutanus);
+                                                if (me->IsAlive())
+                                                {
+                                                    mutanus->CombatStart(me);
+                                                }
+                                                else
+                                                {
+                                                    Position pos = me->GetPosition();
+                                                    mutanus->MovePositionToFirstCollision(pos, 0.1f, 0.1f);
+                                                }
+                                            }
+
+                                            instance->SetData(TYPE_MUTANUS_THE_DEVOURER, IN_PROGRESS);
+                                        }
+                                        else
+                                            if (eventProgress == 6 && instance->GetData(TYPE_MUTANUS_THE_DEVOURER) == DONE)
+                                            {
+                                                ++eventProgress;
+                                                eventTimer = 3000;
+                                                if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                                {
+                                                    if (me->HasAura(SPELL_NARALEXS_AWAKENING))
+                                                        me->RemoveAura(SPELL_NARALEXS_AWAKENING);
+                                                    naralex->SetStandState(UNIT_STAND_STATE_STAND);
+                                                    naralex->AI()->Talk(SAY_I_AM_AWAKE);
+                                                }
+                                                Talk(SAY_NARALEX_AWAKES);
+                                            }
+                                            else
+                                                if (eventProgress == 7)
+                                                {
+                                                    ++eventProgress;
+                                                    eventTimer = 6000;
+                                                    if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                                        naralex->AI()->Talk(SAY_THANK_YOU);
+                                                }
+                                                else
+                                                    if (eventProgress == 8)
+                                                    {
+                                                        ++eventProgress;
+                                                        eventTimer = 8000;
+                                                        if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                                        {
+                                                            naralex->AI()->Talk(SAY_FAREWELL);
+                                                            naralex->AddAura(SPELL_FLIGHT_FORM, naralex);
+                                                        }
+                                                        SetRun();
+                                                        me->SetStandState(UNIT_STAND_STATE_STAND);
+                                                        me->AddAura(SPELL_FLIGHT_FORM, me);
+                                                    }
+                                                    else
+                                                        if (eventProgress == 9)
+                                                        {
+                                                            ++eventProgress;
+                                                            eventTimer = 1500;
+
+                                                            // lfm unuseful
+                                                            //if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                                            //{
+                                                            //    naralex->GetMotionMaster()->MovePoint(25, naralex->GetPositionX(), naralex->GetPositionY(), naralex->GetPositionZ());
+                                                            //}
+                                                        }
+                                                        else
+                                                            if (eventProgress == 10)
+                                                            {
+                                                                ++eventProgress;
+                                                                eventTimer = 2500;
+                                                                if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                                                {
+                                                                    naralex->GetMotionMaster()->MovePoint(0, 117.095512f, 247.107971f, -96.167870f);
+                                                                    naralex->GetMotionMaster()->MovePoint(1, 90.388809f, 276.135406f, -83.389801f);
+                                                                }                                                                
+                                                                me->GetMotionMaster()->Clear();
+                                                                me->GetMotionMaster()->MovePoint(0, 117.095512f, 247.107971f, -96.167870f);
+                                                                me->GetMotionMaster()->MovePoint(1, 144.375443f, 281.045837f, -82.477135f);
+                                                            }
+                                                            else
+                                                                if (eventProgress == 11)
+                                                                {
+                                                                    if (Creature* naralex = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_NARALEX)))
+                                                                        naralex->SetVisible(false);
+                                                                    me->SetVisible(false);
+                                                                    instance->SetData(TYPE_NARALEX_PART3, DONE);
+                                                                }
+                        break;
+                    }
+                }
+            }
+            else eventTimer -= diff;
+        }
+
+        void sGossipSelect(Player* player, uint32 /*menuId*/, uint32 gossipListId) override
+        {
+            uint32 const action = player->PlayerTalkClass->GetGossipOptionAction(gossipListId);
+            ClearGossipMenuFor(player);
+            if (action == GOSSIP_ACTION_INFO_DEF + 1)
+            {
+                CloseGossipMenuFor(player);
+                if (instance)
+                    instance->SetData(TYPE_NARALEX_EVENT, IN_PROGRESS);
+
+                Talk(SAY_MAKE_PREPARATIONS);
+
+                me->SetFaction(FACTION_ESCORTEE_N_NEUTRAL_ACTIVE);
+                me->SetImmuneToPC(false);
+
+                Start(false, false, player->GetGUID());
+                SetDespawnAtFar(false);
+                SetDespawnAtEnd(false);
+            }
+        }
+
+        void sGossipHello(Player* player) override
+        {
+            DoCast(player, SPELL_MARK_OF_THE_WILD_RANK_2, true);
+
+            ClearGossipMenuFor(player);
+
+            if ((instance->GetData(TYPE_LORD_COBRAHN) == DONE) && (instance->GetData(TYPE_LORD_PYTHAS) == DONE) &&
+                (instance->GetData(TYPE_LADY_ANACONDRA) == DONE) && (instance->GetData(TYPE_LORD_SERPENTIS) == DONE))
+            {
+                AddGossipItemFor(player, GOSSIP_OPTION_LET_EVENT_BEGIN, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+                SendGossipMenuFor(player, NPC_TEXT_FANGLORDS_ARE_DEAD, me->GetGUID());
+
+                if (!instance->GetData(TYPE_NARALEX_YELLED))
+                {
+                    Talk(SAY_AT_LAST);
+                    instance->SetData(TYPE_NARALEX_YELLED, 1);
+                }
+            }
+            else
+            {
+                SendGossipMenuFor(player, NPC_TEXT_NARALEX_SLEEPS_AGAIN, me->GetGUID());                
+            }
+        }
+    };
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_disciple_of_naralex_lfmAI(creature);
+    }
+};
+
+#define MAX_ENCOUNTER 9
+
+class instance_wailing_caverns_lfm : public InstanceMapScript
+{
+public:
+    instance_wailing_caverns_lfm() : InstanceMapScript("instance_wailing_caverns_lfm", 43) { }
+
+    InstanceScript* GetInstanceScript(InstanceMap* map) const override
+    {
+        return new instance_wailing_caverns_lfm_InstanceMapScript(map);
+    }
+
+    struct instance_wailing_caverns_lfm_InstanceMapScript : public InstanceScript
+    {
+        instance_wailing_caverns_lfm_InstanceMapScript(Map* map) : InstanceScript(map) { }
+
+        void Initialize() override
+        {
+            memset(&m_auiEncounter, 0, sizeof(m_auiEncounter));
+        }
+
+        uint32 m_auiEncounter[MAX_ENCOUNTER];
+        bool yelled;
+        ObjectGuid NaralexGUID;
+        ObjectGuid DiscipleOfNaralexGUID;
+
+        void OnCreatureCreate(Creature* creature) override
+        {
+            if (creature->GetEntry() == DATA_NARALEX)
+            {
+                NaralexGUID = creature->GetGUID();
+            }
+            else if (creature->GetEntry() == DATA_Disciple_of_NARALEX)
+            {
+                DiscipleOfNaralexGUID = creature->GetGUID();
+            }
+        }
+
+        void SetData(uint32 type, uint32 data) override
+        {
+            switch (type)
+            {
+            case TYPE_LORD_COBRAHN:         m_auiEncounter[0] = data; break;
+            case TYPE_LORD_PYTHAS:          m_auiEncounter[1] = data; break;
+            case TYPE_LADY_ANACONDRA:       m_auiEncounter[2] = data; break;
+            case TYPE_LORD_SERPENTIS:       m_auiEncounter[3] = data; break;
+            case TYPE_NARALEX_EVENT:        m_auiEncounter[4] = data; break;
+            case TYPE_NARALEX_PART1:        m_auiEncounter[5] = data; break;
+            case TYPE_NARALEX_PART2:        m_auiEncounter[6] = data; break;
+            case TYPE_NARALEX_PART3:        m_auiEncounter[7] = data; break;
+            case TYPE_MUTANUS_THE_DEVOURER: m_auiEncounter[8] = data; break;
+            case TYPE_NARALEX_YELLED:       yelled = true;      break;
+            }
+            if (data == DONE)SaveToDB();
+
+            // lfm yell at boss die
+            if (type == TYPE_LORD_COBRAHN || type == TYPE_LORD_PYTHAS || type == TYPE_LADY_ANACONDRA || type == TYPE_LORD_SERPENTIS)
+            {
+                if ((GetData(TYPE_LORD_COBRAHN) == DONE) && (GetData(TYPE_LORD_PYTHAS) == DONE) && (GetData(TYPE_LADY_ANACONDRA) == DONE) && (GetData(TYPE_LORD_SERPENTIS) == DONE))
+                {
+                    if (Creature* don = instance->GetCreature(DiscipleOfNaralexGUID))
+                    {
+                        don->AI()->Talk(SAY_AT_LAST);
+                        yelled = true;
+                    }
+                }
+            }
+        }
+
+        uint32 GetData(uint32 type) const override
+        {
+            switch (type)
+            {
+            case TYPE_LORD_COBRAHN:         return m_auiEncounter[0];
+            case TYPE_LORD_PYTHAS:          return m_auiEncounter[1];
+            case TYPE_LADY_ANACONDRA:       return m_auiEncounter[2];
+            case TYPE_LORD_SERPENTIS:       return m_auiEncounter[3];
+            case TYPE_NARALEX_EVENT:        return m_auiEncounter[4];
+            case TYPE_NARALEX_PART1:        return m_auiEncounter[5];
+            case TYPE_NARALEX_PART2:        return m_auiEncounter[6];
+            case TYPE_NARALEX_PART3:        return m_auiEncounter[7];
+            case TYPE_MUTANUS_THE_DEVOURER: return m_auiEncounter[8];
+            case TYPE_NARALEX_YELLED:       return yelled;
+            }
+            return 0;
+        }
+
+        ObjectGuid GetGuidData(uint32 data) const override
+        {
+            if (data == DATA_NARALEX)return NaralexGUID;
+            return ObjectGuid::Empty;
+        }
+
+        std::string GetSaveData() override
+        {
+            OUT_SAVE_INST_DATA;
+
+            std::ostringstream saveStream;
+            saveStream << m_auiEncounter[0] << ' ' << m_auiEncounter[1] << ' ' << m_auiEncounter[2] << ' '
+                << m_auiEncounter[3] << ' ' << m_auiEncounter[4] << ' ' << m_auiEncounter[5] << ' '
+                << m_auiEncounter[6] << ' ' << m_auiEncounter[7] << ' ' << m_auiEncounter[8];
+
+            OUT_SAVE_INST_DATA_COMPLETE;
+            return saveStream.str();
+        }
+
+        void Load(const char* in) override
+        {
+            if (!in)
+            {
+                OUT_LOAD_INST_DATA_FAIL;
+                return;
+            }
+
+            OUT_LOAD_INST_DATA(in);
+
+            std::istringstream loadStream(in);
+            loadStream >> m_auiEncounter[0] >> m_auiEncounter[1] >> m_auiEncounter[2] >> m_auiEncounter[3]
+                >> m_auiEncounter[4] >> m_auiEncounter[5] >> m_auiEncounter[6] >> m_auiEncounter[7] >> m_auiEncounter[8];
+
+            for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
+                if (m_auiEncounter[i] != DONE)
+                    m_auiEncounter[i] = NOT_STARTED;
+
+            OUT_LOAD_INST_DATA_COMPLETE;
+        }
+    };
+};
+
 void AddSC_npcs_special()
 {
     // Ours
@@ -2882,4 +3474,7 @@ void AddSC_npcs_special()
     // lfm scripts
     new npc_dirge_quikcleave();
     new npc_worm();
+
+    new npc_disciple_of_naralex_lfm();
+    new instance_wailing_caverns_lfm();
 }
