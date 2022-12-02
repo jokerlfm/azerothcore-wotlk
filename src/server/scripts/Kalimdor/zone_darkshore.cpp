@@ -442,11 +442,15 @@ public:
     {
         npc_rabid_thistle_bearAI(Creature* creature) : FollowerAI(creature)
         {
+            maulDelay = 0;
+            rabidDelay = 0;
             Initialize();
         }
 
         void Initialize()
         {
+            maulDelay = urand(3000, 5000);
+            rabidDelay = urand(5000, 8000);
             me->SetEntry(NPC_RABID_THISTLE_BEAR);
             me->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
             _playerGUID.Clear();
@@ -490,19 +494,45 @@ public:
                 _events.Update(diff);
                 switch (_events.ExecuteEvent())
                 {
-                    case EVENT_CHECK_FOLLOWING:
-                        Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID);
-                        if (!player || me->GetDistance2d(player) > 100.0f || me->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE || player->GetQuestStatus(QUEST_PLAGUED_LANDS) == QUEST_STATUS_NONE)
-                        {
-                            me->DespawnOrUnsummon();
-                        }
-                        _events.ScheduleEvent(EVENT_CHECK_FOLLOWING, 1000);
-                        break;
+                case EVENT_CHECK_FOLLOWING:
+                    Player* player = ObjectAccessor::GetPlayer(*me, _playerGUID);
+                    if (!player || me->GetDistance2d(player) > 100.0f || me->GetMotionMaster()->GetCurrentMovementGeneratorType() != FOLLOW_MOTION_TYPE || player->GetQuestStatus(QUEST_PLAGUED_LANDS) == QUEST_STATUS_NONE)
+                    {
+                        me->DespawnOrUnsummon();
+                    }
+                    _events.ScheduleEvent(EVENT_CHECK_FOLLOWING, 1000);
+                    break;
                 }
             }
 
             if (!UpdateVictim())
                 return;
+
+            if (maulDelay > 0)
+            {
+                maulDelay -= diff;
+            }
+            else
+            {
+                maulDelay = urand(8000, 12000);
+                DoCastVictim(7092);
+            }
+
+            if (rabidDelay > 0)
+            {
+                rabidDelay -= diff;
+            }
+            else
+            {
+                rabidDelay = urand(12000, 15000);
+                if (Unit* victim = me->GetVictim())
+                {
+                    if (!victim->HasAura(3150))
+                    {
+                        me->CastSpell(victim, 3150);
+                    }
+                }
+            }
 
             DoMeleeAttackIfReady();
         }
@@ -510,6 +540,8 @@ public:
     private:
         EventMap _events;
         ObjectGuid _playerGUID;
+        int maulDelay;
+        int rabidDelay;
     };
 
     CreatureAI* GetAI(Creature* creature) const override

@@ -172,6 +172,18 @@ void NierStrategy_Base::Update(uint32 pmDiff)
         return;
     }
     me->nierAction->Update(pmDiff);
+    if (reviveDelay > 0)
+    {
+        reviveDelay -= pmDiff;
+        if (reviveDelay <= 0)
+        {
+            reviveDelay = 0;
+            me->ResurrectPlayer(0.1f);
+            me->ClearInCombat();
+            me->SetSelection(ObjectGuid::Empty);
+            me->GetMotionMaster()->Clear();
+        }
+    }
     if (assembleDelay > 0)
     {
         assembleDelay -= pmDiff;
@@ -194,28 +206,12 @@ void NierStrategy_Base::Update(uint32 pmDiff)
                             me->SetSelection(ObjectGuid::Empty);
                             me->SetPhaseMask(leader->GetPhaseMask(), true);
                             me->GetMotionMaster()->Clear();
-                            if (me->IsAlive())
+                            if (me->TeleportTo(leader->GetWorldLocation()))
                             {
-                                if (me->TeleportTo(leader->GetWorldLocation()))
-                                {
-                                    me->Whisper("In position.", Language::LANG_UNIVERSAL, leader);
-                                }
+                                me->Whisper("In position.", Language::LANG_UNIVERSAL, leader);
                             }
-                            else
+                            if (!me->IsAlive())
                             {
-                                if (Map* leaderMap = leader->GetMap())
-                                {
-                                    if (leaderMap->Instanceable())
-                                    {
-                                        if (me->GetMapId() != leaderMap->GetId())
-                                        {
-                                            me->Whisper("Revive first", Language::LANG_UNIVERSAL, leader);
-                                            reviveDelay = 500;
-                                            assembleDelay = 5000;
-                                            return;
-                                        }
-                                    }
-                                }
                                 me->Whisper("Revive in 5 seconds", Language::LANG_UNIVERSAL, leader);
                                 reviveDelay = 5000;
                             }
@@ -225,20 +221,63 @@ void NierStrategy_Base::Update(uint32 pmDiff)
             }
         }
     }
-    if (reviveDelay > 0)
-    {
-        reviveDelay -= pmDiff;
-        if (reviveDelay <= 0)
-        {
-            reviveDelay = 0;
-            me->ResurrectPlayer(0.1f);
-            me->ClearInCombat();
-            me->SetSelection(ObjectGuid::Empty);
-            me->GetMotionMaster()->Clear();
-        }
-    }
     if (me->IsAlive())
     {
+        if (me->IsNonMeleeSpellCast(true))
+        {
+            bool interrupt = false;
+            if (Spell* cs = me->GetCurrentSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL))
+            {
+                if (Unit* victim = cs->m_targets.GetUnitTarget())
+                {
+                    if (!victim->IsAlive())
+                    {
+                        interrupt = true;
+                    }
+                }
+            }
+            else if (Spell* cs = me->GetCurrentSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL))
+            {
+                if (Unit* victim = cs->m_targets.GetUnitTarget())
+                {
+                    if (!victim->IsAlive())
+                    {
+                        interrupt = true;
+                    }
+                }
+            }
+            else if (Spell* cs = me->GetCurrentSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL))
+            {
+                if (Unit* victim = cs->m_targets.GetUnitTarget())
+                {
+                    if (!victim->IsAlive())
+                    {
+                        if (victim->IsHostileTo(me))
+                        {
+                            interrupt = true;
+                        }
+                    }
+                }
+            }
+            else if (Spell* cs = me->GetCurrentSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL))
+            {
+                if (Unit* victim = cs->m_targets.GetUnitTarget())
+                {
+                    if (!victim->IsAlive())
+                    {
+                        interrupt = true;
+                    }
+                }
+            }
+            if (interrupt)
+            {
+                me->InterruptNonMeleeSpells(true);
+            }
+            else
+            {
+                return;
+            }
+        }
         if (actionLimit > 0)
         {
             actionLimit -= pmDiff;
@@ -328,7 +367,7 @@ void NierStrategy_Base::Update(uint32 pmDiff)
                         if (me->GetDistance(leader) > CONTACT_DISTANCE)
                         {
                             me->nierAction->nm->ResetMovement();
-                            me->InterruptNonMeleeSpells(false);
+                            me->InterruptNonMeleeSpells(true);
                             me->GetMotionMaster()->MovePoint(0, leader->GetPosition());
                         }
                         return;
@@ -378,6 +417,10 @@ void NierStrategy_Base::Update(uint32 pmDiff)
                     return;
                 }
                 if (Assist())
+                {
+                    return;
+                }
+                if (me->IsNonMeleeSpellCast(false))
                 {
                     return;
                 }
@@ -607,10 +650,6 @@ bool NierStrategy_Base::Engage(Unit* pmTarget)
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
 
     if (NierAction_Base* nab = me->nierAction)
     {
@@ -653,10 +692,6 @@ bool NierStrategy_Base::TryTank()
     else if (!me->IsAlive())
     {
         return false;
-    }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
     }
 
     if (Group* myGroup = me->GetGroup())
@@ -809,10 +844,7 @@ bool NierStrategy_Base::DoTank(Unit* pmTarget)
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
+
     if (me->nierAction->Tank(pmTarget, aoe, dpsDistance, dpsDistanceMin, basicStrategyType == BasicStrategyType::BasicStrategyType_Hold))
     {
         return true;
@@ -838,10 +870,6 @@ bool NierStrategy_Base::TryDPS(bool pmDelay, bool pmForceInstantOnly, bool pmCha
     else if (!me->IsAlive())
     {
         return false;
-    }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
     }
 
     if (!ogVip.IsEmpty())
@@ -951,10 +979,6 @@ bool NierStrategy_Base::DoDPS(Unit* pmTarget, bool pmForceInstantOnly, bool pmCh
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     if (!pmTarget)
     {
         return false;
@@ -1060,10 +1084,7 @@ bool NierStrategy_Base::TryHeal(bool pmForceInstantOnly)
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
+
     if (Group* myGroup = me->GetGroup())
     {
         if (me->GetHealthPct() < 50.0f)
@@ -1150,10 +1171,7 @@ bool NierStrategy_Base::DoHeal(Unit* pmTarget, bool pmForceInstantOnly)
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
+
     bool instant = pmForceInstantOnly;
     if (!instant)
     {
@@ -1177,10 +1195,7 @@ bool NierStrategy_Base::Revive()
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
+
     if (Group* myGroup = me->GetGroup())
     {
         for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
@@ -1214,10 +1229,6 @@ bool NierStrategy_Base::Revive(Unit* pmTarget)
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     if (Player* targetPlayer = (Player*)pmTarget)
     {
         if (me->nierAction->Revive(targetPlayer))
@@ -1238,10 +1249,6 @@ bool NierStrategy_Base::Buff()
     else if (!me->IsAlive())
     {
         return false;
-    }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
     }
     if (Group* myGroup = me->GetGroup())
     {
@@ -1273,10 +1280,6 @@ bool NierStrategy_Base::Assist()
     else if (!me->IsAlive())
     {
         return false;
-    }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
     }
     if (me->nierAction->Assist(rti))
     {
@@ -1330,10 +1333,6 @@ bool NierStrategy_Base::Petting()
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     if (me->nierAction->Petting(petting))
     {
         return true;
@@ -1352,11 +1351,6 @@ bool NierStrategy_Base::Cure()
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
-
     if (Group* myGroup = me->GetGroup())
     {
         for (GroupReference* groupRef = myGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
@@ -1391,10 +1385,6 @@ bool NierStrategy_Base::Follow()
     else if (!me->IsAlive())
     {
         return false;
-    }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
     }
     if (Group* myGroup = me->GetGroup())
     {
@@ -1432,20 +1422,47 @@ bool NierStrategy_Base::Wander()
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     else if (me->isMoving())
     {
         return true;
     }
 
-    float angle = frand(0, 2 * M_PI);
-    float distance = frand(10.0f, 30.0f);
-    Position dest;
-    me->GetNearPoint(me, dest.m_positionX, dest.m_positionY, dest.m_positionZ, 0.0f, distance, angle);
-    me->nierAction->nm->Point(dest);
+    uint32 wanderRate = urand(0, 100);
+    if (wanderRate < 25)
+    {
+        std::list<Unit*> targets;
+        // Maximum spell range=100m ?
+        MaNGOS::AnyUnitInObjectRangeCheck u_check(me, 100.0f);
+        MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(targets, u_check);
+        // Don't need to use visibility modifier, units won't be able to cast outside of draw distance
+        Cell::VisitAllObjects(me, searcher, 100.0f);
+        for (std::list<Unit*>::iterator uIT = targets.begin(); uIT != targets.end(); uIT++)
+        {
+            if (Unit* eachUnit = *uIT)
+            {
+                if (eachUnit->GetTypeId() == TypeID::TYPEID_PLAYER)
+                {
+                    if (me->IsValidAttackTarget(eachUnit))
+                    {
+                        if (sb->DPS(eachUnit, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
+                        {
+                            engageDelay = 20 * TimeConstants::IN_MILLISECONDS;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else if (wanderRate < 50)
+    {
+        float angle = frand(0, 2 * M_PI);
+        float distance = frand(10.0f, 30.0f);
+        Position dest;
+        me->GetNearPoint(me, dest.m_positionX, dest.m_positionY, dest.m_positionZ, 0.0f, distance, angle);
+        me->nierAction->nm->Point(dest);
+    }
+
     return true;
 }
 
@@ -1517,11 +1534,6 @@ bool NierStrategy_The_Black_Morass::DoDPS(Unit* pmTarget, bool pmForceInstantOnl
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
-
     if (aoe)
     {
         int attackerInRangeCount = 0;
@@ -1601,7 +1613,7 @@ void NierStrategy_Magisters_Terrace::Update(uint32 pmDiff)
         if (Creature* phoenix = me->FindNearestCreature(24674, NIER_NORMAL_DISTANCE - MELEE_RANGE))
         {
             me->nierAction->nm->ResetMovement();
-            me->InterruptNonMeleeSpells(false);
+            me->InterruptNonMeleeSpells(true);
             Position pos;
             me->GetNearPoint(phoenix, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, NIER_NORMAL_DISTANCE, phoenix->GetAbsoluteAngle(me));
             me->GetMotionMaster()->MovePoint(0, pos);
@@ -1612,7 +1624,7 @@ void NierStrategy_Magisters_Terrace::Update(uint32 pmDiff)
         if (Creature* flame = me->FindNearestCreature(24666, NIER_NORMAL_DISTANCE - MELEE_RANGE))
         {
             me->nierAction->nm->ResetMovement();
-            me->InterruptNonMeleeSpells(false);
+            me->InterruptNonMeleeSpells(true);
             Position pos;
             me->GetNearPoint(flame, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, NIER_NORMAL_DISTANCE, flame->GetAbsoluteAngle(me));
             me->GetMotionMaster()->MovePoint(0, pos);
@@ -1654,7 +1666,7 @@ void NierStrategy_Magisters_Terrace::Update(uint32 pmDiff)
                     if (me->GetDistance(leader) > CONTACT_DISTANCE)
                     {
                         me->nierAction->nm->ResetMovement();
-                        me->InterruptNonMeleeSpells(false);
+                        me->InterruptNonMeleeSpells(true);
                         me->GetMotionMaster()->MovePoint(0, leader->GetPosition());
                     }
                     return;
@@ -1683,11 +1695,6 @@ bool NierStrategy_Magisters_Terrace::TryTank()
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
-
     if (kael)
     {
         if (Creature* egg = me->FindNearestCreature(24675, VISIBILITY_DISTANCE_NORMAL))
@@ -1721,10 +1728,6 @@ bool NierStrategy_Magisters_Terrace::DoTank(Unit* pmTarget)
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     if (pmTarget->GetEntry() == 24664 || pmTarget->GetEntry() == 24857)
     {
         kael = true;
@@ -1750,11 +1753,6 @@ bool NierStrategy_Magisters_Terrace::TryDPS(bool pmDelay, bool pmForceInstantOnl
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
-
     if (kael)
     {
         if (Creature* phoenix = me->FindNearestCreature(24674, VISIBILITY_DISTANCE_NORMAL))
@@ -1836,11 +1834,6 @@ bool NierStrategy_Magisters_Terrace::DoDPS(Unit* pmTarget, bool pmForceInstantOn
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
-
     if (!pmTarget)
     {
         return false;
@@ -1866,10 +1859,6 @@ bool NierStrategy_Magisters_Terrace::DoHeal(Unit* pmTarget, bool pmForceInstantO
     else if (!me->IsAlive())
     {
         return false;
-    }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
     }
     if (!pmTarget)
     {
@@ -2002,10 +1991,6 @@ bool NierStrategy_Azjol_Nerub::TryTank()
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     if (arak)
     {
         Unit* myTarget = me->GetSelectedUnit();
@@ -2130,10 +2115,6 @@ bool NierStrategy_Azjol_Nerub::DoTank(Unit* pmTarget)
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     if (!pmTarget)
     {
         return false;
@@ -2193,10 +2174,6 @@ bool NierStrategy_Azjol_Nerub::DoDPS(Unit* pmTarget, bool pmForceInstantOnly, bo
     {
         return false;
     }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
-    }
     if (!pmTarget)
     {
         return false;
@@ -2234,10 +2211,6 @@ bool NierStrategy_Azjol_Nerub::DoHeal(Unit* pmTarget, bool pmForceInstantOnly)
     else if (!me->IsAlive())
     {
         return false;
-    }
-    else if (me->IsNonMeleeSpellCast(false))
-    {
-        return true;
     }
     if (!pmTarget)
     {

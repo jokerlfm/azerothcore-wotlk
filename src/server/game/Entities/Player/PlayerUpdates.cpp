@@ -443,6 +443,14 @@ void Player::Update(uint32 p_time)
             }
         }
     }
+
+    // lfm debug
+    //if (isTurning())
+    //{
+    //    std::ostringstream replyStream;
+    //    replyStream << m_movementInfo.flags;
+    //    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), this);
+    //}
 }
 
 void Player::UpdateMirrorTimers()

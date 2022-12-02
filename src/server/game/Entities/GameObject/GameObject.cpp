@@ -948,7 +948,7 @@ void GameObject::Update(uint32 diff)
                     {
                         if (IsOutdoors())
                         {
-                            rangeLimit = VISIBILITY_DISTANCE_NORMAL;
+                            rangeLimit = VISIBILITY_DISTANCE_GIGANTIC;
                         }
                     }
                     std::list<GameObject*> gameobjectList;

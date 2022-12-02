@@ -303,7 +303,7 @@ class spell_dk_death_and_decay : public SpellScript
         if (target)
             damage = target->CalculateAOEDamageReduction(damage, GetSpellInfo()->SchoolMask, caster);
 
-        SetHitDamage(damage);
+        SetHitDamage(damage);        
     }
 
     void Register() override
@@ -1139,7 +1139,15 @@ class spell_dk_corpse_explosion : public SpellScript
         if (effIndex == EFFECT_0)
             GetCaster()->CastCustomSpell(GetSpellInfo()->Effects[EFFECT_1].CalcValue(), SPELLVALUE_BASE_POINT0, GetEffectValue(), target, true);
         else if (effIndex == EFFECT_1)
-            GetCaster()->CastCustomSpell(GetEffectValue(), SPELLVALUE_BASE_POINT0, GetSpell()->CalculateSpellDamage(EFFECT_0, nullptr), target, true);
+        {
+            // lfm dk corpse explosion ap
+            //GetCaster()->CastCustomSpell(GetEffectValue(), SPELLVALUE_BASE_POINT0, GetSpell()->CalculateSpellDamage(EFFECT_0, nullptr), target, true);
+            int ceDamage = GetSpell()->CalculateSpellDamage(EFFECT_0, nullptr);
+            float APbonus = GetCaster()->GetTotalAttackPowerValue(WeaponAttackType::BASE_ATTACK);
+            APbonus = APbonus * 0.18f;
+            ceDamage = ceDamage + APbonus;
+            GetCaster()->CastCustomSpell(GetEffectValue(), SPELLVALUE_BASE_POINT0, ceDamage, target, true);
+        }
     }
 
     void HandleCorpseExplosion(SpellEffIndex effIndex)

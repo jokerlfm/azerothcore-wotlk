@@ -2630,12 +2630,6 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
         return;
     }
 
-    // lfm debug spell
-    //if (m_spellInfo->Id == 45902)
-    //{
-    //    bool breakPoint = true;
-    //}
-
     if (effectUnit->IsAlive() != target->alive)
         return;
 
@@ -3775,13 +3769,6 @@ void Spell::cast(bool skipCheck)
 
 void Spell::_cast(bool skipCheck)
 {
-    // lfm debug
-    //uint32 spellId = m_spellInfo->Id;
-    //if (spellId == 47750)
-    //{
-    //    bool breakPoint = true;
-    //}
-    
     // update pointers base at GUIDs to prevent access to non-existed already object
     if (!UpdatePointers())
     {
@@ -5287,6 +5274,8 @@ void Spell::TakePower()
 
     Powers PowerType = Powers(m_spellInfo->PowerType);
     bool hit = true;
+    // lfm dk try block refund
+    bool blocked = false;
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
     {
         if (PowerType == POWER_RAGE || PowerType == POWER_ENERGY || PowerType == POWER_RUNE || PowerType == POWER_RUNIC_POWER)
@@ -5301,12 +5290,24 @@ void Spell::TakePower()
                             if (Player* modOwner = m_caster->ToPlayer()->GetSpellModOwner())
                                 modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_SPELL_COST_REFUND_ON_FAIL, m_powerCost, this);
                         }
+                        if (ihit->missCondition == SpellMissInfo::SPELL_MISS_BLOCK)
+                        {
+                            blocked = true;
+                        }
                         break;
                     }
     }
 
     if (PowerType == POWER_RUNE)
     {
+        // lfm dk try block refund
+        if (hit)
+        {
+            if (blocked)
+            {
+                hit = false;
+            }
+        }
         TakeRunePower(hit);
         return;
     }
@@ -5589,13 +5590,6 @@ void Spell::HandleThreatSpells()
 
 void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGOTarget, uint32 i, SpellEffectHandleMode mode)
 {
-    // lfm debug
-    //uint32 spellId = m_spellInfo->Id;
-    //if (spellId == 47750)
-    //{
-    //    bool breakPoint = true;
-    //}
-
     effectHandleMode = mode;
     unitTarget = pUnitTarget;
     itemTarget = pItemTarget;
@@ -5607,12 +5601,6 @@ void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGOT
     LOG_DEBUG("spells.aura", "Spell: {} Effect : {}", m_spellInfo->Id, eff);
 
     // we do not need DamageMultiplier here.
-
-    // lfm debug
-    if (m_spellInfo->Id == 50475)
-    {
-        bool breakPoint = true;
-    }
     damage = CalculateSpellDamage(i, nullptr);
 
     bool preventDefault = CallScriptEffectHandlers((SpellEffIndex)i, mode);

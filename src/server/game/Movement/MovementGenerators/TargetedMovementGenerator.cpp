@@ -82,7 +82,11 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     bool const mutualChase = IsMutualChase(owner, target);
     // lfm hitboxSum - 1
     float hitboxSum = owner->GetMeleeRange(target);
-    if (hitboxSum > 1.0f)
+    if (hitboxSum > 2.0f)
+    {
+        hitboxSum = hitboxSum - 2.0f;
+    }
+    else if (hitboxSum > 1.0f)
     {
         hitboxSum = hitboxSum - 1.0f;
     }

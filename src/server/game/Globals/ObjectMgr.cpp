@@ -2798,15 +2798,30 @@ void ObjectMgr::LoadItemTemplates()
             sNierManager->equipsMap[itemTemplate.InventoryType][requiredLevel][sNierManager->equipsMap[itemTemplate.InventoryType][requiredLevel].size()] = itemTemplate.ItemId;
         }
 
+        bool canSell = false;
         if (itemTemplate.Class == ItemClass::ITEM_CLASS_WEAPON || itemTemplate.Class == ItemClass::ITEM_CLASS_ARMOR)
         {
-            if (itemTemplate.Quality > ItemQualities::ITEM_QUALITY_NORMAL && itemTemplate.Quality < ItemQualities::ITEM_QUALITY_EPIC)
+            if (itemTemplate.Quality == ItemQualities::ITEM_QUALITY_UNCOMMON)
             {
                 if (itemTemplate.RequiredLevel > 0)
                 {
-                    sMingManager->vendorEquipsMap[itemTemplate.Class][itemTemplate.SubClass][itemTemplate.RequiredLevel].insert(itemTemplate.ItemId);
+                    if (itemTemplate.Class == ItemClass::ITEM_CLASS_WEAPON)
+                    {
+                        if (itemTemplate.SubClass != ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MISC)
+                        {
+                            canSell = true;
+                        }
+                    }
+                    else
+                    {
+                        canSell = true;
+                    }
                 }
             }
+        }
+        if (canSell)
+        {
+            sMingManager->vendorEquipsMap[itemTemplate.Class][itemTemplate.SubClass][itemTemplate.RequiredLevel].insert(itemTemplate.ItemId);
         }
 
         // Checks

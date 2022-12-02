@@ -288,7 +288,9 @@ HostileReference* ThreatContainer::AddThreat(Unit* victim, float threat)
 {
     HostileReference* ref = getReferenceByTarget(victim);
     if (ref)
+    {
         ref->AddThreat(threat);
+    }
     return ref;
 }
 

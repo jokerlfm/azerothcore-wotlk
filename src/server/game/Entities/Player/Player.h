@@ -406,12 +406,11 @@ struct Areas
 #define MAX_RUNES       6
 
 enum RuneCooldowns
-{
-    // lfm dk rune cooldowns 
+{    
+    // lfm dk rune cooldown
     //RUNE_BASE_COOLDOWN  = 10000,
-    //RUNE_MISS_COOLDOWN = 1500,     // cooldown applied on runes when the spell misses
     RUNE_BASE_COOLDOWN = 20000,
-    RUNE_MISS_COOLDOWN = 20000,     // cooldown applied on runes when the spell misses
+    RUNE_MISS_COOLDOWN = 1500,     // cooldown applied on runes when the spell misses    
     RUNE_GRACE_PERIOD   = 2500,     // xinef: maximum possible grace period
 };
 
@@ -1065,13 +1064,13 @@ public:
     // lfm auto fish
     int fishingDelay;
 
+    // lfm nier
+    bool isNier;
     // 0 dps, 1 tank, 2 healer
     uint32 groupRole;    
     NierAction_Base* nierAction;
     std::unordered_map<uint32, NierStrategy_Base*> nierStrategyMap;
-    uint32 activeStrategyIndex;    
-
-    bool isNier;
+    uint32 activeStrategyIndex;
 
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 
@@ -2483,7 +2482,11 @@ public:
     void SetLastUsedRune(RuneType type) { m_runes->lastUsedRune = type; }
     void SetBaseRune(uint8 index, RuneType baseRune) { m_runes->runes[index].BaseRune = baseRune; }
     void SetCurrentRune(uint8 index, RuneType currentRune) { m_runes->runes[index].CurrentRune = currentRune; }
-    void SetRuneCooldown(uint8 index, uint32 cooldown) { m_runes->runes[index].Cooldown = cooldown; m_runes->SetRuneState(index, (cooldown == 0)); }
+    void SetRuneCooldown(uint8 index, uint32 cooldown)
+    {
+        m_runes->runes[index].Cooldown = cooldown;
+        m_runes->SetRuneState(index, (cooldown == 0));
+    }
     void SetGracePeriod(uint8 index, uint32 period) { m_runes->runes[index].GracePeriod = period; }
     void SetRuneConvertAura(uint8 index, AuraEffect const* aura) { m_runes->runes[index].ConvertAura = aura; }
     void AddRuneByAuraEffect(uint8 index, RuneType newType, AuraEffect const* aura) { SetRuneConvertAura(index, aura); ConvertRune(index, newType); }

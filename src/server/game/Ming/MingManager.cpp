@@ -11,6 +11,7 @@ MingManager::MingManager()
     instanceEncounterEntrySet.clear();
     veinsMap.clear();
     vendorEquipsMap.clear();
+    flyingCreatureEntrySet.clear();
 
     checkDelay = 0;
 }
@@ -39,6 +40,19 @@ void MingManager::InitializeManager()
     dkSpellsExceptionSet.insert(47541);
     dkSpellsExceptionSet.insert(45462);
     
+    dkSpellsExceptionSet.insert(3276);
+    dkSpellsExceptionSet.insert(3277);
+    dkSpellsExceptionSet.insert(3278);
+    dkSpellsExceptionSet.insert(7928);
+    dkSpellsExceptionSet.insert(7929);
+    dkSpellsExceptionSet.insert(10840);
+    dkSpellsExceptionSet.insert(10841);
+    dkSpellsExceptionSet.insert(18629);
+    dkSpellsExceptionSet.insert(18630);
+
+    dkSpellsExceptionSet.insert(33391);
+    dkSpellsExceptionSet.insert(33392);
+
     dkItemExceptionSet.clear();
     dkItemExceptionSet.insert(34658);
     dkItemExceptionSet.insert(38147);
@@ -53,6 +67,7 @@ void MingManager::InitializeManager()
     noRewardQuestExceptions.insert(9560);
     noRewardQuestExceptions.insert(9571);
     noRewardQuestExceptions.insert(9667);
+    noRewardQuestExceptions.insert(9689);
 
     instanceEncounterEntrySet.clear();
     QueryResult icQR = WorldDatabase.Query("SELECT distinct creditEntry FROM instance_encounters");
@@ -168,7 +183,7 @@ void MingManager::InitializeManager()
     veinGOEntrySet.insert(1735);
     veinGOEntrySet.insert(2040);
     veinGOEntrySet.insert(2047);
-    veinGOEntrySet.insert(2653);
+    //veinGOEntrySet.insert(2653);
     veinGOEntrySet.insert(73939);
     veinGOEntrySet.insert(123309);
     veinGOEntrySet.insert(123310);
@@ -187,6 +202,8 @@ void MingManager::InitializeManager()
     veinGOEntrySet.insert(189980);
     veinGOEntrySet.insert(189981);
     veinGOEntrySet.insert(195036);
+
+    flyingCreatureEntrySet.insert(4012);
 
     checkDelay = 10000;
 

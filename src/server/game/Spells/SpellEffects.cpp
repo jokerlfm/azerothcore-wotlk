@@ -3560,6 +3560,9 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     // Glyph of Plague Strike
                     if (AuraEffect const* aurEff = m_caster->GetAuraEffect(58657, EFFECT_0))
                         AddPct(totalDamagePercentMod, aurEff->GetAmount());
+
+                    // lfm dk bonus
+                    spell_bonus += int32(0.15f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                     break;
                 }
                 // Blood Strike
@@ -3576,6 +3579,9 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     if (m_caster->GetAuraEffect(59332, EFFECT_0))
                         if (unitTarget->HasAuraType(SPELL_AURA_MOD_DECREASE_SPEED))
                             AddPct(totalDamagePercentMod, 20.0f);
+
+                    // lfm dk bonus
+                    spell_bonus += int32(0.1f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));                    
                     break;
                 }
                 // Death Strike
@@ -3585,6 +3591,9 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     if (AuraEffect const* aurEff = m_caster->GetAuraEffect(59336, EFFECT_0))
                         if (uint32 runic = std::min<uint32>(m_caster->GetPower(POWER_RUNIC_POWER), aurEff->GetSpellInfo()->Effects[EFFECT_1].CalcValue()))
                             AddPct(totalDamagePercentMod, runic);
+
+                    // lfm dk bonus
+                    spell_bonus += int32(0.05f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                     break;
                 }
                 // Obliterate (12.5% more damage per disease)
@@ -3603,6 +3612,10 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                         AddPct(disease_amt, aurEff->GetAmount());
 
                     AddPct(totalDamagePercentMod, disease_amt * unitTarget->GetDiseasesByCaster(m_caster->GetGUID(), consumeDiseases) / 2.0f);
+
+                    // lfm dk bonus
+                    spell_bonus += int32(0.11f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+
                     break;
                 }
                 // Blood-Caked Strike - Blood-Caked Blade
@@ -3627,7 +3640,24 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                 // Rune Strike
                 if (m_spellInfo->SpellFamilyFlags[1] & 0x20000000)
                 {
-                    spell_bonus += int32(0.15f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    //if (m_caster->haveOffhandWeapon())
+                    //{
+                    //    spell_bonus = m_caster->CalculateDamage(WeaponAttackType::OFF_ATTACK, false, true) * 0.5f;
+                    //}
+                    spell_bonus += int32(0.2f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                }
+                // Scourge Strike 
+                if (m_spellInfo->SpellFamilyFlags[1] & 0x8000000)
+                {
+                    spell_bonus += int32(0.18f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+
+                    float disease_amt = m_spellInfo->Effects[EFFECT_2].CalcValue();
+                    //Death Knight T8 Melee 4P Bonus
+                    if (AuraEffect* aurEff = m_caster->GetAuraEffectDummy(64736))
+                        AddPct(disease_amt, aurEff->GetAmount());
+
+                    AddPct(totalDamagePercentMod, disease_amt * unitTarget->GetDiseasesByCaster(m_caster->GetGUID()) / 2.0f);
+                    break;
                 }
 
                 break;
@@ -4022,8 +4052,13 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                             uint32 spellID = m_spellInfo->Effects[EFFECT_0].CalcValue();
                             uint32 questID = m_spellInfo->Effects[EFFECT_1].CalcValue();
 
-                            if (unitTarget->ToPlayer()->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE)
+                            // lfm dk portal
+                            //if (unitTarget->ToPlayer()->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE)
+                            int qStatus = unitTarget->ToPlayer()->GetQuestStatus(questID);
+                            if (qStatus == QUEST_STATUS_COMPLETE || qStatus == QUEST_STATUS_REWARDED)
+                            {
                                 unitTarget->CastSpell(unitTarget, spellID, true);
+                            }
 
                             return;
                         }

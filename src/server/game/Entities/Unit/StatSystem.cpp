@@ -1163,10 +1163,13 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
         {
         case CreatureEliteType::CREATURE_ELITE_NORMAL:
         {
-            lfmMultiplier = 1.5f;
-            if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
+            if (!IsGuardian() && !IsPet())
             {
-                lfmMultiplier = 1.2f;
+                lfmMultiplier = 1.5f;
+                if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
+                {
+                    lfmMultiplier = 1.2f;
+                }
             }
             break;
         }

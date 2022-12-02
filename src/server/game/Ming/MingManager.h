@@ -38,8 +38,6 @@ class MingManager
 
 public:
     void InitializeManager();
-    bool StringEndWith(const std::string& str, const std::string& tail);
-    bool StringStartWith(const std::string& str, const std::string& head);
     bool IsMingerExceptionEntry(uint32 pmEntry);
     bool IsHerb(uint32 pmEntry);
     bool NearHerb(uint32 pmMapId, Position pmPos, float pmDistance);
@@ -49,6 +47,8 @@ public:
     void ReplaceVendor(Unit* pmVendor);
     bool IsDKSpellsException(uint32 pmSpellId);
     bool IsDKItemException(uint32 pmItemId);
+    bool StringEndWith(const std::string& str, const std::string& tail);
+    bool StringStartWith(const std::string& str, const std::string& head);
     std::vector<std::string> SplitString(std::string srcStr, std::string delimStr, bool repeatedCharIgnored);
     std::string TrimString(std::string srcStr);
     static MingManager* instance();    
@@ -63,6 +63,7 @@ public:
     std::unordered_set<SpawnedObject*> spawnedHerbSet;
     std::unordered_set<SpawnedObject*> spawnedVeinSet;
     std::unordered_map<uint32, SpawnedObject*> veinsMap;
+    std::unordered_set<uint32> flyingCreatureEntrySet;
 
     /// <summary>
     /// class, subclass, level, entry set

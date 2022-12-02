@@ -96,7 +96,7 @@ Quest::Quest(Field* questRecord)
                         if (it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_AXE || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_AXE2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_BOW || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_CROSSBOW ||
                             it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_DAGGER || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_FIST || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_GUN ||
                             it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_MACE2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_POLEARM ||
-                            it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD2)
+                            it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_STAFF || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_SWORD2 || it->SubClass == ItemSubclassWeapon::ITEM_SUBCLASS_WEAPON_WAND)
                         {
                             weaponOrArmor = true;
                         }

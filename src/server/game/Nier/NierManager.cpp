@@ -22,6 +22,7 @@
 #include "World/World.h"
 #include "Accounts/AccountMgr.h"
 #include <boost/chrono/duration.hpp>
+#include "MoveSplineInit.h"
 
 NierManager::NierManager()
 {
@@ -541,12 +542,12 @@ void NierManager::CreateNier(uint32 pmLevel, bool pmAlliance, uint32 pmGroupRole
         }
         else
         {
-            if (classRand < 30)
+            if (classRand < 60)
             {
                 target_class = Classes::CLASS_ROGUE;
                 target_specialty = 1;
             }
-            else if (classRand < 60)
+            else if (classRand < 80)
             {
                 target_class = Classes::CLASS_DRUID;
                 target_specialty = 0;
@@ -742,6 +743,101 @@ void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, 
             std::ostringstream replyStream;
             replyStream << characterTalentTabNameMap[pmTargetPlayer->getClass()][pmTargetPlayer->nierAction->specialty];
             pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
+        }
+    }
+    else if (commandName == "emote")
+    {
+        if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmCommander->GetGUID())
+                    {
+                        HandleChatCommand(pmCommander, pmContent, member);
+                    }
+                }
+            }
+        }
+        else if (pmTargetPlayer)
+        {
+            Player* targetPlayer = pmTargetPlayer;
+            if (!targetPlayer)
+            {
+                targetPlayer = pmCommander;
+            }
+            if (commandVector.size() > 1)
+            {
+                std::string emoteContents = commandVector.at(1);
+                int emoteNumber = atoi(emoteContents.c_str());
+                targetPlayer->HandleEmoteCommand(emoteNumber);
+            }
+        }
+        else
+        {
+            if (commandVector.size() > 1)
+            {
+                std::string emoteContents = commandVector.at(1);
+                int emoteNumber = atoi(emoteContents.c_str());
+                pmCommander->HandleEmoteCommand(emoteNumber);
+            }
+        }
+    }
+    else if (commandName == "turn")
+    {
+        if (pmTargetGroup)
+        {
+            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            {
+                Player* member = groupRef->GetSource();
+                if (member)
+                {
+                    if (member->GetGUID() != pmCommander->GetGUID())
+                    {
+                        HandleChatCommand(pmCommander, pmContent, member);
+                    }
+                }
+            }
+        }
+        else if (pmTargetPlayer)
+        {
+            Player* targetPlayer = pmTargetPlayer;
+            if (!targetPlayer)
+            {
+                targetPlayer = pmCommander;
+            }
+            if (commandVector.size() > 1)
+            {
+                std::string emoteContents = commandVector.at(1);
+                int emoteNumber = atoi(emoteContents.c_str());
+                targetPlayer->HandleEmoteCommand(emoteNumber);
+            }
+        }
+        else
+        {
+            if (commandVector.size() > 1)
+            {
+                std::string turnContents = commandVector.at(1);
+                float turnAngle = M_PI / 8;
+                if (turnContents == "left")
+                {
+                    turnAngle = M_PI / 8;
+                }
+                else
+                {
+                    turnAngle = -M_PI / 8;
+                }
+                float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
+                pmCommander->GetNearPoint(nullptr, destX, destY, destZ, 0.0f, 0.05f, pmCommander->GetOrientation() + turnAngle + M_PI);
+                float angle = pmCommander->GetOrientation() + turnAngle;
+                Movement::MoveSplineInit init(pmCommander);
+                init.MoveTo(destX, destY, destZ, false);
+                init.SetFacing(angle);
+                init.SetOrientationInversed();
+                init.Launch();
+            }
         }
     }
     else if (commandName == "arrangement")

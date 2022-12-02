@@ -1714,6 +1714,15 @@ void Player::AddToWorld()
     for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
         if (m_items[i])
             m_items[i]->AddToWorld();
+
+    // lfm dk update rune regen
+    if (getClass() == Classes::CLASS_DEATH_KNIGHT)
+    {
+        UpdateRuneRegen(RuneType::RUNE_BLOOD);
+        UpdateRuneRegen(RuneType::RUNE_FROST);
+        UpdateRuneRegen(RuneType::RUNE_UNHOLY);
+        UpdateRuneRegen(RuneType::RUNE_DEATH);
+    }
 }
 
 void Player::RemoveFromWorld()

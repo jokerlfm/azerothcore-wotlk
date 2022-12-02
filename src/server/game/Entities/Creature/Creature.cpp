@@ -247,6 +247,9 @@ Creature::Creature(bool isWorldObject): Unit(isWorldObject), MovableMapObject(),
     _focusSpell = nullptr;
 
     m_respawnedTime = time_t(0);
+
+    // lfm creature hover 
+    hoverDelay = 0;
 }
 
 Creature::~Creature()
@@ -935,6 +938,61 @@ void Creature::Update(uint32 diff)
 
         sScriptMgr->OnCreatureUpdate(this, diff);
     }
+
+    if (hoverDelay >= 0)
+    {
+        hoverDelay -= diff;
+        if (hoverDelay <= 0)
+        {
+            if (const CreatureTemplate* ct = GetCreatureTemplate())
+            {
+                bool flying = false;
+                if (ct->family == CreatureFamily::CREATURE_FAMILY_CHIMAERA)
+                {
+                    flying = true;
+                }
+                else if (sMingManager->flyingCreatureEntrySet.find(GetEntry()) != sMingManager->flyingCreatureEntrySet.end())
+                {
+                    flying = true;
+                }
+                if (flying)
+                {
+                    if (HasUnitMovementFlag(MOVEMENTFLAG_HOVER))
+                    {
+                        RemoveUnitMovementFlag(MOVEMENTFLAG_HOVER);
+                    }
+                    hoverDelay = 0 - urand(60000, 600000);
+                }
+            }
+        }
+    }
+    else
+    {
+        hoverDelay += diff;
+        if (hoverDelay >= 0)
+        {
+            if (const CreatureTemplate* ct = GetCreatureTemplate())
+            {
+                bool flying = false;
+                if (ct->family == CreatureFamily::CREATURE_FAMILY_CHIMAERA)
+                {
+                    flying = true;
+                }
+                else if (sMingManager->flyingCreatureEntrySet.find(GetEntry()) != sMingManager->flyingCreatureEntrySet.end())
+                {
+                    flying = true;
+                }
+                if (flying)
+                {
+                    if (!HasUnitMovementFlag(MOVEMENTFLAG_HOVER))
+                    {
+                        AddUnitMovementFlag(MOVEMENTFLAG_HOVER);
+                    }
+                    hoverDelay = urand(60000, 600000);
+                }
+            }
+        }
+    }
 }
 
 bool Creature::IsFreeToMove()
@@ -1538,7 +1596,10 @@ void Creature::SelectLevel(bool changelevel)
         {
         case CreatureEliteType::CREATURE_ELITE_NORMAL:
         {
-            lfmMultiplier = 1.5f;
+            if (!IsGuardian() && !IsPet())
+            {
+                lfmMultiplier = 1.5f;
+            }
             break;
         }
         case CreatureEliteType::CREATURE_ELITE_ELITE:

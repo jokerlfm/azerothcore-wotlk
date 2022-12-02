@@ -88,6 +88,10 @@ void NierMovement::Update_Direct(uint32 pmDiff)
     {
         return;
     }
+    if (me->IsNonMeleeSpellCast(false))
+    {
+        return;
+    }
     switch (activeMovementType)
     {
     case NierMovementType::NierMovementType_None:
@@ -132,7 +136,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                     me->StopMoving();
                     me->GetMotionMaster()->Clear();
                 }
-                if (!me->isInFront(chaseTarget, M_PI / 8))
+                if (!me->isInFront(chaseTarget, M_PI / 2))
                 {
                     me->SetFacingToObject(chaseTarget);
                 }
@@ -159,7 +163,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                             me->StopMoving();
                             me->GetMotionMaster()->Clear();
                         }
-                        if (!me->isInFront(chaseTarget, M_PI / 8))
+                        if (!me->isInFront(chaseTarget, M_PI / 2))
                         {
                             me->SetFacingToObject(chaseTarget);
                         }
@@ -211,7 +215,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                     me->StopMoving();
                     me->GetMotionMaster()->Clear();
                 }
-                if (!me->isInFront(chaseTarget, M_PI / 8))
+                if (!me->isInFront(chaseTarget, M_PI / 2))
                 {
                     me->SetFacingToObject(chaseTarget);
                 }
@@ -269,7 +273,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                                 me->StopMoving();
                                 me->GetMotionMaster()->Clear();
                             }
-                            if (!me->isInFront(chaseTarget, M_PI / 8))
+                            if (!me->isInFront(chaseTarget, M_PI / 2))
                             {
                                 me->SetFacingToObject(chaseTarget);
                             }
@@ -331,7 +335,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                     me->StopMoving();
                     me->GetMotionMaster()->Clear();
                 }
-                if (!me->isInFront(chaseTarget, M_PI / 8))
+                if (!me->isInFront(chaseTarget, M_PI / 2))
                 {
                     me->SetFacingToObject(chaseTarget);
                 }
@@ -363,7 +367,7 @@ void NierMovement::Update_Direct(uint32 pmDiff)
                             me->StopMoving();
                             me->GetMotionMaster()->Clear();
                         }
-                        if (!me->isInFront(chaseTarget, M_PI / 8))
+                        if (!me->isInFront(chaseTarget, M_PI / 2))
                         {
                             me->SetFacingToObject(chaseTarget);
                         }
@@ -498,7 +502,7 @@ void NierMovement::Update_Chase(uint32 pmDiff)
                     me->StopMoving();
                     me->GetMotionMaster()->Clear();
                 }
-                if (!me->isInFront(chaseTarget, M_PI / 8))
+                if (!me->isInFront(chaseTarget, M_PI / 2))
                 {
                     me->SetFacingToObject(chaseTarget);
                 }
@@ -513,7 +517,7 @@ void NierMovement::Update_Chase(uint32 pmDiff)
                 float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
                 if (me->IsWithinLOSInMap(chaseTarget) && targetDistance < chaseTarget->GetCombatReach() + chaseDistance)
                 {
-                    if (!me->isInFront(chaseTarget, M_PI / 8))
+                    if (!me->isInFront(chaseTarget, M_PI / 2))
                     {
                         me->SetFacingToObject(chaseTarget);
                     }
@@ -556,7 +560,7 @@ void NierMovement::Update_Chase(uint32 pmDiff)
                     me->StopMoving();
                     me->GetMotionMaster()->Clear();
                 }
-                if (!me->isInFront(chaseTarget, M_PI / 8))
+                if (!me->isInFront(chaseTarget, M_PI / 2))
                 {
                     me->SetFacingToObject(chaseTarget);
                 }
@@ -567,7 +571,7 @@ void NierMovement::Update_Chase(uint32 pmDiff)
                 float targetDistance = me->GetExactDist(chaseTarget->GetPosition());
                 if (me->IsWithinLOSInMap(chaseTarget) && targetDistance < chaseTarget->GetCombatReach() + me->GetCombatReach() + chaseDistance)
                 {
-                    if (!me->isInFront(chaseTarget, M_PI / 8))
+                    if (!me->isInFront(chaseTarget, M_PI / 2))
                     {
                         me->SetFacingToObject(chaseTarget);
                     }
@@ -618,7 +622,7 @@ void NierMovement::Update_Chase(uint32 pmDiff)
                     me->StopMoving();
                     me->GetMotionMaster()->Clear();
                 }
-                if (!me->isInFront(followTarget, M_PI / 8))
+                if (!me->isInFront(followTarget, M_PI / 2))
                 {
                     me->SetFacingToObject(followTarget);
                 }
@@ -629,7 +633,7 @@ void NierMovement::Update_Chase(uint32 pmDiff)
                 float targetDistance = me->GetExactDist(followTarget->GetPosition());
                 if (me->IsWithinLOSInMap(followTarget) && targetDistance < followTarget->GetCombatReach() + me->GetCombatReach() + followDistance)
                 {
-                    if (!me->isInFront(followTarget, M_PI / 8))
+                    if (!me->isInFront(followTarget, M_PI / 2))
                     {
                         me->SetFacingToObject(followTarget);
                     }
@@ -1166,11 +1170,11 @@ void NierAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32
     }
     else if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_MAINHAND)
     {
-        inventoryType = 17;
+        inventoryType = InventoryType::INVTYPE_WEAPON;
     }
     else if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_OFFHAND)
     {
-
+        inventoryType = InventoryType::INVTYPE_WEAPON;
     }
     else if (pmEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_RANGED)
     {
@@ -1181,21 +1185,6 @@ void NierAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32
         return;
     }
 
-    std::ostringstream inventoryTypeQueryStream;
-    if (pmInventoryTypeSet.size() > 0)
-    {
-        inventoryTypeQueryStream << " ( 1 = 0 ";
-        for (std::unordered_set<uint32>::iterator it = pmInventoryTypeSet.begin(); it != pmInventoryTypeSet.end(); it++)
-        {
-            inventoryTypeQueryStream << " or InventoryType = " << *it;
-        }
-        inventoryTypeQueryStream << " ) ";
-    }
-    else
-    {
-        inventoryTypeQueryStream << " InventoryType = " << inventoryType;
-    }
-    std::string inventoryTypeQuery = inventoryTypeQueryStream.str();
     int maxReqLevel = me->getLevel();
     int minReqLevel = maxReqLevel - 5;    
     while (minReqLevel > 0 && maxReqLevel > 1)
@@ -1406,7 +1395,7 @@ bool NierAction_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheckAu
                     }
                 }
             }
-            if (!me->isInFront(pmTarget, M_PI / 4))
+            if (!me->isInFront(pmTarget, M_PI / 2))
             {
                 me->SetFacingToObject(pmTarget);
             }

@@ -2756,6 +2756,10 @@ bool Unit::GetMeleeAttackPoint(Unit* attacker, Position& pos)
     {
         distance = distance - 2.0f;
     }
+    else if (distance > 1.0f)
+    {
+        distance = distance - 1.0f;
+    }
 
     GetNearPoint(attacker, x, y, z, distance, 0.0f, absAngle);
 
@@ -3277,6 +3281,16 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
         default:
             LOG_DEBUG("entities.unit", "Spell {} SPELL_AURA_IGNORE_COMBAT_RESULT has unhandled state {}", (*i)->GetId(), (*i)->GetMiscValue());
             break;
+        }
+    }
+
+    // lfm dodge parry not from behind
+    if (canDodge)
+    {
+        if (victim->isInFront(this))
+        {
+            canDodge = false;
+            canParry = false;
         }
     }
 
@@ -8456,6 +8470,12 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
                 AddPct(basepoints0, glyph->GetAmount());
 
             basepoints0 = basepoints0 / (unholyBlight->GetMaxDuration() / unholyBlight->Effects[0].Amplitude);
+
+            // lfm dk unholy blight 
+            if (basepoints0 < 1)
+            {
+                basepoints0 = 1;
+            }
             victim->CastDelayedSpellWithPeriodicAmount(this, triggered_spell_id, SPELL_AURA_PERIODIC_DAMAGE, basepoints0);
             return true;
         }
@@ -8559,7 +8579,8 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
 
             // Rune Strike
             case 56815:
-                triggered_spell_id = 66217;
+                // lfm dk rune strike 
+                //triggered_spell_id = 66217;
                 break;                            // Rank 1
 
             // Blood Strike
@@ -11715,11 +11736,28 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
 
         // Blood Boil - bonus for diseased targets
         if (spellProto->SpellFamilyFlags[0] & 0x00040000)
-            if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, 0, 0, 0x00000002, GetGUID()))
+        {
+            // lfm dk blood boil
+            //if (victim->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, 0, 0, 0x00000002, GetGUID()))
+            //{
+            //    DoneTotal += 95;
+            //    ApCoeffMod = 1.5835f;            
+            //}
+            int diseaseCount = 0;
+            AuraEffectList const& auras = victim->GetAuraEffectsByType(SPELL_AURA_PERIODIC_DAMAGE);
+            for (AuraEffectList::const_iterator i = auras.begin(); i != auras.end(); ++i)
             {
-                DoneTotal += 95;
-                ApCoeffMod = 1.5835f;
+                SpellInfo const* spell = (*i)->GetSpellInfo();
+                if (spell->SpellFamilyName == uint32(SPELLFAMILY_DEATHKNIGHT) && spell->SpellFamilyFlags.HasFlag(0, 0, 0x00000002))
+                {
+                    if ((*i)->GetCasterGUID() == GetGUID())
+                    {
+                        diseaseCount++;
+                    }
+                }
             }
+            DoneTotalMod = DoneTotalMod * (1.0f + (diseaseCount * 0.1f));
+        }
     }
 
     // Done fixed damage bonus auras
@@ -11727,6 +11765,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
 
     // Check for table values
     float coeff = spellProto->Effects[effIndex].BonusMultiplier;
+
     SpellBonusEntry const* bonus = sSpellMgr->GetSpellBonusData(spellProto->Id);
     if (bonus)
     {
@@ -11787,7 +11826,10 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
                 {
                 case CreatureEliteType::CREATURE_ELITE_NORMAL:
                 {
-                    tmpDamage = tmpDamage * 1.5f;
+                    if (!IsGuardian() && !IsPet())
+                    {
+                        tmpDamage = tmpDamage * 1.5f;
+                    }
                     break;
                 }
                 case CreatureEliteType::CREATURE_ELITE_ELITE:
