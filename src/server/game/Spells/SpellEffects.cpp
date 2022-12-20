@@ -3562,7 +3562,7 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                         AddPct(totalDamagePercentMod, aurEff->GetAmount());
 
                     // lfm dk bonus
-                    spell_bonus += int32(0.15f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    //spell_bonus += int32(0.15f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                     break;
                 }
                 // Blood Strike
@@ -3593,7 +3593,7 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                             AddPct(totalDamagePercentMod, runic);
 
                     // lfm dk bonus
-                    spell_bonus += int32(0.05f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    //spell_bonus += int32(0.05f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                     break;
                 }
                 // Obliterate (12.5% more damage per disease)
@@ -3614,7 +3614,7 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     AddPct(totalDamagePercentMod, disease_amt * unitTarget->GetDiseasesByCaster(m_caster->GetGUID(), consumeDiseases) / 2.0f);
 
                     // lfm dk bonus
-                    spell_bonus += int32(0.11f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    spell_bonus += int32(0.14f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
 
                     break;
                 }
@@ -3644,12 +3644,12 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     //{
                     //    spell_bonus = m_caster->CalculateDamage(WeaponAttackType::OFF_ATTACK, false, true) * 0.5f;
                     //}
-                    spell_bonus += int32(0.2f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    spell_bonus += int32(0.3f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                 }
                 // Scourge Strike 
                 if (m_spellInfo->SpellFamilyFlags[1] & 0x8000000)
                 {
-                    spell_bonus += int32(0.18f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    spell_bonus += int32(0.12f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
 
                     float disease_amt = m_spellInfo->Effects[EFFECT_2].CalcValue();
                     //Death Knight T8 Melee 4P Bonus
@@ -3789,9 +3789,10 @@ void Spell::EffectThreat(SpellEffIndex /*effIndex*/)
     if (!unitTarget->CanHaveThreatList() || m_caster->IsFriendlyTo(unitTarget))
         return;
 
-    // lfm threat spell will be halved
+    // lfm threat spell will be halved 
     //unitTarget->AddThreat(m_caster, float(damage));
-    float threat = float(damage) / 2.0f;
+    float threat = float(damage);
+    //threat = threat / 2.0f;
     unitTarget->AddThreat(m_caster, threat);
 }
 

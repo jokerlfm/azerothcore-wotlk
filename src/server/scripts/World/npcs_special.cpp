@@ -1148,63 +1148,64 @@ public:
     }
 };
 
-class npc_dirge_quikcleave : public CreatureScript
-{
-public:
-    npc_dirge_quikcleave() : CreatureScript("npc_dirge_quikcleave") { }
-
-    struct npc_dirge_quikcleaveAI : public ScriptedAI
-    {
-        npc_dirge_quikcleaveAI(Creature* creature) : ScriptedAI(creature) { }
-    };
-
-    bool OnGossipHello(Player* player, Creature* creature) override
-    {
-        if (player->IsQuestRewarded(6610))
-        {
-            bool canTrain = false;
-            uint32 cValue = player->GetSkillValue(185);
-            if (cValue >= 225)
-            {
-                if (!player->HasSpell(18260))
-                {
-                    AddGossipItemFor(player, GossipOptionIcon::GOSSIP_ICON_CHAT, "Train me.", eTradeskill::GOSSIP_SENDER_MAIN, eTradeskill::GOSSIP_ACTION_INFO_DEF);
-                    SendGossipMenuFor(player, 5798, creature->GetGUID());
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action) override
-    {
-        if (sender == eTradeskill::GOSSIP_SENDER_MAIN && action == eTradeskill::GOSSIP_ACTION_INFO_DEF)
-        {
-            ClearGossipMenuFor(player);
-            CloseGossipMenuFor(player);
-            uint32 cValue = player->GetSkillValue(185);
-            if (cValue >= 225)
-            {
-                if (!player->HasSpell(18260))
-                {
-                    creature->SendPlaySpellVisual(179); // 53 SpellCastDirected
-                    creature->SendPlaySpellImpact(player->GetGUID(), 362); // 113 EmoteSalute
-                    player->learnSpell(18260);
-                }
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-    CreatureAI* GetAI(Creature* creature) const override
-    {
-        return new npc_dirge_quikcleaveAI(creature);
-    }
-};
+// lfm npc_dirge_quikcleave
+//class npc_dirge_quikcleave : public CreatureScript
+//{
+//public:
+//    npc_dirge_quikcleave() : CreatureScript("npc_dirge_quikcleave") { }
+//
+//    struct npc_dirge_quikcleaveAI : public ScriptedAI
+//    {
+//        npc_dirge_quikcleaveAI(Creature* creature) : ScriptedAI(creature) { }
+//    };
+//
+//    bool OnGossipHello(Player* player, Creature* creature) override
+//    {
+//        if (player->IsQuestRewarded(6610))
+//        {
+//            bool canTrain = false;
+//            uint32 cValue = player->GetSkillValue(185);
+//            if (cValue >= 225)
+//            {
+//                if (!player->HasSpell(18260))
+//                {
+//                    AddGossipItemFor(player, GossipOptionIcon::GOSSIP_ICON_CHAT, "Train me.", eTradeskill::GOSSIP_SENDER_MAIN, eTradeskill::GOSSIP_ACTION_INFO_DEF);
+//                    SendGossipMenuFor(player, 5798, creature->GetGUID());
+//                    return true;
+//                }
+//            }
+//        }
+//
+//        return false;
+//    }
+//
+//    bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action) override
+//    {
+//        if (sender == eTradeskill::GOSSIP_SENDER_MAIN && action == eTradeskill::GOSSIP_ACTION_INFO_DEF)
+//        {
+//            ClearGossipMenuFor(player);
+//            CloseGossipMenuFor(player);
+//            uint32 cValue = player->GetSkillValue(185);
+//            if (cValue >= 225)
+//            {
+//                if (!player->HasSpell(18260))
+//                {
+//                    creature->SendPlaySpellVisual(179); // 53 SpellCastDirected
+//                    creature->SendPlaySpellImpact(player->GetGUID(), 362); // 113 EmoteSalute
+//                    player->learnSpell(18260);
+//                }
+//            }
+//            return true;
+//        }
+//
+//        return false;
+//    }
+//
+//    CreatureAI* GetAI(Creature* creature) const override
+//    {
+//        return new npc_dirge_quikcleaveAI(creature);
+//    }
+//};
 
 /*#####
 ## npc_injured_patient (handles all the patients, no matter Horde or Alliance)
@@ -3553,7 +3554,7 @@ void AddSC_npcs_special()
     RegisterCreatureAI(npc_arcanite_dragonling);
     
     // lfm scripts
-    new npc_dirge_quikcleave();
+    //new npc_dirge_quikcleave();
     new npc_worm();
 
     new npc_disciple_of_naralex_lfm();

@@ -247,9 +247,6 @@ Creature::Creature(bool isWorldObject): Unit(isWorldObject), MovableMapObject(),
     _focusSpell = nullptr;
 
     m_respawnedTime = time_t(0);
-
-    // lfm creature hover 
-    hoverDelay = 0;
 }
 
 Creature::~Creature()
@@ -944,51 +941,21 @@ void Creature::Update(uint32 diff)
         hoverDelay -= diff;
         if (hoverDelay <= 0)
         {
-            if (const CreatureTemplate* ct = GetCreatureTemplate())
+            hoverDelay = urand(10000, 20000);
+            if (!HasUnitMovementFlag(MOVEMENTFLAG_HOVER))
             {
-                bool flying = false;
-                if (ct->family == CreatureFamily::CREATURE_FAMILY_CHIMAERA)
+                if (const CreatureTemplate* ct = GetCreatureTemplate())
                 {
-                    flying = true;
-                }
-                else if (sMingManager->flyingCreatureEntrySet.find(GetEntry()) != sMingManager->flyingCreatureEntrySet.end())
-                {
-                    flying = true;
-                }
-                if (flying)
-                {
-                    if (HasUnitMovementFlag(MOVEMENTFLAG_HOVER))
+                    if (ct->Movement.Flight == CreatureFlightMovementType::DisableGravity || ct->Movement.Flight == CreatureFlightMovementType::CanFly)
                     {
-                        RemoveUnitMovementFlag(MOVEMENTFLAG_HOVER);
+                        SetHover(true);
+                        SetDisableGravity(true);
+                        SetFloatValue(UNIT_FIELD_HOVERHEIGHT, DEFAULT_COMBAT_REACH);
+                        //AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_CAN_FLY);
+                        //AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_FLYING);
+                        //AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_MASK_MOVING_FLY);
+                        AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_HOVER);
                     }
-                    hoverDelay = 0 - urand(60000, 600000);
-                }
-            }
-        }
-    }
-    else
-    {
-        hoverDelay += diff;
-        if (hoverDelay >= 0)
-        {
-            if (const CreatureTemplate* ct = GetCreatureTemplate())
-            {
-                bool flying = false;
-                if (ct->family == CreatureFamily::CREATURE_FAMILY_CHIMAERA)
-                {
-                    flying = true;
-                }
-                else if (sMingManager->flyingCreatureEntrySet.find(GetEntry()) != sMingManager->flyingCreatureEntrySet.end())
-                {
-                    flying = true;
-                }
-                if (flying)
-                {
-                    if (!HasUnitMovementFlag(MOVEMENTFLAG_HOVER))
-                    {
-                        AddUnitMovementFlag(MOVEMENTFLAG_HOVER);
-                    }
-                    hoverDelay = urand(60000, 600000);
                 }
             }
         }
@@ -1590,53 +1557,56 @@ void Creature::SelectLevel(bool changelevel)
 
     // lfm creature health
     float lfmMultiplier = 1.0f;
-    if (CreatureTemplate const* ci = GetCreatureTemplate())
+    if (sMingConfig->CreatureHealthMod > 0)
     {
-        switch (ci->rank)
+        if (CreatureTemplate const* ci = GetCreatureTemplate())
         {
-        case CreatureEliteType::CREATURE_ELITE_NORMAL:
-        {
-            if (!IsGuardian() && !IsPet())
+            switch (ci->rank)
             {
-                lfmMultiplier = 1.5f;
-            }
-            break;
-        }
-        case CreatureEliteType::CREATURE_ELITE_ELITE:
-        {
-            if (ci->expansion < 1)
+            case CreatureEliteType::CREATURE_ELITE_NORMAL:
             {
-                if (ci->maxlevel < 63)
+                if (!IsGuardian() && !IsPet())
                 {
                     lfmMultiplier = 1.5f;
                 }
+                break;
             }
-            else if (ci->expansion < 2)
+            case CreatureEliteType::CREATURE_ELITE_ELITE:
             {
-                if (ci->maxlevel < 73)
+                if (ci->expansion < 1)
                 {
-                    if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+                    if (ci->maxlevel < 63)
                     {
-                        lfmMultiplier = 1.2f;
+                        lfmMultiplier = 1.5f;
                     }
                 }
+                else if (ci->expansion < 2)
+                {
+                    if (ci->maxlevel < 73)
+                    {
+                        if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+                        {
+                            lfmMultiplier = 1.2f;
+                        }
+                    }
+                }
+                break;
             }
-            break;
-        }
-        case CreatureEliteType::CREATURE_ELITE_RARE:
-        {
-            lfmMultiplier = 2.0f;
-            break;
-        }
-        case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-        {
-            lfmMultiplier = 2.5f;
-            break;
-        }
-        default:
-        {
-            break;
-        }
+            case CreatureEliteType::CREATURE_ELITE_RARE:
+            {
+                lfmMultiplier = 2.0f;
+                break;
+            }
+            case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+            {
+                lfmMultiplier = 2.5f;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+            }
         }
     }
     health = health * lfmMultiplier;

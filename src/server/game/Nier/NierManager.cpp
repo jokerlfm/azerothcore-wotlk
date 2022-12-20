@@ -785,6 +785,34 @@ void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, 
             }
         }
     }
+    else if (commandName == "join")
+    {
+        if (ObjectGuid selectionGUID = pmCommander->GetGuidValue(UNIT_FIELD_TARGET))
+        {
+            if (Player* targetPlayer = ObjectAccessor::FindPlayer(selectionGUID))
+            {
+                if (targetPlayer->IsInSameGroupWith(pmCommander))
+                {
+                    pmCommander->TeleportTo(targetPlayer->GetWorldLocation());
+                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "joined", pmCommander);
+                }
+            }
+        }
+    }
+    else if (commandName == "hover")
+    {
+        if (Unit* targetUnit = pmCommander->GetSelectedUnit())
+        {
+            if (targetUnit->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_ASCENDING))
+            {
+                targetUnit->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ASCENDING);
+            }
+            else
+            {
+                targetUnit->m_movementInfo.AddMovementFlag(MOVEMENTFLAG_ASCENDING);
+            }
+        }
+    }
     else if (commandName == "turn")
     {
         if (pmTargetGroup)

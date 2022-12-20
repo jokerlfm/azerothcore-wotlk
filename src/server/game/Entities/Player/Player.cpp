@@ -2120,7 +2120,9 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask)
     //                return nullptr;
 
     // not too far
-    if (!creature->IsWithinDistInMap(this, INTERACTION_DISTANCE))
+    // lfm gossip selection distance 
+    //if (!creature->IsWithinDistInMap(this, INTERACTION_DISTANCE))
+    if (!creature->IsWithinDistInMap(this, TRADE_DISTANCE))
         return nullptr;
 
     // pussywizard: many npcs have missing conditions for class training and rogue trainer can for eg. train dual wield to a shaman :/ too many to change in sql and watch in the future

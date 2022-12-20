@@ -631,6 +631,18 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields)
         creatureTemplate.Movement.Flight = static_cast<CreatureFlightMovementType>(fields[54].Get<uint8>());
     }
 
+    // lfm ming flight creature
+    if (sMingManager->flyingCreatureEntrySet.find(creatureTemplate.Entry) != sMingManager->flyingCreatureEntrySet.end())
+    {
+        creatureTemplate.Movement.Flight = CreatureFlightMovementType::DisableGravity;
+        creatureTemplate.Movement.Ground = CreatureGroundMovementType::Hover;
+    }
+    else if (creatureTemplate.Movement.Flight == CreatureFlightMovementType::DisableGravity)
+    {
+        creatureTemplate.Movement.Flight = CreatureFlightMovementType::DisableGravity;
+        creatureTemplate.Movement.Ground = CreatureGroundMovementType::Hover;
+    }
+
     creatureTemplate.Movement.Rooted = fields[55].Get<bool>();
     if (!fields[56].IsNull())
     {
@@ -4050,9 +4062,12 @@ void ObjectMgr::LoadPlayerInfo()
             levelInfo.basehealth = fields[2].Get<uint32>();
 
             // lfm player base health
-            levelInfo.basehealth = levelInfo.basehealth * 150 / 100;
+            if (sMingConfig->CreatureHealthMod > 0)
+            {
+                levelInfo.basehealth = levelInfo.basehealth * 150 / 100;
+            }
 
-            levelInfo.basemana   = fields[3].Get<uint32>();
+            levelInfo.basemana = fields[3].Get<uint32>();
 
             ++count;
         } while (result->NextRow());

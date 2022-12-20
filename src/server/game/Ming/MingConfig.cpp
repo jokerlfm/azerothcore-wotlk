@@ -452,6 +452,10 @@ bool MingConfig::StartMing()
     ManagerCheckDelay = GetIntDefault("ManagerCheckDelay", 60000);
     VenderReplaceDelay_Min = GetIntDefault("VenderReplaceDelay_Min", 3600000);
     VenderReplaceDelay_Max = GetIntDefault("VenderReplaceDelay_Max", 7200000);
+    PlayerHealthMod = GetIntDefault("PlayerHealthMod", 1);
+    CreatureHealthMod = GetIntDefault("CreatureHealthMod", 1);
+    CreatureDamageMod = GetIntDefault("CreatureDamageMod", 1);
+    CreatureSpellMod = GetIntDefault("CreatureSpellMod", 1);
 
     if (Enable == 0)
     {

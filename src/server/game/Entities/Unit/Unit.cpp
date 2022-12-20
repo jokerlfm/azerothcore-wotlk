@@ -11818,56 +11818,59 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     }
     else if (GetTypeId() == TypeID::TYPEID_UNIT)
     {
-        // lfm creature spell damage mod        
-        if (Creature* meCreature = ToCreature())
+        // lfm creature spell damage mod 
+        if (sMingConfig->CreatureSpellMod > 0)
         {
-            if (const CreatureTemplate* ci = meCreature->GetCreatureTemplate())
+            if (Creature* meCreature = ToCreature())
             {
-                switch (ci->rank)
+                if (const CreatureTemplate* ci = meCreature->GetCreatureTemplate())
                 {
-                case CreatureEliteType::CREATURE_ELITE_NORMAL:
-                {
-                    if (!IsGuardian() && !IsPet())
+                    switch (ci->rank)
                     {
-                        tmpDamage = tmpDamage * 1.5f;
-                    }
-                    break;
-                }
-                case CreatureEliteType::CREATURE_ELITE_ELITE:
-                {
-                    if (ci->expansion < 1)
+                    case CreatureEliteType::CREATURE_ELITE_NORMAL:
                     {
-                        if (ci->maxlevel < 63)
+                        if (!IsGuardian() && !IsPet())
                         {
-                            tmpDamage = tmpDamage * 1.2f;
+                            tmpDamage = tmpDamage * 1.5f;
                         }
+                        break;
                     }
-                    else if (ci->expansion < 2)
+                    case CreatureEliteType::CREATURE_ELITE_ELITE:
                     {
-                        if (ci->maxlevel < 73)
+                        if (ci->expansion < 1)
                         {
-                            if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+                            if (ci->maxlevel < 63)
                             {
                                 tmpDamage = tmpDamage * 1.2f;
                             }
                         }
+                        else if (ci->expansion < 2)
+                        {
+                            if (ci->maxlevel < 73)
+                            {
+                                if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+                                {
+                                    tmpDamage = tmpDamage * 1.2f;
+                                }
+                            }
+                        }
+                        break;
                     }
-                    break;
-                }
-                case CreatureEliteType::CREATURE_ELITE_RARE:
-                {
-                    tmpDamage = tmpDamage * 2.0f;
-                    break;
-                }
-                case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-                {
-                    tmpDamage = tmpDamage * 2.5f;
-                    break;
-                }
-                default:
-                {
-                    break;
-                }
+                    case CreatureEliteType::CREATURE_ELITE_RARE:
+                    {
+                        tmpDamage = tmpDamage * 2.0f;
+                        break;
+                    }
+                    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+                    {
+                        tmpDamage = tmpDamage * 2.5f;
+                        break;
+                    }
+                    default:
+                    {
+                        break;
+                    }
+                    }
                 }
             }
         }
@@ -13808,9 +13811,19 @@ void Unit::SetInCombatState(bool PvP, Unit* enemy, uint32 duration)
         return;
 
     if (PvP)
+    {
         m_CombatTimer = std::max<uint32>(GetCombatTimer(), std::max<uint32>(5500, duration));
+    }        
     else if (duration)
+    {
         m_CombatTimer = std::max<uint32>(GetCombatTimer(), duration);
+    }        
+
+    if (GetTypeId() != TYPEID_PLAYER || enemy->GetTypeId() != TYPEID_PLAYER)
+    {
+        // lfm no delay combat timer
+        m_CombatTimer = 0;
+    }
 
     if (HasUnitState(UNIT_STATE_EVADE) || GetCreatureType() == CREATURE_TYPE_NON_COMBAT_PET)
         return;

@@ -40,6 +40,10 @@ public:
     int ManagerCheckDelay;
     uint32 VenderReplaceDelay_Min;
     uint32 VenderReplaceDelay_Max;
+    uint32 PlayerHealthMod;
+    uint32 CreatureHealthMod;
+    uint32 CreatureDamageMod;
+    uint32 CreatureSpellMod;
 
     std::string const GetFilename();
     std::string const GetConfigPath();

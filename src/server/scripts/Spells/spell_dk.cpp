@@ -1454,9 +1454,18 @@ class spell_dk_death_strike : public SpellScript
     {
         Unit* caster = GetCaster();
         if (Unit* target = GetHitUnit())
-        {
+        {            
             uint32 count = target->GetDiseasesByCaster(caster->GetGUID());
-            int32 bp = int32(count * caster->CountPctFromMaxHealth(int32(GetSpellInfo()->Effects[EFFECT_0].DamageMultiplier)));
+            // lfm death strike 
+            //int32 bp = int32(count * caster->CountPctFromMaxHealth(int32(GetSpellInfo()->Effects[EFFECT_0].DamageMultiplier)));
+            int32 bp = 0;
+            if (const SpellInfo* pS = GetSpellInfo())
+            {
+                float pct = pS->Effects[EFFECT_0].DamageMultiplier;
+                uint32 maxHealth = caster->GetMaxHealth();
+                bp = CalculatePct(maxHealth, pct);
+                bp = bp * count;
+            }
             // Improved Death Strike
             if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_AURA_ADD_PCT_MODIFIER, SPELLFAMILY_DEATHKNIGHT, DK_ICON_ID_IMPROVED_DEATH_STRIKE, 0))
                 AddPct(bp, caster->CalculateSpellDamage(caster, aurEff->GetSpellInfo(), 2));

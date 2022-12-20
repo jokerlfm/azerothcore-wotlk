@@ -1428,33 +1428,7 @@ bool NierStrategy_Base::Wander()
     }
 
     uint32 wanderRate = urand(0, 100);
-    if (wanderRate < 25)
-    {
-        std::list<Unit*> targets;
-        // Maximum spell range=100m ?
-        MaNGOS::AnyUnitInObjectRangeCheck u_check(me, 100.0f);
-        MaNGOS::UnitListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(targets, u_check);
-        // Don't need to use visibility modifier, units won't be able to cast outside of draw distance
-        Cell::VisitAllObjects(me, searcher, 100.0f);
-        for (std::list<Unit*>::iterator uIT = targets.begin(); uIT != targets.end(); uIT++)
-        {
-            if (Unit* eachUnit = *uIT)
-            {
-                if (eachUnit->GetTypeId() == TypeID::TYPEID_PLAYER)
-                {
-                    if (me->IsValidAttackTarget(eachUnit))
-                    {
-                        if (sb->DPS(eachUnit, Chasing(), aoe, mark, chaseDistanceMin, chaseDistanceMax))
-                        {
-                            engageDelay = 20 * TimeConstants::IN_MILLISECONDS;
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else if (wanderRate < 50)
+    if (wanderRate < 50)
     {
         float angle = frand(0, 2 * M_PI);
         float distance = frand(10.0f, 30.0f);
