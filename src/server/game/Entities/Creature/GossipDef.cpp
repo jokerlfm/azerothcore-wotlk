@@ -547,11 +547,11 @@ void PlayerMenu::SendQuestQueryResponse(Quest const* quest) const
     {
         uint32 moneyRew = 0;
         Player* player = _session->GetPlayer();
-        if (player && (player->getLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) || sScriptMgr->ShouldBeRewardedWithMoneyInsteadOfExp(player)))
+        if (player && (player->GetLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) || sScriptMgr->ShouldBeRewardedWithMoneyInsteadOfExp(player)))
         {
             moneyRew = quest->GetRewMoneyMaxLevel();
         }
-        moneyRew += quest->GetRewOrReqMoney(player ? player->getLevel() : 0); // reward money (below max lvl)
+        moneyRew += quest->GetRewOrReqMoney(player ? player->GetLevel() : 0); // reward money (below max lvl)
         data << moneyRew;
     }
 

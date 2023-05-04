@@ -333,7 +333,7 @@ void Player::ApplyFeralAPBonus(int32 amount, bool apply)
 void Player::UpdateAttackPowerAndDamage(bool ranged)
 {
     float val2 = 0.0f;
-    float level = float(getLevel());
+    float level = float(GetLevel());
 
     sScriptMgr->OnBeforeUpdateAttackPowerAndDamage(this, level, val2, ranged);
 
@@ -457,14 +457,14 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
                     switch (GetShapeshiftForm())
                     {
                         case FORM_CAT:
-                            val2 = (getLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f + GetStat(STAT_AGILITY) - 20.0f + weapon_bonus + m_baseFeralAP;
+                            val2 = (GetLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f + GetStat(STAT_AGILITY) - 20.0f + weapon_bonus + m_baseFeralAP;
                             break;
                         case FORM_BEAR:
                         case FORM_DIREBEAR:
-                            val2 = (getLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + weapon_bonus + m_baseFeralAP;
+                            val2 = (GetLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + weapon_bonus + m_baseFeralAP;
                             break;
                         case FORM_MOONKIN:
-                            val2 = (getLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + m_baseFeralAP;
+                            val2 = (GetLevel() * mLevelMult) + GetStat(STAT_STRENGTH) * 2.0f - 20.0f + m_baseFeralAP;
                             break;
                         default:
                             val2 = GetStat(STAT_STRENGTH) * 2.0f - 20.0f;
@@ -579,7 +579,7 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, bo
 
     if (IsInFeralForm()) // check if player is druid and in cat or bear forms
     {
-        uint8 lvl = getLevel();
+        uint8 lvl = GetLevel();
         if (lvl > 60)
             lvl = 60;
 

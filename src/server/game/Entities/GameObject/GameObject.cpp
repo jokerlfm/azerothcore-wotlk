@@ -1148,7 +1148,7 @@ void GameObject::SaveToDB(bool saveAddon /*= false*/)
 {
     // this should only be used when the gameobject has already been loaded
     // preferably after adding to map, because mapid may not be valid otherwise
-    GameObjectData const* data = sObjectMgr->GetGOData(m_spawnId);
+    GameObjectData const* data = sObjectMgr->GetGameObjectData(m_spawnId);
     if (!data)
     {
         LOG_ERROR("entities.gameobject", "GameObject::SaveToDB failed, cannot get gameobject data!");
@@ -1227,7 +1227,7 @@ void GameObject::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask, bool 
 
 bool GameObject::LoadGameObjectFromDB(ObjectGuid::LowType spawnId, Map* map, bool addToMap)
 {
-    GameObjectData const* data = sObjectMgr->GetGOData(spawnId);
+    GameObjectData const* data = sObjectMgr->GetGameObjectData(spawnId);
 
     if (!data)
     {
@@ -1467,7 +1467,7 @@ bool GameObject::ActivateToQuest(Player* target) const
     case GAMEOBJECT_TYPE_CHEST:
     {
         // scan GO chest with loot including quest items
-        if (LootTemplates_Gameobject.HaveQuestLootForPlayer(GetGOInfo()->GetLootId(), target))
+                if (target->GetQuestStatus(GetGOInfo()->chest.questId) == QUEST_STATUS_INCOMPLETE || LootTemplates_Gameobject.HaveQuestLootForPlayer(GetGOInfo()->GetLootId(), target))
         {
             //TODO: fix this hack
             //look for battlegroundAV for some objects which are only activated after mine gots captured by own team
@@ -1565,7 +1565,7 @@ void GameObject::UseDoorOrButton(uint32 time_to_restore, bool alternative /* = f
 void GameObject::SetGoArtKit(uint8 kit)
 {
     SetByteValue(GAMEOBJECT_BYTES_1, 2, kit);
-    GameObjectData* data = const_cast<GameObjectData*>(sObjectMgr->GetGOData(m_spawnId));
+    GameObjectData* data = const_cast<GameObjectData*>(sObjectMgr->GetGameObjectData(m_spawnId));
     if (data)
         data->artKit = kit;
 }
@@ -1576,10 +1576,10 @@ void GameObject::SetGoArtKit(uint8 artkit, GameObject* go, ObjectGuid::LowType l
     if (go)
     {
         go->SetGoArtKit(artkit);
-        data = go->GetGOData();
+        data = go->GetGameObjectData();
     }
     else if (lowguid)
-        data = sObjectMgr->GetGOData(lowguid);
+        data = sObjectMgr->GetGameObjectData(lowguid);
 
     if (data)
         const_cast<GameObjectData*>(data)->artKit = artkit;
@@ -1608,7 +1608,6 @@ void GameObject::Use(Unit* user)
     Unit* spellCaster = user;
     uint32 spellId = 0;
     bool triggered = false;
-    bool tmpfish = false;
 
     if (Player* playerUser = user->ToPlayer())
     {
@@ -1831,7 +1830,6 @@ void GameObject::Use(Unit* user)
         // cast this spell later if provided
         spellId = info->goober.spellId;
         spellCaster = user;
-        tmpfish = true;
 
         break;
     }
@@ -1951,8 +1949,6 @@ void GameObject::Use(Unit* user)
                 notificationStream << "Require fishing skill more than " << zone_skill;
                 player->GetSession()->SendNotification(notificationStream.str().c_str());
             }
-
-            tmpfish = true;
             break;
         }
         case GO_JUST_DEACTIVATED:                   // nothing to do, will be deleted at next update
@@ -1966,8 +1962,7 @@ void GameObject::Use(Unit* user)
             break;
         }
         }
-
-        // lfm auto fish
+// lfm auto fish
         player->fishingDelay = urand(500, 1000);
         uint32 maxSlot = loot.GetMaxSlotInLootFor(player);
         for (uint32 slotIndex = 0; slotIndex <= maxSlot; slotIndex++)
@@ -2083,10 +2078,10 @@ void GameObject::Use(Unit* user)
             return;
 
         //required lvl checks!
-        uint8 level = player->getLevel();
+                uint8 level = player->GetLevel();
         if (level < info->meetingstone.minLevel)
             return;
-        level = targetPlayer->getLevel();
+                level = targetPlayer->GetLevel();
         if (level < info->meetingstone.minLevel)
             return;
 
@@ -2287,7 +2282,7 @@ void GameObject::CastSpell(Unit* target, uint32 spellId)
 
     if (Unit* owner = GetOwner())
     {
-        trigger->SetLevel(owner->getLevel(), false);
+        trigger->SetLevel(owner->GetLevel(), false);
         trigger->SetFaction(owner->GetFaction());
         // needed for GO casts for proper target validation checks
         trigger->SetOwnerGUID(owner->GetGUID());
@@ -2381,7 +2376,7 @@ void GameObject::EventInform(uint32 eventId)
 
 uint32 GameObject::GetScriptId() const
 {
-    if (GameObjectData const* gameObjectData = GetGOData())
+    if (GameObjectData const* gameObjectData = GetGameObjectData())
         if (uint32 scriptId = gameObjectData->ScriptId)
             return scriptId;
 
@@ -2487,7 +2482,7 @@ void GameObject::ModifyHealth(int32 change, Unit* attackerOrHealer /*= nullptr*/
     Player* player = attackerOrHealer->GetCharmerOrOwnerPlayerOrPlayerItself();
 
     // dealing damage, send packet
-    // TODO: is there any packet for healing?
+    /// @todo: is there any packet for healing?
     if (player)
     {
         WorldPacket data(SMSG_DESTRUCTIBLE_BUILDING_DAMAGE, 8 + 8 + 8 + 4 + 4);
@@ -2670,7 +2665,7 @@ void GameObject::SetGoState(GOState state)
         // startOpen determines whether we are going to add or remove the LoS on activation
         /*bool startOpen = (GetGoType() == GAMEOBJECT_TYPE_DOOR || GetGoType() == GAMEOBJECT_TYPE_BUTTON ? GetGOInfo()->door.startOpen : false);
 
-        if (GetGOData() && GetGOData()->go_state == GO_STATE_READY)
+        if (GetGameObjectData() && GetGameObjectData()->go_state == GO_STATE_READY)
             startOpen = !startOpen;
 
         if (state == GO_STATE_ACTIVE || state == GO_STATE_ACTIVE_ALTERNATIVE)
@@ -3074,7 +3069,7 @@ void GameObject::GetRespawnPosition(float& x, float& y, float& z, float* ori /* 
 {
     if (m_spawnId)
     {
-        if (GameObjectData const* data = sObjectMgr->GetGOData(m_spawnId))
+        if (GameObjectData const* data = sObjectMgr->GetGameObjectData(m_spawnId))
         {
             x = data->posX;
             y = data->posY;
