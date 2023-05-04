@@ -3649,7 +3649,7 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                 // Scourge Strike 
                 if (m_spellInfo->SpellFamilyFlags[1] & 0x8000000)
                 {
-                    spell_bonus += int32(0.12f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                    spell_bonus += int32(0.11f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
 
                     float disease_amt = m_spellInfo->Effects[EFFECT_2].CalcValue();
                     //Death Knight T8 Melee 4P Bonus

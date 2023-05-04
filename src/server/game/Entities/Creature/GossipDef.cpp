@@ -450,7 +450,9 @@ void PlayerMenu::SendQuestGiverQuestDetails(Quest const* quest, ObjectGuid npcGU
                 data << uint32(0);
         }
 
-        // lfm max level quest 
+        // lfm max level quest
+        Player* player = _session->GetPlayer();
+        uint32 playerLevel = player->getLevel();
         uint32 accountMaxLevel = sWorld->GetAccountMaxLevel(_session->Expansion());
         uint32 questXP = quest->XPValue(playerLevel) * _session->GetPlayer()->GetQuestRate();
         int32 questMoney = quest->GetRewOrReqMoney(playerLevel);
@@ -460,9 +462,8 @@ void PlayerMenu::SendQuestGiverQuestDetails(Quest const* quest, ObjectGuid npcGU
             questMoney = quest->GetRewOrReqMoney(playerLevel) + quest->GetRewMoneyMaxLevel();
         }
         data << uint32(questMoney);
+        sScriptMgr->OnQuestComputeXP(player, quest, questXP);
         data << uint32(questXP);
-        
-        sScriptMgr->OnQuestComputeXP(player, quest, questXp);
     }
 
     // rewarded honor points. Multiply with 10 to satisfy client
@@ -698,6 +699,7 @@ void PlayerMenu::SendQuestGiverOfferReward(Quest const* quest, ObjectGuid npcGUI
 
     Player* player = _session->GetPlayer();
     // lfm max level quest
+    uint32 playerLevel = player->getLevel();
     uint32 accountMaxLevel = sWorld->GetAccountMaxLevel(_session->Expansion());
     uint32 questXP = quest->XPValue(playerLevel) * _session->GetPlayer()->GetQuestRate();
     int32 questMoney = quest->GetRewOrReqMoney(playerLevel);
@@ -709,7 +711,7 @@ void PlayerMenu::SendQuestGiverOfferReward(Quest const* quest, ObjectGuid npcGUI
     data << uint32(questMoney);
     data << uint32(questXP);
     
-    sScriptMgr->OnQuestComputeXP(player, quest, questXp);
+    sScriptMgr->OnQuestComputeXP(player, quest, questXP);
 
     // rewarded honor points. Multiply with 10 to satisfy client
     data << uint32(10 * quest->CalculateHonorGain(_session->GetPlayer()->GetQuestLevel(quest)));
