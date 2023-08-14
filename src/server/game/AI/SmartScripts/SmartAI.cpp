@@ -523,7 +523,7 @@ void SmartAI::UpdateAI(uint32 diff)
             mFollowArrivedTimer -= diff;
     }
 
-     if (!IsAIControlled())
+    if (!IsAIControlled())
     {
         if (CharmInfo* charmInfo = me->GetCharmInfo())
         {

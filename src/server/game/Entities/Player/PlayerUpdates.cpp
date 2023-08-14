@@ -244,7 +244,7 @@ void Player::Update(uint32 p_time)
 
                 float bubble = 0.125f * sWorld->getRate(RATE_REST_INGAME);
                 float extraPerSec =
-                    ((float)GetUInt32Value(PLAYER_NEXT_LEVEL_XP) / 72000.0f) *
+                    ((float) GetUInt32Value(PLAYER_NEXT_LEVEL_XP) / 72000.0f) *
                     bubble;
 
                 // speed collect rest bonus (section/in hour)
@@ -371,7 +371,7 @@ void Player::Update(uint32 p_time)
     if (!_instanceResetTimes.empty())
     {
         for (InstanceTimeMap::iterator itr = _instanceResetTimes.begin();
-            itr != _instanceResetTimes.end();)
+             itr != _instanceResetTimes.end();)
         {
             if (itr->second < now)
                 _instanceResetTimes.erase(itr++);
@@ -443,14 +443,6 @@ void Player::Update(uint32 p_time)
             }
         }
     }
-
-    // lfm debug
-    //if (isTurning())
-    //{
-    //    std::ostringstream replyStream;
-    //    replyStream << m_movementInfo.flags;
-    //    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), this);
-    //}
 }
 
 void Player::UpdateMirrorTimers()
@@ -758,6 +750,7 @@ bool Player::UpdateGatherSkill(uint32 SkillId, uint32 SkillValue,
 
     uint32 gathering_skill_gain =
         sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING);
+    sScriptMgr->OnUpdateGatheringSkill(this, SkillId, SkillValue, RedLevel + 100, RedLevel + 50, RedLevel + 25, gathering_skill_gain);
 
     // For skinning and Mining chance decrease with level. 1-74 - no decrease,
     // 75-149 - 2 times, 225-299 - 8 times
@@ -835,6 +828,7 @@ bool Player::UpdateCraftSkill(uint32 spellid)
 
             uint32 craft_skill_gain =
                 sWorld->getIntConfig(CONFIG_SKILL_GAIN_CRAFTING);
+            sScriptMgr->OnUpdateCraftingSkill(this, _spell_idx->second, SkillValue, craft_skill_gain);
 
             return UpdateSkillPro(
                 _spell_idx->second->SkillLine,
@@ -882,14 +876,16 @@ bool Player::UpdateFishingSkill()
         return false;
     }
 
-    // lfm fishing skill increase rate will always be 20%
-    int chance = 20;
-
     /* Whenever the player clicks on the fishing gameobject the
      * core will decide based on a probability if the skill raises or not.
      */
-    //return UpdateSkillPro(SKILL_FISHING, static_cast<int32>(getProbabilityOfLevelUp(SkillValue)) * 10, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
-    return UpdateSkillPro(SKILL_FISHING, chance * 10, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
+     // lfm fishing skill increase rate will always be 20%
+    //return UpdateSkillPro(
+    //    SKILL_FISHING,
+    //    static_cast<int32>(getProbabilityOfLevelUp(SkillValue)) * 10,
+    //    sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
+    int chance = 200;
+    return UpdateSkillPro(SKILL_FISHING, chance, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
 }
 
 // levels sync. with spell requirement for skill levels to learn

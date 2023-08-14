@@ -2294,13 +2294,6 @@ void SpellMgr::LoadSpellLinked()
             else
                 trigger -= SPELL_LINKED_MAX_SPELLS * type;
         }
-
-        // lfm tank threat will not be too much
-        if (effect == 57339)
-        {
-            continue;
-        }
-
         mSpellLinkedMap[trigger].push_back(effect);
 
         ++count;

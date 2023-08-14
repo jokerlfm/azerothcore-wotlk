@@ -713,12 +713,6 @@ ContentLevels GetContentLevelsForMapAndZone(uint32 mapid, uint32 zoneId)
     if (mapid < 2)
         return CONTENT_1_60;
 
-    // lfm ebon hold will be exp 0
-    if (mapid == 609)
-    {
-        return CONTENT_1_60;
-    }
-
     MapEntry const* mapEntry = sMapStore.LookupEntry(mapid);
     if (!mapEntry)
         return CONTENT_1_60;

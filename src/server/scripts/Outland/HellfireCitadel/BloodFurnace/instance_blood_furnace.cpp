@@ -118,17 +118,17 @@ public:
         {
             switch (data)
             {
-            case DATA_DOOR1:
-            case DATA_DOOR2:
-            case DATA_DOOR3:
-            case DATA_DOOR6:
-                return _doorGUIDs[data - DATA_DOOR1];
+                case DATA_DOOR1:
+                case DATA_DOOR2:
+                case DATA_DOOR3:
+                case DATA_DOOR6:
+                    return _doorGUIDs[data - DATA_DOOR1];
 
-            case DATA_PRISON_CELL1:
-            case DATA_PRISON_CELL2:
-            case DATA_PRISON_CELL3:
-            case DATA_PRISON_CELL4:
-                return _prisonGUIDs[data - DATA_PRISON_CELL1];
+                case DATA_PRISON_CELL1:
+                case DATA_PRISON_CELL2:
+                case DATA_PRISON_CELL3:
+                case DATA_PRISON_CELL4:
+                    return _prisonGUIDs[data - DATA_PRISON_CELL1];
             }
 
             return ObjectGuid::Empty;
@@ -165,10 +165,10 @@ public:
         {
             switch (type)
             {
-            case DATA_THE_MAKER:
-            case DATA_KELIDAN:
-                _auiEncounter[type] = data;
-                break;
+                case DATA_THE_MAKER:
+                case DATA_KELIDAN:
+                    _auiEncounter[type] = data;
+                    break;
             }
 
             if (data == DONE)
@@ -179,9 +179,9 @@ public:
         {
             switch (type)
             {
-            case DATA_THE_MAKER:
-            case DATA_KELIDAN:
-                return _auiEncounter[type];
+                case DATA_THE_MAKER:
+                case DATA_KELIDAN:
+                    return _auiEncounter[type];
             }
             return 0;
         }
@@ -226,45 +226,24 @@ public:
                 }
                 else if (posY >= 76.0f && posY <= 91.0f)
                 {
-                    if (_prisonersCell[1].size() < 3)
-                    {
-                        _prisonersCell[1].insert(creature->GetGUID());
-                        ++_prisonerCounter[1];
-                        ResetPrisoner(creature);
-                    }
-                    else
-                    {
-                        creature->DisappearAndDie();
-                    }
+                    _prisonersCell[1].insert(creature->GetGUID());
+                    ++_prisonerCounter[1];
+                    ResetPrisoner(creature);
                 }
             }
             else if (posX >= 490.0f && posX <= 506.0f)
             {
                 if (posY >= 106.0f && posY <= 123.0f)
                 {
-                    if (_prisonersCell[2].size() < 3)
-                    {
-                        _prisonersCell[2].insert(creature->GetGUID());
-                        ++_prisonerCounter[2];
-                        ResetPrisoner(creature);
-                    }
-                    else
-                    {
-                        creature->DisappearAndDie();
-                    }
+                    _prisonersCell[2].insert(creature->GetGUID());
+                    ++_prisonerCounter[2];
+                    ResetPrisoner(creature);
                 }
                 else if (posY >= 76.0f && posY <= 91.0f)
                 {
-                    if (_prisonersCell[3].size() < 3)
-                    {
-                        _prisonersCell[3].insert(creature->GetGUID());
-                        ++_prisonerCounter[3];
-                        ResetPrisoner(creature);
-                    }
-                    else
-                    {
-                        creature->DisappearAndDie();
-                    }
+                    _prisonersCell[3].insert(creature->GetGUID());
+                    ++_prisonerCounter[3];
+                    ResetPrisoner(creature);
                 }
             }
         }
@@ -285,13 +264,13 @@ public:
         {
             switch (id)
             {
-            case DATA_PRISON_CELL1:
-            case DATA_PRISON_CELL2:
-            case DATA_PRISON_CELL3:
-            case DATA_PRISON_CELL4:
-                HandleGameObject(_prisonGUIDs[id - DATA_PRISON_CELL1], true);
-                ActivatePrisoners(_prisonersCell[id - DATA_PRISON_CELL1]);
-                break;
+                case DATA_PRISON_CELL1:
+                case DATA_PRISON_CELL2:
+                case DATA_PRISON_CELL3:
+                case DATA_PRISON_CELL4:
+                    HandleGameObject(_prisonGUIDs[id - DATA_PRISON_CELL1], true);
+                    ActivatePrisoners(_prisonersCell[id - DATA_PRISON_CELL1]);
+                    break;
                 case DATA_BROGGOK_REAR_DOOR:
                     if (GameObject* go = GetGameObject(DATA_BROGGOK_REAR_DOOR))
                     {
@@ -299,9 +278,9 @@ public:
                     }
                     if (Creature* broggok = GetCreature(DATA_BROGGOK))
                     {
-                    broggok->AI()->DoAction(ACTION_ACTIVATE_BROGGOK);
+                        broggok->AI()->DoAction(ACTION_ACTIVATE_BROGGOK);
                     }
-                break;
+                    break;
             }
         }
 

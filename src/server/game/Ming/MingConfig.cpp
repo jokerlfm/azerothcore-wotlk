@@ -320,16 +320,10 @@ void MingConfig::Configure(std::string const& initFileName, std::vector<std::str
 
 bool MingConfig::LoadAppConfigs(bool isReload /*= false*/)
 {
-    // #1 - Load init config file .conf.dist
-    if (!LoadInitial(_filename + ".dist", isReload))
+    // #1 - Load init config file .conf
+    if (!LoadInitial(_filename, isReload))
     {
         return false;
-    }
-
-    // #2 - Load .conf file
-    if (!LoadAdditionalFile(_filename, true, isReload))
-    {
-        _usingDistConfig = true;
     }
 
     return true;

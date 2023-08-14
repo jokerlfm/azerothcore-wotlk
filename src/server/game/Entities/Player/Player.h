@@ -406,12 +406,10 @@ struct Areas
 #define MAX_RUNES       6
 
 enum RuneCooldowns
-{    
-    // lfm dk rune cooldown
-    //RUNE_BASE_COOLDOWN  = 10000,
-    RUNE_BASE_COOLDOWN = 20000,
-    RUNE_MISS_COOLDOWN = 1500,     // cooldown applied on runes when the spell misses    
+{
+    RUNE_BASE_COOLDOWN  = 10000,
     RUNE_GRACE_PERIOD   = 2500,     // xinef: maximum possible grace period
+    RUNE_MISS_COOLDOWN  = 1500,     // cooldown applied on runes when the spell misses
 };
 
 enum RuneType
@@ -1004,6 +1002,16 @@ enum PlayerCommandStates
     CHEAT_WATERWALK = 0x10
 };
 
+// Used for OnGiveXP PlayerScript hook
+enum PlayerXPSource
+{
+    XPSOURCE_KILL = 0,
+    XPSOURCE_QUEST = 1,
+    XPSOURCE_QUEST_DF = 2,
+    XPSOURCE_EXPLORE = 3,
+    XPSOURCE_BATTLEGROUND = 4
+};
+
 enum InstantFlightGossipAction
 {
     GOSSIP_ACTION_TOGGLE_INSTANT_FLIGHT = 500
@@ -1067,7 +1075,7 @@ public:
     // lfm nier
     bool isNier;
     // 0 dps, 1 tank, 2 healer
-    uint32 groupRole;    
+    uint32 groupRole;
     NierAction_Base* nierAction;
     std::unordered_map<uint32, NierStrategy_Base*> nierStrategyMap;
     uint32 activeStrategyIndex;
@@ -2096,7 +2104,7 @@ public:
     ReputationMgr&       GetReputationMgr()       { return *m_reputationMgr; }
     [[nodiscard]] ReputationMgr const& GetReputationMgr() const { return *m_reputationMgr; }
     [[nodiscard]] ReputationRank GetReputationRank(uint32 faction_id) const;
-    void RewardReputation(Unit* victim, float rate);
+    void RewardReputation(Unit* victim);
     void RewardReputation(Quest const* quest);
 
     float CalculateReputationGain(ReputationSource source, uint32 creatureOrQuestLevel, float rep, int32 faction, bool noQuestBonus = false);
@@ -2483,11 +2491,7 @@ public:
     void SetLastUsedRune(RuneType type) { m_runes->lastUsedRune = type; }
     void SetBaseRune(uint8 index, RuneType baseRune) { m_runes->runes[index].BaseRune = baseRune; }
     void SetCurrentRune(uint8 index, RuneType currentRune) { m_runes->runes[index].CurrentRune = currentRune; }
-    void SetRuneCooldown(uint8 index, uint32 cooldown)
-    {
-        m_runes->runes[index].Cooldown = cooldown;
-        m_runes->SetRuneState(index, (cooldown == 0));
-    }
+    void SetRuneCooldown(uint8 index, uint32 cooldown) { m_runes->runes[index].Cooldown = cooldown; m_runes->SetRuneState(index, (cooldown == 0)); }
     void SetGracePeriod(uint8 index, uint32 period) { m_runes->runes[index].GracePeriod = period; }
     void SetRuneConvertAura(uint8 index, AuraEffect const* aura) { m_runes->runes[index].ConvertAura = aura; }
     void AddRuneByAuraEffect(uint8 index, RuneType newType, AuraEffect const* aura) { SetRuneConvertAura(index, aura); ConvertRune(index, newType); }

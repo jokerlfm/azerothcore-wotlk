@@ -5104,12 +5104,7 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
 
     std::string taxi_nodes = fields[42].Get<std::string>();
 
-    auto RelocateToHomebind = [this, &mapId, &instanceId]()
-    {
-        mapId = m_homebindMapId;
-        instanceId = 0;
-        Relocate(m_homebindX, m_homebindY, m_homebindZ, m_homebindO);
-    };
+    auto RelocateToHomebind = [this, &mapId, &instanceId]() { mapId = m_homebindMapId; instanceId = 0; Relocate(m_homebindX, m_homebindY, m_homebindZ, m_homebindO); };
 
     _LoadGroup();
 
@@ -5267,7 +5262,7 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     // client without expansion support
     if (mapEntry)
     {
-        // lfm expansion check for map 
+        // lfm no expansion check for map 
         //if (GetSession()->Expansion() < mapEntry->Expansion())
         //{
         //    LOG_DEBUG("entities.player.loading", "Player {} using client without required expansion tried login at non accessible map {}", GetName(), mapId);
@@ -5290,7 +5285,7 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
         if (at)
             Relocate(at->target_X, at->target_Y, at->target_Z, at->target_Orientation);
         else
-        RelocateToHomebind();
+            RelocateToHomebind();
     }
 
     // NOW player must have valid map
@@ -6984,7 +6979,7 @@ bool Player::CheckInstanceLoginValid()
     if (GetMap()->IsRaid())
     {
         // cannot be in raid instance without a group
-        if (!GetGroup())
+        if (!GetGroup() && !sWorld->getBoolConfig(CONFIG_INSTANCE_IGNORE_RAID))
             return false;
     }
     else
@@ -7034,13 +7029,11 @@ bool Player::_LoadHomeBind(PreparedQueryResult result)
         MapEntry const* bindMapEntry = sMapStore.LookupEntry(m_homebindMapId);
 
         // accept saved data only for valid position (and non instanceable), and accessable
-        if (MapMgr::IsValidMapCoord(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ, m_homebindO) && !bindMapEntry->Instanceable())
+        if (MapMgr::IsValidMapCoord(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ, m_homebindO) && !bindMapEntry->Instanceable() 
+            // lfm no expansion check for map 
+            // && GetSession()->Expansion() >= bindMapEntry->Expansion()
+            )
         {
-            // lfm expansion check for map 
-            //if (GetSession()->Expansion() >= bindMapEntry->Expansion())
-            //{
-            //    ok = true;
-            //}
             ok = true;
         }
         else

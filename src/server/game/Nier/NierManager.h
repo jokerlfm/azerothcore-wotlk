@@ -49,8 +49,7 @@ public:
     void UpdateNierEntities(uint32 pmDiff);
     void LogoutNiers(bool pmInstant = false);
     void DeleteNiers();
-    bool LoginNier(uint32 pmLevel, uint32 pmCount);
-    bool LoginOneNier(uint32 pmLevel);
+    bool LoginNierPartners(uint32 pmMasterId);
 
     bool IsPolymorphed(Unit* pmTarget);
 
@@ -66,7 +65,7 @@ public:
     std::unordered_map<uint32, std::unordered_map<uint32, uint32>> hordeRaces;
     uint32 nameIndex;
     std::unordered_map<uint32, std::string> nierNameMap;
-    std::unordered_set<NierEntity*> nierEntitySet;
+    std::unordered_map<uint32, std::unordered_set<NierEntity*>> nierEntityMap;
     std::unordered_map<uint32, std::unordered_map<uint32, std::string>> characterTalentTabNameMap;
     std::unordered_set<uint32> instanceEncounterEntrySet;
 
@@ -74,7 +73,7 @@ public:
     std::unordered_map<uint32, std::unordered_map<uint32, std::unordered_map<uint32, uint32>>> equipsMap;
 
 private:
-    void CreateNier(uint32 pmLevel, bool pmAlliance, uint32 pmGroupRole);
+    void CreateNier(uint32 pmMasterId, uint32 pmRace, uint32 pmCareer, uint32 pmSpecialty, uint32 pmGroupRole);
     int checkDelay;
 };
 

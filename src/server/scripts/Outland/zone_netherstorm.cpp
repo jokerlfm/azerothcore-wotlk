@@ -23,20 +23,6 @@
 #include "ScriptedGossip.h"
 #include "SpellInfo.h"
 
-        {
-            if (me->IsInCombat())
-            {
-                {
-                    {
-                        me->SetUnitFlag(UnitFlags::UNIT_FLAG_IMMUNE_TO_NPC);
-                        me->SetUnitFlag(UnitFlags::UNIT_FLAG_IMMUNE_TO_PC);
-                        me->SetFaction(FACTION_DEMON);
-                        me->GetMotionMaster()->MoveTargetedHome();
-                        me->CombatStop();
-                        me->ClearInCombat();
-                    }
-                }
-            }
 // Ours
 enum saeed
 {

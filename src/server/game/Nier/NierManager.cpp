@@ -31,7 +31,7 @@ NierManager::NierManager()
     hordeRaces.clear();
     nameIndex = 0;
     nierNameMap.clear();
-    nierEntitySet.clear();
+    nierEntityMap.clear();
     characterTalentTabNameMap.clear();
     equipsMap.clear();
 }
@@ -152,21 +152,22 @@ void NierManager::InitializeManager()
         DeleteNiers();
     }
 
-    QueryResult nierQR = CharacterDatabase.Query("SELECT nier_id, account_name, character_id, target_level, target_race, target_class, target_specialty FROM nier");
+    QueryResult nierQR = CharacterDatabase.Query("SELECT entry, master_id, account_name, account_id, character_id, race, career, specialty, role FROM nier");
     if (nierQR)
     {
         do
         {
             Field* fields = nierQR->Fetch();
             NierEntity* re = new NierEntity();
-            re->nier_id = fields[0].Get<uint32>();
-            re->account_name = fields[1].Get<std::string>();
-            re->character_id = fields[2].Get<uint32>();
-            re->target_level = fields[3].Get<uint32>();
-            re->target_race = fields[4].Get<uint32>();
-            re->target_class = fields[5].Get<uint32>();
-            re->target_specialty = fields[6].Get<uint32>();
-            nierEntitySet.insert(re);
+            re->entry = fields[0].Get<uint32>();
+            re->master_id = fields[1].Get<uint32>();
+            re->account_name = fields[2].Get<std::string>();
+            re->account_id = fields[3].Get<uint32>();
+            re->character_id = fields[4].Get<uint32>();
+            re->target_race = fields[5].Get<uint32>();
+            re->target_class = fields[6].Get<uint32>();
+            re->target_specialty = fields[7].Get<uint32>();
+            nierEntityMap[re->master_id].insert(re);
         } while (nierQR->NextRow());
     }
     nameIndex = 0;
@@ -204,8 +205,6 @@ void NierManager::UpdateNierManager(uint32 pmDiff)
     if (checkDelay < 0)
     {
         checkDelay = sNierConfig->ManagerCheckDelay;
-        std::unordered_set<uint32> onlinePlayerLevelSet;
-        onlinePlayerLevelSet.clear();
         std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
         for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
         {
@@ -215,52 +214,49 @@ void NierManager::UpdateNierManager(uint32 pmDiff)
                 {
                     if (Player* eachPlayer = eachWS->GetPlayer())
                     {
-                        uint32 eachLevel = eachPlayer->getLevel();
-                        if (onlinePlayerLevelSet.find(eachLevel) == onlinePlayerLevelSet.end())
-                        {
-                            onlinePlayerLevelSet.insert(eachLevel);
-                        }
+                        LoginNierPartners(eachPlayer->GetGUID().GetCounter());
                     }
                 }
             }
-        }
-        for (std::unordered_set<uint32>::iterator levelIT = onlinePlayerLevelSet.begin(); levelIT != onlinePlayerLevelSet.end(); levelIT++)
-        {
-            uint32 eachLevel = *levelIT;
-            LoginOneNier(eachLevel);
         }
     }
 }
 
 void NierManager::UpdateNierEntities(uint32 pmDiff)
 {
-    for (std::unordered_set<NierEntity*>::iterator reIT = nierEntitySet.begin(); reIT != nierEntitySet.end(); reIT++)
+    for (std::unordered_map<uint32, std::unordered_set<NierEntity*>>::iterator nierGroupIT = nierEntityMap.begin(); nierGroupIT != nierEntityMap.end(); nierGroupIT++)
     {
-        (*reIT)->Update(pmDiff);
+        for (std::unordered_set<NierEntity*>::iterator reIT = nierGroupIT->second.begin(); reIT != nierGroupIT->second.end(); reIT++)
+        {
+            (*reIT)->Update(pmDiff);
+        }
     }
 }
 
 void NierManager::LogoutNiers(bool pmInstant)
 {
-    for (std::unordered_set<NierEntity*>::iterator reIT = nierEntitySet.begin(); reIT != nierEntitySet.end(); reIT++)
+    for (std::unordered_map<uint32, std::unordered_set<NierEntity*>>::iterator nierGroupIT = nierEntityMap.begin(); nierGroupIT != nierEntityMap.end(); nierGroupIT++)
     {
-        if (NierEntity* eachNier = *reIT)
+        for (std::unordered_set<NierEntity*>::iterator reIT = nierGroupIT->second.begin(); reIT != nierGroupIT->second.end(); reIT++)
         {
-            if (pmInstant)
+            if (NierEntity* eachNier = *reIT)
             {
-                ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, eachNier->character_id);
-                if (Player* eachPlayer = ObjectAccessor::FindPlayer(playerGuid))
+                if (pmInstant)
                 {
-                    std::ostringstream logStream;
-                    logStream << "Logout nier : " << eachPlayer->GetName();
-                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, logStream.str().c_str());
-                    eachPlayer->GetSession()->LogoutPlayer(true);
+                    ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, eachNier->character_id);
+                    if (Player* eachPlayer = ObjectAccessor::FindPlayer(playerGuid))
+                    {
+                        std::ostringstream logStream;
+                        logStream << "Logout nier : " << eachPlayer->GetName();
+                        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, logStream.str().c_str());
+                        eachPlayer->GetSession()->LogoutPlayer(true);
+                    }
                 }
-            }
-            else
-            {
-                eachNier->entityState = NierEntityState::NierEntityState_DoLogoff;
-                eachNier->checkDelay = 10;
+                else
+                {
+                    eachNier->entityState = NierEntityState::NierEntityState_DoLogoff;
+                    eachNier->checkDelay = 10;
+                }
             }
         }
     }
@@ -301,201 +297,129 @@ void NierManager::DeleteNiers()
     }
 }
 
-bool NierManager::LoginNier(uint32 pmLevel, uint32 pmCount)
+bool NierManager::LoginNierPartners(uint32 pmMasterId)
 {
-    if (pmLevel >= 20)
+    ObjectGuid masterGuid = ObjectGuid(HighGuid::Player, pmMasterId);
+    if (Player* master = ObjectAccessor::FindConnectedPlayer(masterGuid))
     {
-        uint32 currentCount = 0;
-        QueryResult levelNierQR = CharacterDatabase.Query("SELECT count(*) FROM nier where target_level = {}", pmLevel);
-        if (levelNierQR)
+        int tankCount = 1;
+        int healerCount = 0;
+        int dpsCount = 3;
+        std::unordered_map<uint32, uint32> partnerMap;
+        QueryResult nierQR = CharacterDatabase.Query("SELECT master_id, role FROM nier where master_id = {}", pmMasterId);
+        if (nierQR)
         {
-            Field* fields = levelNierQR->Fetch();
-            currentCount = fields[0].Get<uint32>();
-        }
-        if (currentCount < pmCount)
-        {
-            uint32 addCount = pmCount - currentCount;
-            uint32 allianceCount = addCount / 2;
-            uint32 hordeCount = addCount - allianceCount;
-            int checkCount = allianceCount;
-            int tankA = 1;
-            int tankH = 1;
-            int healerA = 1;
-            int healerH = 1;
-            while (checkCount > 0)
+            do
             {
-                uint32 groupRole = GroupRole::GroupRole_DPS;
-                if (tankA > 0)
+                Field* fields = nierQR->Fetch();
+                uint32 character_id = fields[0].Get<uint32>();
+                uint32 role = fields[1].Get<uint32>();
+                partnerMap[character_id] = role;
+                if (role == GroupRole::GroupRole_Tank)
                 {
-                    groupRole = GroupRole::GroupRole_Tank;
-                    tankA--;
+                    tankCount -= 1;
                 }
-                else if (healerA > 0)
+                else if (role == GroupRole::GroupRole_Healer)
                 {
-                    groupRole = GroupRole::GroupRole_Healer;
-                    healerA--;
+                    healerCount -= 1;
                 }
-                CreateNier(pmLevel, true, groupRole);
-                checkCount--;
-            }
-            checkCount = hordeCount;
-            while (checkCount > 0)
-            {
-                uint32 groupRole = GroupRole::GroupRole_DPS;
-                if (tankH > 0)
+                else if (role == GroupRole::GroupRole_DPS)
                 {
-                    groupRole = GroupRole::GroupRole_Tank;
-                    tankH--;
+                    dpsCount -= 1;
                 }
-                else if (healerH > 0)
-                {
-                    groupRole = GroupRole::GroupRole_Healer;
-                    healerH--;
-                }
-                CreateNier(pmLevel, false, groupRole);
-                checkCount--;
-            }
+            } while (nierQR->NextRow());
         }
-        uint32 onlineCount = 0;
-        for (std::unordered_set<NierEntity*>::iterator reIT = nierEntitySet.begin(); reIT != nierEntitySet.end(); reIT++)
+        while (tankCount > 0)
         {
-            if (NierEntity* eachRE = *reIT)
-            {
-                if (eachRE->target_level == pmLevel)
-                {
-                    if (eachRE->entityState != NierEntityState::NierEntityState_OffLine && eachRE->entityState != NierEntityState::NierEntityState_None)
-                    {
-                        onlineCount++;
-                    }
-                }
-            }
-        }
-        int toOnline = 0;
-        if (pmCount > onlineCount)
-        {
-            toOnline = pmCount - onlineCount;
-        }
-        if (toOnline > 0)
-        {
-            for (std::unordered_set<NierEntity*>::iterator reIT = nierEntitySet.begin(); reIT != nierEntitySet.end(); reIT++)
-            {
-                if (NierEntity* eachRE = *reIT)
-                {
-                    if (eachRE->target_level == pmLevel)
-                    {
-                        if (eachRE->entityState == NierEntityState::NierEntityState_OffLine)
-                        {
-                            eachRE->checkDelay = urand(5 * IN_MILLISECONDS, 5 * MINUTE * IN_MILLISECONDS);
-                            eachRE->entityState = NierEntityState::NierEntityState_Enter;
-                            toOnline--;
-                            if (toOnline <= 0)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return true;
-}
+            uint32 career = Classes::CLASS_WARRIOR;
+            uint32 specialty = 2;
 
-bool NierManager::LoginOneNier(uint32 pmLevel)
-{
-    if (pmLevel >= 20)
-    {
-        uint32 allianceTankCount = 0, hordeTankCount = 0, allianceHealerCount = 0, hordeHealerCount = 0, allianceDPSCount = 0, hordeDPSCount = 0;
-        QueryResult levelAllianceTankNierQR = CharacterDatabase.Query("SELECT count(*) FROM nier where target_level = {} and target_class = 1 and (target_race = 1 or target_race = 3 or target_race = 4 or target_race = 7 or target_race = 11)", pmLevel);
-        if (levelAllianceTankNierQR)
-        {
-            Field* fields = levelAllianceTankNierQR->Fetch();
-            allianceTankCount = fields[0].Get<uint32>();
-        }
-        QueryResult levelAllianceHealerNierQR = CharacterDatabase.Query("SELECT count(*) FROM nier where target_level = {} and target_class = 5 and (target_race = 1 or target_race = 3 or target_race = 4 or target_race = 7 or target_race = 11)", pmLevel);
-        if (levelAllianceHealerNierQR)
-        {
-            Field* fields = levelAllianceHealerNierQR->Fetch();
-            allianceHealerCount = fields[0].Get<uint32>();
-        }
-        QueryResult levelAllianceDPSNierQR = CharacterDatabase.Query("SELECT count(*) FROM nier where target_level = {} and (target_class = 2 or target_class = 3 or target_class = 4 or target_class = 6 or target_class = 7 or target_class = 8 or target_class = 9 or target_class = 11) and (target_race = 1 or target_race = 3 or target_race = 4 or target_race = 7 or target_race = 11)", pmLevel);
-        if (levelAllianceDPSNierQR)
-        {
-            Field* fields = levelAllianceDPSNierQR->Fetch();
-            allianceDPSCount = fields[0].Get<uint32>();
-        }
-        QueryResult levelHordeTankNierQR = CharacterDatabase.Query("SELECT count(*) FROM nier where target_level = {} and target_class = 1 and (target_race = 2 or target_race = 5 or target_race = 6 or target_race = 8 or target_race = 10)", pmLevel);
-        if (levelHordeTankNierQR)
-        {
-            Field* fields = levelHordeTankNierQR->Fetch();
-            hordeTankCount = fields[0].Get<uint32>();
-        }
-        QueryResult levelHordeHealerNierQR = CharacterDatabase.Query("SELECT count(*) FROM nier where target_level = {} and target_class = 5 and (target_race = 2 or target_race = 5 or target_race = 6 or target_race = 8 or target_race = 10)", pmLevel);
-        if (levelHordeHealerNierQR)
-        {
-            Field* fields = levelHordeHealerNierQR->Fetch();
-            hordeHealerCount = fields[0].Get<uint32>();
-        }
-        QueryResult levelHordeDPSNierQR = CharacterDatabase.Query("SELECT count(*) FROM nier where target_level = {} and (target_class = 2 or target_class = 3 or target_class = 4 or target_class = 6 or target_class = 7 or target_class = 8 or target_class = 9 or target_class = 11) and (target_race = 2 or target_race = 5 or target_race = 6 or target_race = 8 or target_race = 10)", pmLevel);
-        if (levelAllianceDPSNierQR)
-        {
-            Field* fields = levelHordeDPSNierQR->Fetch();
-            hordeDPSCount = fields[0].Get<uint32>();
-        }
-        uint32 groupRole = GroupRole::GroupRole_DPS;
-        bool alliance = true;
-        bool createNier = true;
-        if (allianceTankCount == 0)
-        {
-            alliance = true;
-            groupRole = GroupRole::GroupRole_Tank;
-        }
-        else if (hordeTankCount == 0)
-        {
-            alliance = false;
-            groupRole = GroupRole::GroupRole_Tank;
-        }
-        else if (allianceHealerCount == 0)
-        {
-            alliance = true;
-            groupRole = GroupRole::GroupRole_Healer;
-        }
-        else if (hordeHealerCount == 0)
-        {
-            alliance = false;
-            groupRole = GroupRole::GroupRole_Healer;
-        }
-        else if ((allianceDPSCount + hordeDPSCount) < sNierConfig->NierCountEachLevel)
-        {
-            if (allianceDPSCount < hordeDPSCount)
+            career = Classes::CLASS_PRIEST;
+            specialty = 0;
+
+            uint32 role = GroupRole::GroupRole_Tank;
+            uint32 race = urand(0, 4);
+            uint32 masterRace = master->getRace();
+            if (masterRace == Races::RACE_HUMAN || masterRace == Races::RACE_DWARF || masterRace == Races::RACE_NIGHTELF || masterRace == Races::RACE_DRAENEI || masterRace == Races::RACE_GNOME)
             {
-                alliance = true;
+                uint32 raceIndex = urand(0, allianceRaces[career].size() - 1);
+                race = allianceRaces[career][raceIndex];
             }
             else
             {
-                alliance = false;
+                uint32 raceIndex = urand(0, hordeRaces[career].size() - 1);
+                race = hordeRaces[career][raceIndex];
             }
-            groupRole = GroupRole::GroupRole_DPS;
-        }
-        else
-        {
-            createNier = false;
-        }
-        if (createNier)
-        {
-            CreateNier(pmLevel, alliance, groupRole);
-        }
-        for (std::unordered_set<NierEntity*>::iterator reIT = nierEntitySet.begin(); reIT != nierEntitySet.end(); reIT++)
-        {
-            if (NierEntity* eachRE = *reIT)
+            // debug
+            if (race == 0)
             {
-                if (eachRE->target_level == pmLevel)
+                bool breakPoint = true;
+            }
+            CreateNier(pmMasterId, race, career, specialty, role);
+            tankCount -= 1;
+        }
+        while (healerCount > 0)
+        {
+            uint32 career = Classes::CLASS_PRIEST;
+            uint32 specialty = 1;
+            uint32 role = GroupRole::GroupRole_Healer;
+            uint32 race = urand(0, 4);
+            uint32 masterRace = master->getRace();
+            if (masterRace == Races::RACE_HUMAN || masterRace == Races::RACE_DWARF || masterRace == Races::RACE_NIGHTELF || masterRace == Races::RACE_DRAENEI || masterRace == Races::RACE_GNOME)
+            {
+                uint32 raceIndex = urand(0, allianceRaces[career].size() - 1);
+                race = allianceRaces[career][raceIndex];
+            }
+            else
+            {
+                uint32 raceIndex = urand(0, hordeRaces[career].size() - 1);
+                race = hordeRaces[career][raceIndex];
+            }
+            // debug
+            if (race == 0)
+            {
+                bool breakPoint = true;
+            }
+            CreateNier(pmMasterId, race, career, specialty, role);
+            healerCount -= 1;
+        }
+        while (dpsCount > 0)
+        {
+            uint32 career = Classes::CLASS_PRIEST;
+            uint32 specialty = 2;
+            uint32 role = GroupRole::GroupRole_DPS;
+            uint32 race = urand(0, 4);
+            uint32 masterRace = master->getRace();
+            if (masterRace == Races::RACE_HUMAN || masterRace == Races::RACE_DWARF || masterRace == Races::RACE_NIGHTELF || masterRace == Races::RACE_DRAENEI || masterRace == Races::RACE_GNOME)
+            {
+                uint32 raceIndex = urand(0, allianceRaces[career].size() - 1);
+                race = allianceRaces[career][raceIndex];
+            }
+            else
+            {
+                uint32 raceIndex = urand(0, hordeRaces[career].size() - 1);
+                race = hordeRaces[career][raceIndex];
+            }
+            // debug
+            if (race == 0)
+            {
+                bool breakPoint = true;
+            }
+            CreateNier(pmMasterId, race, career, specialty, role);
+            dpsCount -= 1;
+        }
+
+        // nier todo login partners
+        if (nierEntityMap.find(pmMasterId) != nierEntityMap.end())
+        {
+            for (std::unordered_set<NierEntity*>::iterator reIT = nierEntityMap[pmMasterId].begin(); reIT != nierEntityMap[pmMasterId].end(); reIT++)
+            {
+                if (NierEntity* re = *reIT)
                 {
-                    if (eachRE->entityState == NierEntityState::NierEntityState_OffLine)
+                    if (re->entityState == NierEntityState::NierEntityState_OffLine)
                     {
-                        eachRE->checkDelay = 2 * IN_MILLISECONDS;
-                        eachRE->entityState = NierEntityState::NierEntityState_Enter;
-                        break;
+                        re->entityState = NierEntityState::NierEntityState_Enter;
+                        re->checkDelay = urand(1000, 10000);
                     }
                 }
             }
@@ -505,7 +429,7 @@ bool NierManager::LoginOneNier(uint32 pmLevel)
     return true;
 }
 
-void NierManager::CreateNier(uint32 pmLevel, bool pmAlliance, uint32 pmGroupRole)
+void NierManager::CreateNier(uint32 pmMasterId, uint32 pmRace, uint32 pmCareer, uint32 pmSpecialty, uint32 pmGroupRole)
 {
     uint32 currentNierCount = 0;
     QueryResult nierQR = CharacterDatabase.Query("SELECT count(*) FROM nier");
@@ -527,75 +451,37 @@ void NierManager::CreateNier(uint32 pmLevel, bool pmAlliance, uint32 pmGroupRole
     }
     else
     {
-        uint32 target_class = Classes::CLASS_HUNTER;
-        uint32 target_specialty = 1;
-        uint32 classRand = urand(1, 100);
-        if (pmGroupRole == GroupRole::GroupRole_Tank)
+        uint32 nierEntry = 0;
+        nierQR = CharacterDatabase.Query("SELECT entry FROM nier order by entry desc");
+        if (nierQR)
         {
-            target_class = Classes::CLASS_WARRIOR;
-            target_specialty = 2;
+            Field* fields = nierQR->Fetch();
+            nierEntry = fields[0].Get<uint32>();
         }
-        else if (pmGroupRole == GroupRole::GroupRole_Healer)
-        {
-            target_class = Classes::CLASS_PRIEST;
-            target_specialty = 0;
-        }
-        else
-        {
-            if (classRand < 60)
-            {
-                target_class = Classes::CLASS_ROGUE;
-                target_specialty = 1;
-            }
-            else if (classRand < 80)
-            {
-                target_class = Classes::CLASS_DRUID;
-                target_specialty = 0;
-            }
-            //else if (classRand < 60)
-            //{
-            //	target_class = Classes::CLASS_HUNTER;
-            //	target_specialty = 1;
-            //}
-            else if (classRand < 200)
-            {
-                target_class = Classes::CLASS_MAGE;
-                target_specialty = 2;
-            }
-        }
+        nierEntry = nierEntry + 1;
 
-        // lfm debug
-        //target_class = Classes::CLASS_ROGUE;
-        //target_specialty = 1;
-
-        uint32 target_race = 0;
-        if (pmAlliance)
-        {
-            uint32 raceIndex = urand(0, allianceRaces[target_class].size() - 1);
-            target_race = allianceRaces[target_class][raceIndex];
-        }
-        else
-        {
-            uint32 raceIndex = urand(0, hordeRaces[target_class].size() - 1);
-            target_race = hordeRaces[target_class][raceIndex];
-        }
         std::ostringstream sqlStream;
-        sqlStream << "INSERT INTO nier (nier_id, account_id, account_name, character_id, target_level, target_race, target_class, target_specialty) VALUES (" << currentNierCount << ", 0, '" << checkAccountName << "', 0, " << pmLevel << ", " << target_race << ", " << target_class << ", " << target_specialty << ")";
+        sqlStream << "INSERT INTO nier (entry, master_id, account_name, account_id, character_id, race, career, specialty, role) VALUES (" << nierEntry << ", " << pmMasterId << ", '" << checkAccountName << "', 0, 0, " << pmRace << ", " << pmCareer << ", " << pmSpecialty << ", " << pmGroupRole << ")";
         std::string sql = sqlStream.str();
         CharacterDatabase.DirectExecute(sql.c_str());
-        NierEntity* re = new NierEntity();
-        re->nier_id = currentNierCount;
-        re->account_id = 0;
-        re->account_name = checkAccountName;
-        re->character_id = 0;
-        re->target_level = pmLevel;
-        re->target_race = target_race;
-        re->target_class = target_class;
-        re->target_specialty = target_specialty;
-        nierEntitySet.insert(re);
         std::ostringstream replyStream;
         replyStream << "nier " << checkAccountName << " created";
         sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str());
+
+        NierEntity* ne = new NierEntity();
+        ne->account_id = 0;
+        ne->account_name = checkAccountName;
+        ne->character_id = 0;
+        ne->checkDelay = 1000;
+        ne->entityState = NierEntityState_OffLine;
+        ne->master_id = pmMasterId;
+        ne->entry = nierEntry;
+        ne->offlineDelay = 0;
+        ne->target_class = pmCareer;
+        ne->target_level = 0;
+        ne->target_race = pmRace;
+        ne->target_specialty = pmSpecialty;
+        nierEntityMap[pmMasterId].insert(ne);
     }
 }
 
@@ -938,8 +824,20 @@ void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, 
                             }
                             case Classes::CLASS_PRIEST:
                             {
-                                member->groupRole = GroupRole::GroupRole_Healer;
-                                ogHealer = member->GetGUID();
+                                if (member->nierAction->specialty == 0)
+                                {
+                                    member->groupRole = GroupRole::GroupRole_Tank;
+                                    ogTank = member->GetGUID();
+                                }
+                                else if (member->nierAction->specialty == 1)
+                                {
+                                    member->groupRole = GroupRole::GroupRole_Healer;
+                                    ogHealer = member->GetGUID();
+                                }
+                                if (member->nierAction->specialty == 2)
+                                {
+                                    member->groupRole = GroupRole::GroupRole_DPS;
+                                }
                                 break;
                             }
                             default:
@@ -1368,61 +1266,12 @@ void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, 
         if (commandVector.size() > 1)
         {
             std::string nierAction = commandVector.at(1);
-            if (nierAction == "reset")
-            {
-                std::ostringstream replyStream;
-                bool allOffline = true;
-                for (std::unordered_set<NierEntity*>::iterator reIT = nierEntitySet.begin(); reIT != nierEntitySet.end(); reIT++)
-                {
-                    if (NierEntity* eachRE = *reIT)
-                    {
-                        if (eachRE->entityState != NierEntityState::NierEntityState_None && eachRE->entityState != NierEntityState::NierEntityState_OffLine)
-                        {
-                            allOffline = false;
-                            replyStream << "Not all niers are offline. Going offline first";
-                            LogoutNiers();
-                            break;
-                        }
-                    }
-                }
-                if (allOffline)
-                {
-                    replyStream << "All niers are offline. Ready to delete";
-                    DeleteNiers();
-                }
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-            }
-            else if (nierAction == "offline")
+            if (nierAction == "offline")
             {
                 std::ostringstream replyStream;
                 replyStream << "All niers are going offline";
                 LogoutNiers();
                 sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-            }
-            else if (nierAction == "online")
-            {
-                uint32 playerLevel = pmCommander->getLevel();
-                if (playerLevel < 10)
-                {
-                    std::ostringstream replyStream;
-                    replyStream << "You level is too low";
-                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-                }
-                else
-                {
-                    uint32 nierCount = sNierConfig->NierCountEachLevel;
-                    if (commandVector.size() > 2)
-                    {
-                        nierCount = atoi(commandVector.at(2).c_str());
-                    }
-                    if (nierCount > 0)
-                    {
-                        std::ostringstream replyTitleStream;
-                        replyTitleStream << "nier count to go online : " << nierCount;
-                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmCommander);
-                        LoginNier(playerLevel, nierCount);
-                    }
-                }
             }
             else if (nierAction == "relocate")
             {
@@ -2858,300 +2707,256 @@ void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, 
     {
         if (pmTargetPlayer)
         {
-            std::ostringstream replyStream;
-            if (commandVector.size() > 1)
+            if (pmTargetPlayer->isNier)
             {
-                uint32 entry = 0;
-                std::string equipTypeName = commandVector.at(1);
-                if (equipTypeName == "name")
+                std::ostringstream replyStream;
+                if (commandVector.size() > 1)
                 {
-                    if (commandVector.size() > 2)
+                    uint32 entry = 0;
+                    std::string entryStr = commandVector.at(2);
+                    entry = std::atoi(entryStr.c_str());
+                    if (entry > 0)
                     {
-                        std::string itemName = commandVector.at(2);
                         std::ostringstream queryStream;
-                        queryStream << "SELECT entry FROM item_template where name = '" << itemName << "'";
+                        queryStream << "SELECT entry FROM item_template where entry = " << entry << "";
                         QueryResult itemQR = WorldDatabase.Query(queryStream.str().c_str());
                         if (itemQR)
                         {
                             do
                             {
                                 Field* fields = itemQR->Fetch();
-                                entry = fields[0].Get<uint32>();
+                                uint32 entry = fields[0].Get<uint32>();
+                                if (const ItemTemplate* proto = sObjectMgr->GetItemTemplate(entry))
+                                {
+                                    if (Item* pItem = Item::CreateItem(entry, 1))
+                                    {
+                                        uint32 equipSlot = 0;
+                                        switch (proto->InventoryType)
+                                        {
+                                        case INVTYPE_HEAD:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_HEAD;
+                                            break;
+                                        }
+                                        case INVTYPE_NECK:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_NECK;
+                                            break;
+                                        }
+                                        case INVTYPE_SHOULDERS:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_SHOULDERS;
+                                            break;
+                                        }
+                                        case INVTYPE_BODY:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_BODY;
+                                            break;
+                                        }
+                                        case INVTYPE_CHEST:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_CHEST;
+                                            break;
+                                        }
+                                        case INVTYPE_ROBE:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_CHEST;
+                                            break;
+                                        }
+                                        case INVTYPE_WAIST:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_WAIST;
+                                            break;
+                                        }
+                                        case INVTYPE_LEGS:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_LEGS;
+                                            break;
+                                        }
+                                        case INVTYPE_FEET:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_FEET;
+                                            break;
+                                        }
+                                        case INVTYPE_WRISTS:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_WRISTS;
+                                            break;
+                                        }
+                                        case INVTYPE_HANDS:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_HANDS;
+                                            break;
+                                        }
+                                        case INVTYPE_FINGER:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_FINGER1;
+                                            //viable_slots[1] = EQUIPMENT_SLOT_FINGER2;
+                                            break;
+                                        }
+                                        case INVTYPE_TRINKET:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_TRINKET1;
+                                            //viable_slots[1] = EQUIPMENT_SLOT_TRINKET2;
+                                            break;
+                                        }
+                                        case INVTYPE_CLOAK:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_BACK;
+                                            break;
+                                        }
+                                        case INVTYPE_WEAPON:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_MAINHAND;
+                                            //if (CanDualWield())
+                                            //{										
+                                            //	viable_slots[1] = EQUIPMENT_SLOT_OFFHAND;
+                                            //}
+                                            break;
+                                        }
+                                        case INVTYPE_SHIELD:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_OFFHAND;
+                                            break;
+                                        }
+                                        case INVTYPE_RANGED:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            break;
+                                        }
+                                        case INVTYPE_2HWEAPON:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_MAINHAND;
+                                            //if (CanDualWield() && CanTitanGrip())
+                                            //{										
+                                            //	viable_slots[1] = EQUIPMENT_SLOT_OFFHAND;
+                                            //}
+                                            break;
+                                        }
+                                        case INVTYPE_TABARD:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_TABARD;
+                                            break;
+                                        }
+                                        case INVTYPE_WEAPONMAINHAND:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_MAINHAND;
+                                            break;
+                                        }
+                                        case INVTYPE_WEAPONOFFHAND:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_OFFHAND;
+                                            break;
+                                        }
+                                        case INVTYPE_HOLDABLE:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_OFFHAND;
+                                            break;
+                                        }
+                                        case INVTYPE_THROWN:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            break;
+                                        }
+                                        case INVTYPE_RANGEDRIGHT:
+                                        {
+                                            equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            break;
+                                        }
+                                        case INVTYPE_BAG:
+                                        {
+                                            equipSlot = INVENTORY_SLOT_BAG_START + 0;
+                                            //viable_slots[1] = INVENTORY_SLOT_BAG_START + 1;
+                                            //viable_slots[2] = INVENTORY_SLOT_BAG_START + 2;
+                                            //viable_slots[3] = INVENTORY_SLOT_BAG_START + 3;
+                                            break;
+                                        }
+                                        case INVTYPE_RELIC:
+                                        {
+                                            //pClass = getClass();
+                                            //if (pClass)
+                                            //{
+                                            //	switch (proto->SubClass)
+                                            //	{
+                                            //	case ITEM_SUBCLASS_ARMOR_LIBRAM:											
+                                            //		if (pClass == CLASS_PALADIN)
+                                            //		{
+                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            //		}
+                                            //		break;
+                                            //	case ITEM_SUBCLASS_ARMOR_IDOL:											
+                                            //		if (pClass == CLASS_DRUID)
+                                            //		{
+                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            //		}
+                                            //		break;
+                                            //	case ITEM_SUBCLASS_ARMOR_TOTEM:											
+                                            //		if (pClass == CLASS_SHAMAN)
+                                            //		{
+                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            //		}
+                                            //		break;
+                                            //	case ITEM_SUBCLASS_ARMOR_MISC:											
+                                            //		if (pClass == CLASS_WARLOCK)
+                                            //		{
+                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            //		}
+                                            //		break;
+                                            //	case ITEM_SUBCLASS_ARMOR_SIGIL:											
+                                            //		if (pClass == CLASS_DEATH_KNIGHT)
+                                            //		{
+                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
+                                            //		}
+                                            //		break;
+                                            //	default:											
+                                            //		break;
+                                            //	}
+                                            //}
+                                            break;
+                                        }
+                                        default:
+                                        {
+                                            break;
+                                        }
+                                        }
+                                        if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, equipSlot))
+                                        {
+                                            if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
+                                            {
+                                                pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, equipSlot, true);
+                                            }
+                                        }
+                                        uint16 dest = 0;
+                                        if (pmTargetPlayer->CanEquipItem(equipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                                        {
+                                            pmTargetPlayer->EquipItem(dest, pItem, true);
+                                            replyStream << "Equiped " << pItem->GetTemplate()->Name1;
+                                        }
+                                        else
+                                        {
+                                            replyStream << "Can not equip " << pItem->GetTemplate()->Name1;
+                                        }
+                                    }
+                                }
                                 break;
                             } while (itemQR->NextRow());
+                        }
+                        else
+                        {
+                            replyStream << "Item not found : " << entry;
                         }
                     }
                     else
                     {
-                        replyStream << "Missing name";
-                    }
-                }
-                else if (equipTypeName == "entry")
-                {
-                    if (commandVector.size() > 2)
-                    {
-                        std::string entryStr = commandVector.at(2);
-                        entry = std::atoi(entryStr.c_str());
-                    }
-                    else
-                    {
-                        replyStream << "Missing entry";
-                    }
-                }
-                if (entry > 0)
-                {
-                    std::ostringstream queryStream;
-                    queryStream << "SELECT entry FROM item_template where entry = " << entry << "";
-                    QueryResult itemQR = WorldDatabase.Query(queryStream.str().c_str());
-                    if (itemQR)
-                    {
-                        do
-                        {
-                            Field* fields = itemQR->Fetch();
-                            uint32 entry = fields[0].Get<uint32>();
-                            if (const ItemTemplate* proto = sObjectMgr->GetItemTemplate(entry))
-                            {
-                                if (Item* pItem = Item::CreateItem(entry, 1))
-                                {
-                                    uint32 equipSlot = 0;
-                                    switch (proto->InventoryType)
-                                    {
-                                    case INVTYPE_HEAD:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_HEAD;
-                                        break;
-                                    }
-                                    case INVTYPE_NECK:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_NECK;
-                                        break;
-                                    }
-                                    case INVTYPE_SHOULDERS:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_SHOULDERS;
-                                        break;
-                                    }
-                                    case INVTYPE_BODY:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_BODY;
-                                        break;
-                                    }
-                                    case INVTYPE_CHEST:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_CHEST;
-                                        break;
-                                    }
-                                    case INVTYPE_ROBE:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_CHEST;
-                                        break;
-                                    }
-                                    case INVTYPE_WAIST:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_WAIST;
-                                        break;
-                                    }
-                                    case INVTYPE_LEGS:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_LEGS;
-                                        break;
-                                    }
-                                    case INVTYPE_FEET:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_FEET;
-                                        break;
-                                    }
-                                    case INVTYPE_WRISTS:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_WRISTS;
-                                        break;
-                                    }
-                                    case INVTYPE_HANDS:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_HANDS;
-                                        break;
-                                    }
-                                    case INVTYPE_FINGER:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_FINGER1;
-                                        //viable_slots[1] = EQUIPMENT_SLOT_FINGER2;
-                                        break;
-                                    }
-                                    case INVTYPE_TRINKET:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_TRINKET1;
-                                        //viable_slots[1] = EQUIPMENT_SLOT_TRINKET2;
-                                        break;
-                                    }
-                                    case INVTYPE_CLOAK:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_BACK;
-                                        break;
-                                    }
-                                    case INVTYPE_WEAPON:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_MAINHAND;
-                                        //if (CanDualWield())
-                                        //{										
-                                        //	viable_slots[1] = EQUIPMENT_SLOT_OFFHAND;
-                                        //}
-                                        break;
-                                    }
-                                    case INVTYPE_SHIELD:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_OFFHAND;
-                                        break;
-                                    }
-                                    case INVTYPE_RANGED:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        break;
-                                    }
-                                    case INVTYPE_2HWEAPON:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_MAINHAND;
-                                        //if (CanDualWield() && CanTitanGrip())
-                                        //{										
-                                        //	viable_slots[1] = EQUIPMENT_SLOT_OFFHAND;
-                                        //}
-                                        break;
-                                    }
-                                    case INVTYPE_TABARD:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_TABARD;
-                                        break;
-                                    }
-                                    case INVTYPE_WEAPONMAINHAND:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_MAINHAND;
-                                        break;
-                                    }
-                                    case INVTYPE_WEAPONOFFHAND:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_OFFHAND;
-                                        break;
-                                    }
-                                    case INVTYPE_HOLDABLE:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_OFFHAND;
-                                        break;
-                                    }
-                                    case INVTYPE_THROWN:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        break;
-                                    }
-                                    case INVTYPE_RANGEDRIGHT:
-                                    {
-                                        equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        break;
-                                    }
-                                    case INVTYPE_BAG:
-                                    {
-                                        equipSlot = INVENTORY_SLOT_BAG_START + 0;
-                                        //viable_slots[1] = INVENTORY_SLOT_BAG_START + 1;
-                                        //viable_slots[2] = INVENTORY_SLOT_BAG_START + 2;
-                                        //viable_slots[3] = INVENTORY_SLOT_BAG_START + 3;
-                                        break;
-                                    }
-                                    case INVTYPE_RELIC:
-                                    {
-                                        //pClass = getClass();
-                                        //if (pClass)
-                                        //{
-                                        //	switch (proto->SubClass)
-                                        //	{
-                                        //	case ITEM_SUBCLASS_ARMOR_LIBRAM:											
-                                        //		if (pClass == CLASS_PALADIN)
-                                        //		{
-                                        //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        //		}
-                                        //		break;
-                                        //	case ITEM_SUBCLASS_ARMOR_IDOL:											
-                                        //		if (pClass == CLASS_DRUID)
-                                        //		{
-                                        //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        //		}
-                                        //		break;
-                                        //	case ITEM_SUBCLASS_ARMOR_TOTEM:											
-                                        //		if (pClass == CLASS_SHAMAN)
-                                        //		{
-                                        //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        //		}
-                                        //		break;
-                                        //	case ITEM_SUBCLASS_ARMOR_MISC:											
-                                        //		if (pClass == CLASS_WARLOCK)
-                                        //		{
-                                        //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        //		}
-                                        //		break;
-                                        //	case ITEM_SUBCLASS_ARMOR_SIGIL:											
-                                        //		if (pClass == CLASS_DEATH_KNIGHT)
-                                        //		{
-                                        //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                        //		}
-                                        //		break;
-                                        //	default:											
-                                        //		break;
-                                        //	}
-                                        //}
-                                        break;
-                                    }
-                                    default:
-                                    {
-                                        break;
-                                    }
-                                    }
-                                    if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, equipSlot))
-                                    {
-                                        if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                                        {
-                                            pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, equipSlot, true);
-                                        }
-                                    }
-                                    uint16 dest = 0;
-                                    if (pmTargetPlayer->CanEquipItem(equipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
-                                    {
-                                        pmTargetPlayer->EquipItem(dest, pItem, true);
-                                        replyStream << "Equiped " << pItem->GetTemplate()->Name1;
-                                    }
-                                    else
-                                    {
-                                        replyStream << "Can not equip " << pItem->GetTemplate()->Name1;
-                                    }
-                                }
-                            }
-                            break;
-                        } while (itemQR->NextRow());
-                    }
-                    else
-                    {
-                        replyStream << "Item not found : " << entry;
+                        replyStream << "Item entry not found : " << entry;
                     }
                 }
                 else
                 {
-                    replyStream << "Item entry not found : " << entry;
+                    pmTargetPlayer->nierAction->InitializeEquipments(true);
                 }
+                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
             }
-            else
-            {
-                for (std::unordered_set<NierEntity*>::iterator reIT = nierEntitySet.begin(); reIT != nierEntitySet.end(); reIT++)
-                {
-                    if (NierEntity* eachNier = *reIT)
-                    {
-                        if (eachNier->character_id == pmTargetPlayer->GetGUID().GetCounter())
-                        {
-                            pmTargetPlayer->nierAction->InitializeEquipments(true);
-                            eachNier->entityState = NierEntityState::NierEntityState_Equip;
-                            eachNier->checkDelay = 100;
-                            replyStream << "Equipments reset";
-                            break;
-                        }
-                    }
-                }
-            }
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
         }
         else if (pmTargetGroup)
         {
@@ -3261,13 +3066,16 @@ void NierManager::HandlePacket(const WorldSession* pmSession, WorldPacket pmPack
                 myCharacterIdSet.insert(character_id);
             }
         }
-        for (std::unordered_set<NierEntity*>::iterator reIT = sNierManager->nierEntitySet.begin(); reIT != sNierManager->nierEntitySet.end(); reIT++)
+        for (std::unordered_map<uint32, std::unordered_set<NierEntity*>>::iterator nierGroupIT = nierEntityMap.begin(); nierGroupIT != nierEntityMap.end(); nierGroupIT++)
         {
-            if (NierEntity* re = *reIT)
+            for (std::unordered_set<NierEntity*>::iterator reIT = nierGroupIT->second.begin(); reIT != nierGroupIT->second.end(); reIT++)
             {
-                if (myCharacterIdSet.find(re->character_id) != myCharacterIdSet.end())
+                if (NierEntity* re = *reIT)
                 {
-                    re->entityState = NierEntityState::NierEntityState_DoLogin;
+                    if (myCharacterIdSet.find(re->character_id) != myCharacterIdSet.end())
+                    {
+                        re->entityState = NierEntityState::NierEntityState_DoLogin;
+                    }
                 }
             }
         }

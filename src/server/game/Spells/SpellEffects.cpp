@@ -767,6 +767,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
     // lfm dummy scripts
     if (m_spellInfo->Id == 55647)
     {
+        //Frost Oil - Throw freezing oil at Plagued Proto - Drake eggs to destroy them.
         if (effIndex == SpellEffIndex::EFFECT_1)
         {
             if (gameObjTarget)
@@ -777,6 +778,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
     }
     else if (m_spellInfo->Id == 56393)
     {
+        // Feed Stormcrest Eagle
         if (effIndex == SpellEffIndex::EFFECT_0)
         {
             bool validCast = false;
@@ -1292,10 +1294,9 @@ void Spell::EffectTeleportUnits(SpellEffIndex /*effIndex*/)
             {
                 unitTarget->NearTeleportTo(x, y, z, orientation, unitTarget == m_caster, false, withPet, true);
             }
+
             if (unitTarget->GetTypeId() == TYPEID_PLAYER) // pussywizard: for units it's done inside NearTeleportTo
-            {
                 unitTarget->UpdateObjectVisibility(true);
-            }
         }
     }
     else if (unitTarget->GetTypeId() == TYPEID_PLAYER)
@@ -1375,6 +1376,7 @@ void Spell::EffectApplyAura(SpellEffIndex effIndex)
     // lfm aura dummy scripts
     if (m_spellInfo->Id == 56393)
     {
+        // Feed Stormcrest Eagle
         if (effIndex == SpellEffIndex::EFFECT_0)
         {
             if (Creature* targetC = ObjectAccessor::GetCreature(*m_caster, m_caster->GetTarget()))
@@ -3502,19 +3504,18 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
             }
         case SPELLFAMILY_PALADIN:
             {
-                // Seal of Command Unleashed
-                if (m_spellInfo->Id == 20467)
-                {
-                    spell_bonus += int32(0.08f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
-                    spell_bonus += int32(0.13f * m_caster->SpellBaseDamageBonusDone(m_spellInfo->GetSchoolMask()));
-                }
-
                 switch (m_spellInfo->Id)
                 {
-                    case 20424: // Seal of Command
-                    case 42463: // Seal of Vengeance
-                    case 53739: // Seal of Corruption
-                    case 53385: // Divine Storm
+                    case 20467: // Seal of Command Unleashed
+                        spell_bonus += int32(0.08f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
+                        spell_bonus += int32(0.13f * m_caster->SpellBaseDamageBonusDone(m_spellInfo->GetSchoolMask()));
+                        break;
+                    case 42463: // Seals of the Pure for Seal of Vengeance/Corruption
+                    case 53739:
+                        if (AuraEffect const* sealsOfPure = m_caster->GetAuraEffect(SPELL_AURA_ADD_PCT_MODIFIER, SPELLFAMILY_PALADIN, 25, 0))
+                            AddPct(totalDamagePercentMod, sealsOfPure->GetAmount());
+                        break;
+                    case 53385:  // Divine Storm deals normalized damage
                         normalized = true;
                         break;
                     default:
@@ -3565,9 +3566,6 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     // Glyph of Plague Strike
                     if (AuraEffect const* aurEff = m_caster->GetAuraEffect(58657, EFFECT_0))
                         AddPct(totalDamagePercentMod, aurEff->GetAmount());
-
-                    // lfm dk bonus
-                    //spell_bonus += int32(0.15f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                     break;
                 }
                 // Blood Strike
@@ -3584,9 +3582,6 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     if (m_caster->GetAuraEffect(59332, EFFECT_0))
                         if (unitTarget->HasAuraType(SPELL_AURA_MOD_DECREASE_SPEED))
                             AddPct(totalDamagePercentMod, 20.0f);
-
-                    // lfm dk bonus
-                    spell_bonus += int32(0.1f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));                    
                     break;
                 }
                 // Death Strike
@@ -3596,9 +3591,6 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                     if (AuraEffect const* aurEff = m_caster->GetAuraEffect(59336, EFFECT_0))
                         if (uint32 runic = std::min<uint32>(m_caster->GetPower(POWER_RUNIC_POWER), aurEff->GetSpellInfo()->Effects[EFFECT_1].CalcValue()))
                             AddPct(totalDamagePercentMod, runic);
-
-                    // lfm dk bonus
-                    //spell_bonus += int32(0.05f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                     break;
                 }
                 // Obliterate (12.5% more damage per disease)
@@ -3617,10 +3609,6 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                         AddPct(disease_amt, aurEff->GetAmount());
 
                     AddPct(totalDamagePercentMod, disease_amt * unitTarget->GetDiseasesByCaster(m_caster->GetGUID(), consumeDiseases) / 2.0f);
-
-                    // lfm dk bonus
-                    spell_bonus += int32(0.14f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
-
                     break;
                 }
                 // Blood-Caked Strike - Blood-Caked Blade
@@ -3645,24 +3633,7 @@ void Spell::EffectWeaponDmg(SpellEffIndex effIndex)
                 // Rune Strike
                 if (m_spellInfo->SpellFamilyFlags[1] & 0x20000000)
                 {
-                    //if (m_caster->haveOffhandWeapon())
-                    //{
-                    //    spell_bonus = m_caster->CalculateDamage(WeaponAttackType::OFF_ATTACK, false, true) * 0.5f;
-                    //}
-                    spell_bonus += int32(0.3f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
-                }
-                // Scourge Strike 
-                if (m_spellInfo->SpellFamilyFlags[1] & 0x8000000)
-                {
-                    spell_bonus += int32(0.11f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
-
-                    float disease_amt = m_spellInfo->Effects[EFFECT_2].CalcValue();
-                    //Death Knight T8 Melee 4P Bonus
-                    if (AuraEffect* aurEff = m_caster->GetAuraEffectDummy(64736))
-                        AddPct(disease_amt, aurEff->GetAmount());
-
-                    AddPct(totalDamagePercentMod, disease_amt * unitTarget->GetDiseasesByCaster(m_caster->GetGUID()) / 2.0f);
-                    break;
+                    spell_bonus += int32(0.15f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                 }
 
                 break;
@@ -3789,11 +3760,7 @@ void Spell::EffectThreat(SpellEffIndex /*effIndex*/)
     if (!unitTarget->CanHaveThreatList() || m_caster->IsFriendlyTo(unitTarget))
         return;
 
-    // lfm threat spell will be halved 
-    //unitTarget->AddThreat(m_caster, float(damage));
-    float threat = float(damage);
-    //threat = threat / 2.0f;
-    unitTarget->AddThreat(m_caster, threat);
+    unitTarget->AddThreat(m_caster, float(damage));
 }
 
 void Spell::EffectHealMaxHealth(SpellEffIndex /*effIndex*/)
@@ -4042,13 +4009,8 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                             uint32 spellID = m_spellInfo->Effects[EFFECT_0].CalcValue();
                             uint32 questID = m_spellInfo->Effects[EFFECT_1].CalcValue();
 
-                            // lfm dk portal
-                            //if (unitTarget->ToPlayer()->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE)
-                            int qStatus = unitTarget->ToPlayer()->GetQuestStatus(questID);
-                            if (qStatus == QUEST_STATUS_COMPLETE || qStatus == QUEST_STATUS_REWARDED)
-                            {
+                            if (unitTarget->ToPlayer()->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE)
                                 unitTarget->CastSpell(unitTarget, spellID, true);
-                            }
 
                             return;
                         }
@@ -5068,7 +5030,8 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
             // lfm charge to a little further 
             //Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
             Position pos;
-            unitTarget->GetNearPoint(unitTarget, pos.m_positionX, pos.m_positionY, pos.m_positionZ, unitTarget->GetCombatReach(), MELEE_RANGE, unitTarget->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
+            unitTarget->GetNearPoint(unitTarget, pos.m_positionX, pos.m_positionY, pos.m_positionZ, unitTarget->GetObjectSize(), std::min(MELEE_RANGE, unitTarget->GetCombatReach() / 2.0f), unitTarget->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
+
             m_caster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed, EVENT_CHARGE, nullptr, false, 0.0f, targetGUID);
 
             if (m_caster->GetTypeId() == TYPEID_PLAYER)

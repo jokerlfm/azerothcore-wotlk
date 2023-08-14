@@ -308,7 +308,7 @@ class spell_dk_death_and_decay : public SpellScript
         if (target)
             damage = target->CalculateAOEDamageReduction(damage, GetSpellInfo()->SchoolMask, caster);
 
-        SetHitDamage(damage);        
+        SetHitDamage(damage);
     }
 
     void Register() override
@@ -1144,15 +1144,7 @@ class spell_dk_corpse_explosion : public SpellScript
         if (effIndex == EFFECT_0)
             GetCaster()->CastCustomSpell(GetSpellInfo()->Effects[EFFECT_1].CalcValue(), SPELLVALUE_BASE_POINT0, GetEffectValue(), target, true);
         else if (effIndex == EFFECT_1)
-        {
-            // lfm dk corpse explosion ap
-            //GetCaster()->CastCustomSpell(GetEffectValue(), SPELLVALUE_BASE_POINT0, GetSpell()->CalculateSpellDamage(EFFECT_0, nullptr), target, true);
-            int ceDamage = GetSpell()->CalculateSpellDamage(EFFECT_0, nullptr);
-            float APbonus = GetCaster()->GetTotalAttackPowerValue(WeaponAttackType::BASE_ATTACK);
-            APbonus = APbonus * 0.18f;
-            ceDamage = ceDamage + APbonus;
-            GetCaster()->CastCustomSpell(GetEffectValue(), SPELLVALUE_BASE_POINT0, ceDamage, target, true);
-        }
+            GetCaster()->CastCustomSpell(GetEffectValue(), SPELLVALUE_BASE_POINT0, GetSpell()->CalculateSpellDamage(EFFECT_0, nullptr), target, true);
     }
 
     void HandleCorpseExplosion(SpellEffIndex effIndex)
@@ -1459,18 +1451,9 @@ class spell_dk_death_strike : public SpellScript
     {
         Unit* caster = GetCaster();
         if (Unit* target = GetHitUnit())
-        {            
+        {
             uint32 count = target->GetDiseasesByCaster(caster->GetGUID());
-            // lfm death strike 
-            //int32 bp = int32(count * caster->CountPctFromMaxHealth(int32(GetSpellInfo()->Effects[EFFECT_0].DamageMultiplier)));
-            int32 bp = 0;
-            if (const SpellInfo* pS = GetSpellInfo())
-            {
-                float pct = pS->Effects[EFFECT_0].DamageMultiplier;
-                uint32 maxHealth = caster->GetMaxHealth();
-                bp = CalculatePct(maxHealth, pct);
-                bp = bp * count;
-            }
+            int32 bp = int32(count * caster->CountPctFromMaxHealth(int32(GetSpellInfo()->Effects[EFFECT_0].DamageMultiplier)));
             // Improved Death Strike
             if (AuraEffect const* aurEff = caster->GetAuraEffect(SPELL_AURA_ADD_PCT_MODIFIER, SPELLFAMILY_DEATHKNIGHT, DK_ICON_ID_IMPROVED_DEATH_STRIKE, 0))
                 AddPct(bp, caster->CalculateSpellDamage(caster, aurEff->GetSpellInfo(), 2));

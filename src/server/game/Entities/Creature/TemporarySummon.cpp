@@ -168,6 +168,7 @@ void TempSummon::Update(uint32 diff)
                         m_timer -= diff;
                         return;
                     }
+                    return;
                 }
 
                 if (!IsInCombat())

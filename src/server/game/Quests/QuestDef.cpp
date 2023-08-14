@@ -21,7 +21,7 @@
 #include "Player.h"
 #include "World.h"
 
-// lfm ming
+ // lfm ming
 #include "MingManager.h"
 
 Quest::Quest(Field* questRecord)
@@ -71,7 +71,15 @@ Quest::Quest(Field* questRecord)
             ++_rewItemsCount;
     }
 
-    // lfm quest reward choice index
+    // lfm quest reward
+    //for (int i = 0; i < QUEST_REWARD_CHOICES_COUNT; ++i)
+    //{
+    //    RewardChoiceItemId[i] = questRecord[36 + i * 2].Get<uint32>();
+    //    RewardChoiceItemCount[i] = questRecord[37 + i * 2].Get<uint16>();
+
+    //    if (RewardChoiceItemId[i])
+    //        ++_rewChoiceItemsCount;
+    //}
     for (int i = 0; i < QUEST_REWARD_CHOICES_COUNT; ++i)
     {
         RewardChoiceItemId[i] = 0;

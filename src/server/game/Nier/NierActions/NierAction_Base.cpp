@@ -25,7 +25,7 @@ NierMovement::NierMovement(Player* pmMe)
     moveCheckDelay = 0;
     backwardCheckDelay = 0;
     circleCheckDelay = 0;
-    activeMovementType = NierMovementType::NierMovementType_None;    
+    activeMovementType = NierMovementType::NierMovementType_None;
 }
 
 void NierMovement::ResetMovement()
@@ -1184,59 +1184,90 @@ void NierAction_Base::EquipRandomItem(uint32 pmEquipSlot, uint32 pmClass, uint32
     {
         return;
     }
+    std::unordered_set<uint32> inventoryTypeSet;
+    if (!pmInventoryTypeSet.empty())
+    {
+        for (std::unordered_set<uint32>::iterator itIT = pmInventoryTypeSet.begin(); itIT != pmInventoryTypeSet.end(); itIT++)
+        {
+            inventoryTypeSet.insert(*itIT);
+        }
+    }
+    if (inventoryTypeSet.find(inventoryType) == inventoryTypeSet.end())
+    {
+        inventoryTypeSet.insert(inventoryType);
+    }
 
     int maxReqLevel = me->getLevel();
-    int minReqLevel = maxReqLevel - 5;    
+    int minReqLevel = maxReqLevel - 5;
     while (minReqLevel > 0 && maxReqLevel > 1)
     {
-        if (sNierManager->equipsMap.find(inventoryType) != sNierManager->equipsMap.end())
+        for (std::unordered_set<uint32>::iterator itIT = inventoryTypeSet.begin(); itIT != inventoryTypeSet.end(); itIT++)
         {
-            int activeLevel = urand(minReqLevel, maxReqLevel);
-            if (sNierManager->equipsMap[inventoryType].find(activeLevel) != sNierManager->equipsMap[inventoryType].end())
+            uint32 eachInventoryType = *itIT;
+            if (sNierManager->equipsMap.find(eachInventoryType) != sNierManager->equipsMap.end())
             {
-                int itemsSize = sNierManager->equipsMap[inventoryType][activeLevel].size();
-                if (itemsSize > 0)
+                int activeLevel = urand(minReqLevel, maxReqLevel);
+                if (sNierManager->equipsMap[eachInventoryType].find(activeLevel) != sNierManager->equipsMap[eachInventoryType].end())
                 {
-                    int itemIndex = urand(0, itemsSize - 1);
-                    uint32 itemEntry = sNierManager->equipsMap[inventoryType][activeLevel][itemIndex];
-                    if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(itemEntry))
+                    int itemsSize = sNierManager->equipsMap[eachInventoryType][activeLevel].size();
+                    if (itemsSize > 0)
                     {
-                        bool hasStat = false;
-                        if (checkStat)
+                        std::unordered_map<uint32, uint32> targetEquipMap;
+                        for (std::unordered_map<uint32, uint32>::iterator itemIT = sNierManager->equipsMap[eachInventoryType][activeLevel].begin(); itemIT != sNierManager->equipsMap[eachInventoryType][activeLevel].end(); itemIT++)
                         {
-                            if (pProto->RandomProperty > 0 || pProto->RandomSuffix > 0)
+                            if (const ItemTemplate* checkProto = sObjectMgr->GetItemTemplate(itemIT->second))
                             {
-                                hasStat = true;
-                            }
-                            else
-                            {
-                                for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
+                                if (checkProto->Class == pmClass && checkProto->SubClass == pmSubclass)
                                 {
-                                    if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
-                                    {
-                                        hasStat = true;
-                                        break;
-                                    }
+                                    targetEquipMap[targetEquipMap.size()] = itemIT->second;
                                 }
                             }
                         }
-                        else
+                        int itemIndex = urand(0, targetEquipMap.size() - 1);
+                        uint32 itemEntry = targetEquipMap[itemIndex];
+                        if (const ItemTemplate* pProto = sObjectMgr->GetItemTemplate(itemEntry))
                         {
-                            hasStat = true;
-                        }
-                        if (hasStat)
-                        {
-                            if (Item* pItem = Item::CreateItem(itemEntry, 1))
+                            bool hasStat = false;
+                            if (checkStat)
                             {
-                                uint16 dest = 0;
-                                if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                                if (pProto->RandomProperty > 0 || pProto->RandomSuffix > 0)
                                 {
-                                    me->EquipItem(dest, pItem, true);
-                                    std::ostringstream msgStream;
-                                    msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
-                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
-                                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, msgStream.str().c_str());
-                                    return;
+                                    hasStat = true;
+                                }
+                                else if (pmModType == -1)
+                                {
+                                    hasStat = true;
+                                }
+                                else
+                                {
+                                    for (uint32 statIndex = 0; statIndex < pProto->StatsCount; statIndex++)
+                                    {
+                                        if (pProto->ItemStat[statIndex].ItemStatType == pmModType)
+                                        {
+                                            hasStat = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                hasStat = true;
+                            }
+                            if (hasStat)
+                            {
+                                if (Item* pItem = Item::CreateItem(itemEntry, 1))
+                                {
+                                    uint16 dest = 0;
+                                    if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                                    {
+                                        me->EquipItem(dest, pItem, true);
+                                        std::ostringstream msgStream;
+                                        msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
+                                        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+                                        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, msgStream.str().c_str());
+                                        return;
+                                    }
                                 }
                             }
                         }
@@ -1306,7 +1337,7 @@ bool NierAction_Base::UseItem(Item* pmItem, Unit* pmTarget)
 
     if (const ItemTemplate* proto = pmItem->GetTemplate())
     {
-        ChooseTarget(pmTarget);
+        //ChooseTarget(pmTarget);
         SpellCastTargets targets;
         targets.Update(pmTarget);
         me->CastItemUseSpell(pmItem, targets, 1, 0);

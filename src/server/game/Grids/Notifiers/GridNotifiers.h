@@ -1479,7 +1479,7 @@ namespace Acore
             // lfm 0 entry will return all creatures, and distance check should be in 3d 
             if (m_uiEntry > 0)
             {
-                if (unit->GetEntry() == m_uiEntry && m_pObject->IsWithinDist(unit, m_fRange))
+                if (unit->GetEntry() == m_uiEntry && m_pObject->IsWithinDist(unit, m_fRange, false))
                 {
                     return true;
                 }

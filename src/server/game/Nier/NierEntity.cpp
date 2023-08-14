@@ -21,7 +21,8 @@
 
 NierEntity::NierEntity()
 {
-    nier_id = 0;
+    master_id = 0;
+    entry = 0;
     account_id = 0;
     account_name = "";
     character_id = 0;
@@ -91,7 +92,7 @@ void NierEntity::Update(uint32 pmDiff)
                 {
                     account_id = queryAccountId;
                     std::ostringstream sqlStream;
-                    sqlStream << "update nier set account_id = " << account_id << " where nier_id = " << nier_id;
+                    sqlStream << "update nier set account_id = " << account_id << " where entry = " << entry;
                     std::string sql = sqlStream.str();
                     CharacterDatabase.DirectExecute(sql.c_str());
                     sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Nier {} is ready.", account_name.c_str());
@@ -119,7 +120,7 @@ void NierEntity::Update(uint32 pmDiff)
                 }
                 else
                 {
-                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Nier id {} account creation failed.", nier_id);
+                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Nier entry {} account creation failed.", entry);
                     entityState = NierEntityState::NierEntityState_None;
                 }
             }
@@ -242,7 +243,7 @@ void NierEntity::Update(uint32 pmDiff)
             if (character_id > 0)
             {
                 std::ostringstream sqlStream;
-                sqlStream << "update nier set character_id = " << character_id << " where nier_id = " << nier_id;
+                sqlStream << "update nier set character_id = " << character_id << " where entry = " << entry;
                 std::string sql = sqlStream.str();
                 CharacterDatabase.DirectExecute(sql.c_str());
                 entityState = NierEntityState::NierEntityState_CheckCharacter;
@@ -397,6 +398,12 @@ void NierEntity::Update(uint32 pmDiff)
                         break;
                     }
                     }
+                    target_level = 20;
+                    ObjectGuid masterGuid = ObjectGuid(HighGuid::Player, master_id);
+                    if (Player* master = ObjectAccessor::FindConnectedPlayer(masterGuid))
+                    {
+                        target_level = master->GetLevel();
+                    }
                     me->nierAction->InitializeCharacter(target_level, target_specialty);
                     offlineDelay = urand(2 * HOUR * IN_MILLISECONDS, 4 * HOUR * IN_MILLISECONDS);
                     std::ostringstream replyStream;
@@ -451,6 +458,15 @@ void NierEntity::Update(uint32 pmDiff)
                     if (me->IsInWorld())
                     {
                         me->nierAction->Prepare();
+                        ObjectGuid masterGuid = ObjectGuid(HighGuid::Player, master_id);
+                        if (Player* master = ObjectAccessor::FindConnectedPlayer(masterGuid))
+                        {
+                            if (me->GetLevel() != master->GetLevel())
+                            {
+                                target_level = master->GetLevel();
+                                me->nierAction->InitializeCharacter(target_level, target_specialty);
+                            }
+                        }
                         if (Group* myGroup = me->GetGroup())
                         {
                             if (Player* leader = ObjectAccessor::FindPlayer(myGroup->GetLeaderGUID()))
@@ -488,7 +504,7 @@ void NierEntity::Update(uint32 pmDiff)
                     }
                 }
             }
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Nier {} is ready to go offline.", nier_id);
+            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Nier entry {} is ready to go offline.", entry);
             entityState = NierEntityState::NierEntityState_DoLogoff;
             break;
         }

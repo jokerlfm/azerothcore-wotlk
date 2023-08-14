@@ -316,6 +316,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
     //    return;
     //}
 
+    // lfm race and class has no exp limit
     // prevent character creating Expansion class without Expansion account
     //if (classEntry->expansion > Expansion())
     //{

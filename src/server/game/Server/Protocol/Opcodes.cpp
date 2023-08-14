@@ -508,7 +508,7 @@ void OpcodeTable::Initialize()
     /*0x179*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_PET_SPELLS,                                         STATUS_NEVER);
     /*0x17A*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_PET_MODE,                                           STATUS_NEVER);
     /*0x17B*/ DEFINE_HANDLER(CMSG_GOSSIP_HELLO,                                                     STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleGossipHelloOpcode                  );
-    /*0x17C*/ DEFINE_HANDLER(CMSG_GOSSIP_SELECT_OPTION, STATUS_LOGGEDIN, PROCESS_INPLACE, &WorldSession::HandleGossipSelectOptionOpcode);
+    /*0x17C*/ DEFINE_HANDLER(CMSG_GOSSIP_SELECT_OPTION,                                             STATUS_LOGGEDIN,   PROCESS_THREADUNSAFE,   &WorldSession::HandleGossipSelectOptionOpcode           );
     /*0x17D*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_GOSSIP_MESSAGE,                                     STATUS_NEVER);
     /*0x17E*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_GOSSIP_COMPLETE,                                    STATUS_NEVER);
     /*0x17F*/ DEFINE_HANDLER(CMSG_NPC_TEXT_QUERY,                                                   STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleNpcTextQueryOpcode                 );

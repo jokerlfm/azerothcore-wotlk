@@ -28,7 +28,6 @@
 #include "QueryResult.h"
 #include "SharedDefines.h"
 #include "Timer.h"
-#include "Unit.h"
 #include <atomic>
 #include <list>
 #include <map>
@@ -71,7 +70,6 @@ enum WorldTimers
     WUPDATE_PINGDB,
     WUPDATE_5_SECS,
     WUPDATE_WHO_LIST,
-    WUPDATE_DELAYED_DAMAGES,
     WUPDATE_COUNT
 };
 
@@ -155,13 +153,9 @@ public:
     World();
     ~World() override;
 
-    std::list<DelayedDamage> _delayedDamages;
-
     static World* instance();
 
     static uint32 m_worldLoopCounter;
-
-    uint32 GetAccountMaxLevel(uint32 pmExpantion);
 
     [[nodiscard]] WorldSession* FindSession(uint32 id) const override;
     [[nodiscard]] WorldSession* FindOfflineSession(uint32 id) const override;
@@ -356,10 +350,6 @@ public:
     void SetRealmName(std::string name) override { _realmName = name; } // pussywizard
 
     void RemoveOldCorpses() override;
-
-    void AddDelayedDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellInfo const* spellProto, bool durabilityLoss) override;
-
-    void ProcessDelayedDamages();
 
 protected:
     void _UpdateGameTime();

@@ -320,16 +320,10 @@ void NierConfig::Configure(std::string const& initFileName, std::vector<std::str
 
 bool NierConfig::LoadAppConfigs(bool isReload /*= false*/)
 {
-    // #1 - Load init config file .conf.dist
-    if (!LoadInitial(_filename + ".dist", isReload))
+    // #1 - Load init config file .conf
+    if (!LoadInitial(_filename, isReload))
     {
         return false;
-    }
-
-    // #2 - Load .conf file
-    if (!LoadAdditionalFile(_filename, true, isReload))
-    {
-        _usingDistConfig = true;
     }
 
     return true;
@@ -453,7 +447,7 @@ bool NierConfig::StartNier()
     ReviveDelay = GetIntDefault("ReviveDelay", 600000);
     DPSDelay = GetIntDefault("DPSDelay", 1000);
     ManagerCheckDelay = GetIntDefault("ManagerCheckDelay", 60000);
-    NierCountEachLevel = GetIntDefault("NierCountEachLevel", 20);
+    PartnerCount = GetIntDefault("PartnerCount", 4);
     RandomTeleportDelay_Min = GetIntDefault("RandomTeleportDelay_Min", 600000);
     RandomTeleportDelay_Max = GetIntDefault("RandomTeleportDelay_Max", 1200000);
     AssembleDelay = GetIntDefault("AssembleDelay", 60000);

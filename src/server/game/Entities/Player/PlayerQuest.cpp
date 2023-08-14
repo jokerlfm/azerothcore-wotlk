@@ -750,16 +750,13 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
 
     sScriptMgr->OnQuestComputeXP(this, quest, XP);
     int32 moneyRew = 0;
-
-    // lfm max level quest
-    uint32 accountMaxLevel = sWorld->GetAccountMaxLevel(GetSession()->Expansion());
-
-    if (getLevel() >= accountMaxLevel || sScriptMgr->ShouldBeRewardedWithMoneyInsteadOfExp(this))
+    if (GetLevel() >= sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL) || sScriptMgr->ShouldBeRewardedWithMoneyInsteadOfExp(this))
     {
         moneyRew = quest->GetRewMoneyMaxLevel();
     }
     else
     {
+        sScriptMgr->OnGivePlayerXP(this, XP, nullptr, isLFGReward ? PlayerXPSource::XPSOURCE_QUEST_DF : PlayerXPSource::XPSOURCE_QUEST);
         GiveXP(XP, nullptr, isLFGReward);
     }
 
@@ -2350,10 +2347,7 @@ void Player::SendQuestReward(Quest const* quest, uint32 XP)
     WorldPacket data(SMSG_QUESTGIVER_QUEST_COMPLETE, (4 + 4 + 4 + 4 + 4));
     data << uint32(questid);
 
-    // lfm max level quest
-    uint32 accountMaxLevel = sWorld->GetAccountMaxLevel(GetSession()->Expansion());
-
-    if (getLevel() < accountMaxLevel)
+    if (GetLevel() < sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
     {
         data << uint32(XP);
         data << uint32(quest->GetRewOrReqMoney(GetLevel()));

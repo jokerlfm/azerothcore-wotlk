@@ -22,8 +22,8 @@
 
 void PlayerTaxi::InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint8 level)
 {
-    // lfm dk no all nodes 
-    // class specific initial known nodes    
+    // lfm dk no all taxi nodes 
+    // class specific initial known nodes
     //switch (chrClass)
     //{
     //    case CLASS_DEATH_KNIGHT:

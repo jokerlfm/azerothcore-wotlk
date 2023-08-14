@@ -31,7 +31,8 @@ public:
     void Update(uint32 pmDiff);
 
 public:
-    uint32 nier_id;
+    uint32 entry;
+    uint32 master_id;
     uint32 account_id;
     std::string account_name;
     uint32 character_id;

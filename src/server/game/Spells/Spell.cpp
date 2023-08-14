@@ -5286,8 +5286,6 @@ void Spell::TakePower()
 
     Powers PowerType = Powers(m_spellInfo->PowerType);
     bool hit = true;
-    // lfm dk try block refund
-    bool blocked = false;
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
     {
         if (PowerType == POWER_RAGE || PowerType == POWER_ENERGY || PowerType == POWER_RUNE || PowerType == POWER_RUNIC_POWER)
@@ -5302,24 +5300,12 @@ void Spell::TakePower()
                             if (Player* modOwner = m_caster->ToPlayer()->GetSpellModOwner())
                                 modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_SPELL_COST_REFUND_ON_FAIL, m_powerCost, this);
                         }
-                        if (ihit->missCondition == SpellMissInfo::SPELL_MISS_BLOCK)
-                        {
-                            blocked = true;
-                        }
                         break;
                     }
     }
 
     if (PowerType == POWER_RUNE)
     {
-        // lfm dk try block refund
-        if (hit)
-        {
-            if (blocked)
-            {
-                hit = false;
-            }
-        }
         TakeRunePower(hit);
         return;
     }
@@ -5613,6 +5599,13 @@ void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGOT
     LOG_DEBUG("spells.aura", "Spell: {} Effect : {}", m_spellInfo->Id, eff);
 
     // we do not need DamageMultiplier here.
+
+    // lfm debug
+    if (GetSpellInfo()->Id == 8092)
+    {
+        bool breakPoint = true;
+    }
+
     damage = CalculateSpellDamage(i, nullptr);
 
     bool preventDefault = CallScriptEffectHandlers((SpellEffIndex)i, mode);
@@ -6236,12 +6229,13 @@ SpellCastResult Spell::CheckCast(bool strict)
                         m_preGeneratedPath = std::make_unique<PathGenerator>(m_caster);
                         m_preGeneratedPath->SetPathLengthLimit(range);
 
-                        // first try with raycast, if it fails fall back to normal path
+                        // first try with raycast, if it fails fall back to normal path                        
                         // lfm charge to a little further 
                         //bool result = m_preGeneratedPath->CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
                         Position pos;
-                        target->GetNearPoint(target, pos.m_positionX, pos.m_positionY, pos.m_positionZ, 0.0f, MELEE_RANGE, target->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
+                        target->GetNearPoint(target, pos.m_positionX, pos.m_positionY, pos.m_positionZ, target->GetObjectSize(), std::min(MELEE_RANGE, target->GetCombatReach() / 2.0f), target->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
                         bool result = m_preGeneratedPath->CalculatePath(pos.m_positionX, pos.m_positionY, pos.m_positionZ, false);
+
 
                         if (m_preGeneratedPath->GetPathType() & PATHFIND_SHORT)
                             return SPELL_FAILED_NOPATH;
@@ -6797,6 +6791,7 @@ SpellCastResult Spell::CheckCast(bool strict)
             return SPELL_FAILED_NOT_READY;
 
     // lfm spell check
+    // Feed Stormcrest Eagle
     if (m_spellInfo->Id == 56393)
     {
         if (Creature* casterTarget = ObjectAccessor::GetCreature(*m_caster, m_caster->GetTarget()))
@@ -7465,14 +7460,7 @@ SpellCastResult Spell::CheckItems()
 
                     // xinef: required level has to be checked also! Exploit fix
                     if (targetItem->GetTemplate()->ItemLevel < m_spellInfo->BaseLevel || (targetItem->GetTemplate()->RequiredLevel && targetItem->GetTemplate()->RequiredLevel < m_spellInfo->BaseLevel))
-                    {
-                        // lfm dk
-                        //return SPELL_FAILED_LOWLEVEL;
-                        if (m_spellInfo->Id != 53343)
-                        {
-                            return SPELL_FAILED_LOWLEVEL;
-                        }                            
-                    }                        
+                        return SPELL_FAILED_LOWLEVEL;
 
                     bool isItemUsable = false;
                     for (uint8 e = 0; e < MAX_ITEM_PROTO_SPELLS; ++e)
@@ -7544,14 +7532,7 @@ SpellCastResult Spell::CheckItems()
                     if (m_CastItem && m_spellInfo->MaxLevel > 0)
                     {
                         if (item->GetTemplate()->ItemLevel < m_CastItem->GetTemplate()->RequiredLevel)
-                        {
-                            // lfm dk
-                            //return SPELL_FAILED_LOWLEVEL;
-                            if (m_spellInfo->Id != 53343)
-                            {
-                                return SPELL_FAILED_LOWLEVEL;
-                            }
-                        }                            
+                            return SPELL_FAILED_LOWLEVEL;
                         if (item->GetTemplate()->ItemLevel > m_spellInfo->MaxLevel)
                             return SPELL_FAILED_HIGHLEVEL;
                     }
@@ -7798,15 +7779,16 @@ void Spell::Delayed() // only called in DealDamage()
     //if (m_spellState == SPELL_STATE_DELAYED)
     //    return;                                             // spell is active and can't be time-backed
 
-    if (isDelayableNoMore())                                 // Spells may only be delayed twice
-        return;
-
-    // spells not loosing casting time (slam, dynamites, bombs..)
-    //if (!(m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_DAMAGE))
+    // lfm spell delay will be always active and base delay time is 1000 
+    int32 delaytime = 1000;
+    //if (isDelayableNoMore())                                 // Spells may only be delayed twice
     //    return;
+    //// spells not loosing casting time (slam, dynamites, bombs..)
+    ////if (!(m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_DAMAGE))
+    ////    return;
+    ////check pushback reduce
+    //int32 delaytime = 500;                                  // spellcasting delay is normally 500ms
 
-    //check pushback reduce
-    int32 delaytime = 500;                                  // spellcasting delay is normally 500ms
     int32 delayReduce = 100;                                // must be initialized to 100 for percent modifiers
     m_caster->ToPlayer()->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, delayReduce, this);
     delayReduce += m_caster->GetTotalAuraModifier(SPELL_AURA_REDUCE_PUSHBACK) - 100;

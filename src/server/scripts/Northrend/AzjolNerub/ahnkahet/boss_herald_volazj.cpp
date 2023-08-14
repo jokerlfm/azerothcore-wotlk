@@ -195,7 +195,6 @@ struct boss_volazj : public BossAI
         // First insanity
         if (insanityTimes == 0 && me->HealthBelowPctDamaged(66, damage))
         {
-            me->InterruptNonMeleeSpells(false);
             DoCastSelf(SPELL_INSANITY, false);
             ++insanityTimes;
         }

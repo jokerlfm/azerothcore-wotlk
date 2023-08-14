@@ -6,8 +6,38 @@
 
 NierAction_Priest::NierAction_Priest(Player* pmMe) :NierAction_Base(pmMe)
 {
+    spell_shoot = 0;
+
+    spell_CircleOfHealing = 0;
+    spell_MindFlay = 0;
+    spell_DesperatePrayer = 0;
+
+    spell_Smite = 0;
     spell_Renew = 0;
     spell_LesserHeal = 0;
+    spell_ShadowWord_Pain = 0;
+    spell_MindBlast = 0;
+    spell_InnerFire = 0;
+    spell_ApolishDisease = 0;
+    spell_HolyFire = 0;
+    spell_ShadowProtection = 0;
+    spell_ShackleUndead = 0;
+    spell_MindSoothe = 0;
+    spell_PsychicScream = 0;
+    spell_Levitate = 0;
+    spell_DevouringPlague = 0;
+    spell_Fade = 0;
+    spell_Shadowfiend = 0;
+    spell_MindVision = 0;
+    spell_ShadowWord_Death = 0;
+    spell_MindControl = 0;
+    spell_PrayerOfMending = 0;
+    spell_FearWard = 0;
+    spell_PrayerOfHealing = 0;
+    spell_PrayerOfShadowProtection = 0;
+    spell_PrayerOfFortitude = 0;
+    spell_PrayerOfSpirit = 0;
+
     spell_Heal = 0;
     spell_GreaterHeal = 0;
     spell_FlashHeal = 0;
@@ -38,12 +68,25 @@ void NierAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpeci
     {
         return;
     }
+    if (me->IsInCombat() || !me->IsAlive())
+    {
+        return;
+    }
     specialty = pmSpecialtyTabIndex;
-    me->ClearInCombat();
     uint32 myLevel = me->getLevel();
     if (myLevel != pmTargetLevel)
     {
+        me->resetTalents(true);
+        PlayerSpellMap spellMap = me->GetSpellMap();
+        for (PlayerSpellMap::const_iterator iter = spellMap.begin(); iter != spellMap.end(); ++iter)
+        {
+            me->removeSpell(iter->first, SPEC_MASK_ALL, false);
+        }
+
         me->GiveLevel(pmTargetLevel);
+        me->LearnDefaultSkills();
+        me->LearnCustomSpells();
+        me->learnQuestRewardedSpells();
         me->LearnDefaultSkills();
         me->learnQuestRewardedSpells();
 
@@ -51,257 +94,139 @@ void NierAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpeci
         RemoveEquipments();
         myLevel = me->getLevel();
     }
+    // stave 
+    me->learnSpell(227);
+
     if (myLevel >= 1)
     {
+        spell_Smite = 585;
+        spell_shoot = 5019;
+    }
+    if (myLevel >= 2)
+    {
         spell_LesserHeal = 2050;
-        spell_PowerWord_Fortitude = 1243;
     }
     if (myLevel >= 4)
     {
-        spell_LesserHeal = 2052;
+        spell_ShadowWord_Pain = 589;
     }
     if (myLevel >= 6)
     {
-        spell_PowerWord_Shield = 17;
+        spell_PowerWord_Fortitude = 1243;
     }
     if (myLevel >= 8)
     {
-        spell_Renew = 139;
+        spell_PowerWord_Shield = 17;
     }
     if (myLevel >= 10)
     {
-        spell_LesserHeal = 2053;
-        spell_Resurrection = 2006;
+        spell_MindBlast = 8092;
     }
     if (myLevel >= 12)
     {
-        spell_PowerWord_Fortitude = 1244;
-        spell_PowerWord_Shield = 592;
+        spell_Renew = 139;
     }
     if (myLevel >= 14)
     {
-        spell_Renew = 6074;
-        spell_CureDisease = 528;
+        spell_InnerFire = 588;
     }
     if (myLevel >= 16)
     {
-        spell_Heal = 2054;
+        spell_ApolishDisease = 552;
     }
     if (myLevel >= 18)
     {
-        spell_DispelMagic = 527;
-        spell_PowerWord_Shield = 600;
+        spell_Resurrection = 2006;
     }
     if (myLevel >= 20)
     {
-        if (specialty == 1)
-        {
-            spell_InnerFocus = 14751;
-        }
-        spell_Renew = 6075;
-        spell_FlashHeal = 2061;
-        spell_HolyNova = 15237;
+        spell_HolyFire = 14914;
+        spell_MindFlay = 15407;
+        spell_DesperatePrayer = 19236;
     }
     if (myLevel >= 22)
     {
-        spell_Heal = 2055;
-        spell_Resurrection = 2010;
+        spell_ShadowProtection = 976;
     }
     if (myLevel >= 24)
     {
-        spell_PowerWord_Fortitude = 1245;
-        spell_PowerWord_Shield = 3747;
+        spell_ShackleUndead = 9484;
     }
     if (myLevel >= 26)
     {
-        spell_Renew = 6076;
-        spell_FlashHeal = 9472;
+        spell_DivineSpirit = 14752;
     }
     if (myLevel >= 28)
     {
-        spell_Heal = 6063;
-        spell_HolyNova = 15430;
+        spell_MindSoothe = 453;
     }
     if (myLevel >= 30)
     {
-        spell_DivineSpirit = 14752;
-        spell_PowerWord_Shield = 6065;
-        spell_Prayer_of_Healing = 596;
+        spell_Heal = 2054;
     }
     if (myLevel >= 32)
     {
-        spell_Renew = 6077;
-        spell_FlashHeal = 9473;
+        spell_DispelMagic = 527;
     }
     if (myLevel >= 34)
     {
-        spell_Heal = 6064;
-        spell_Resurrection = 10880;
+        spell_PsychicScream = 10890;
     }
     if (myLevel >= 36)
     {
-        spell_PowerWord_Fortitude = 2791;
-        spell_PowerWord_Shield = 6066;
-        aura_Surge_of_Light = 33151;
-        spell_HolyNova = 15431;
+        spell_Levitate = 1706;
     }
     if (myLevel >= 38)
     {
-        spell_Renew = 6078;
-        spell_FlashHeal = 9474;
+        spell_FlashHeal = 2061;
     }
     if (myLevel >= 40)
     {
-        spell_GreaterHeal = 2060;
-        spell_DivineSpirit = 14818;
-        spell_Prayer_of_Healing = 996;
-        spell_PowerInfusion = 10060;
+        spell_DevouringPlague = 2944;
     }
     if (myLevel >= 42)
     {
-        spell_PowerWord_Shield = 10898;
+        spell_HolyNova = 15237;
     }
     if (myLevel >= 44)
     {
-        spell_Renew = 10927;
-        spell_FlashHeal = 10915;
-        spell_HolyNova = 27799;
+        spell_Fade = 586;
     }
     if (myLevel >= 46)
     {
-        spell_GreaterHeal = 10963;
-        spell_Resurrection = 10881;
+        spell_Shadowfiend = 34433;
     }
     if (myLevel >= 48)
     {
-        spell_PowerWord_Fortitude = 10937;
-        spell_PowerWord_Shield = 10899;
-        spell_Prayer_of_Fortitude = 21562;
+        spell_MindVision = 2096;
     }
     if (myLevel >= 50)
     {
-        spell_Renew = 10928;
-        spell_FlashHeal = 10916;
-        spell_DivineSpirit = 14819;
-        spell_Prayer_of_Healing = 10960;
-        spell_PainSuppression = 33206;
+        spell_ShadowWord_Death = 32379;
+        spell_CircleOfHealing = 34861;
     }
     if (myLevel >= 52)
     {
-        spell_GreaterHeal = 10964;
-        spell_HolyNova = 27800;
+        spell_GreaterHeal = 2060;
     }
     if (myLevel >= 54)
     {
-        spell_PowerWord_Shield = 10900;
+        spell_MindControl = 605;
     }
     if (myLevel >= 56)
     {
-        spell_Renew = 10929;
-        spell_FlashHeal = 10917;
+        spell_PrayerOfMending = 33076;
     }
     if (myLevel >= 58)
     {
-        spell_GreaterHeal = 10965;
-        spell_Resurrection = 20770;
+        spell_FearWard = 6346;
     }
     if (myLevel >= 60)
     {
-        spell_Renew = 25315;
-        spell_GreaterHeal = 25314;
-        spell_DivineSpirit = 27841;
-        spell_PowerWord_Fortitude = 10938;
-        spell_Penance = 47540;
-        spell_PowerWord_Shield = 10901;
-        spell_Prayer_of_Spirit = 27681;
-        spell_Prayer_of_Fortitude = 21564;
-        spell_Prayer_of_Healing = 10961;
-        spell_GuardianSpirit = 47788;
-        spell_HolyNova = 27801;
-    }
-    if (myLevel >= 61)
-    {
-        spell_FlashHeal = 25233;
-    }
-    if (myLevel >= 63)
-    {
-        spell_GreaterHeal = 25210;
-    }
-    if (myLevel >= 65)
-    {
-        spell_Renew = 25221;
-        spell_PowerWord_Shield = 25217;
-    }
-    if (myLevel >= 67)
-    {
-        spell_FlashHeal = 25235;
-    }
-    if (myLevel >= 68)
-    {
-        spell_GreaterHeal = 25213;
-        spell_Resurrection = 25435;
-        spell_Prayer_of_Healing = 25308;
-        spell_HolyNova = 25331;
-        spell_Prayer_Of_Mending = 33076;
-    }
-    if (myLevel >= 70)
-    {
-        spell_Renew = 25222;
-        spell_DivineSpirit = 25312;
-        spell_PowerWord_Fortitude = 25389;
-        spell_Penance = 53005;
-        spell_PowerWord_Shield = 25218;
-        spell_Prayer_of_Spirit = 32999;
-        spell_Prayer_of_Fortitude = 25392;
-    }
-    if (myLevel >= 73)
-    {
-        spell_GreaterHeal = 48062;
-        spell_FlashHeal = 48070;
-    }
-    if (myLevel >= 74)
-    {
-        if (specialty == 1)
-        {
-            spell_InnerFocus = 14751;
-        }
-        spell_Prayer_Of_Mending = 48112;
-    }
-    if (myLevel >= 75)
-    {
-        spell_Renew = 48067;
-        spell_Penance = 53006;
-        spell_PowerWord_Shield = 48065;
-        spell_HolyNova = 48007;
-    }
-    if (myLevel >= 76)
-    {
-        spell_Prayer_of_Healing = 48072;
-    }
-    if (myLevel >= 78)
-    {
-        spell_GreaterHeal = 48063;
-        spell_Resurrection = 48171;
-    }
-    if (myLevel >= 79)
-    {
-        spell_FlashHeal = 48071;
-        spell_Prayer_Of_Mending = 48113;
-    }
-    if (myLevel >= 80)
-    {
-        spell_Renew = 48068;
-        spell_DivineSpirit = 48073;
-        spell_PowerWord_Fortitude = 48161;
-        spell_Penance = 53007;
-        spell_PowerWord_Shield = 48066;
-        spell_Prayer_of_Spirit = 48074;
-        spell_Prayer_of_Fortitude = 48162;
-        if (specialty == 0)
-        {
-            spell_DesperatePrayer = 19236;
-        }
-        spell_HolyNova = 48078;
+        spell_PrayerOfHealing = 596;
+        spell_PrayerOfShadowProtection = 27683;
+        spell_PrayerOfFortitude = 21562;
+        spell_PrayerOfSpirit = 27681;
     }
     me->UpdateSkillsToMaxSkillsForLevel();
     std::ostringstream msgStream;
@@ -320,74 +245,109 @@ void NierAction_Priest::ResetTalent()
 
     // talent tab : 201 - discipline, 202 - holy, 203 - shadow
 
-    // discipline
-    LearnTalent(1898);
+    switch (specialty)
+    {
+    case 0:
+    {
+        // discipline
+        LearnTalent(1898);
 
-    LearnTalent(344);
-    LearnTalent(352);
+        LearnTalent(344);
+        LearnTalent(352);
 
-    LearnTalent(348);
-    LearnTalent(343);
-    LearnTalent(347);
+        LearnTalent(348);
+        LearnTalent(343);
+        LearnTalent(347);
 
-    LearnTalent(341);
+        LearnTalent(341);
 
-    LearnTalent(351);
-    LearnTalent(1201);
+        LearnTalent(351);
+        LearnTalent(1201);
 
-    LearnTalent(1771);
-    LearnTalent(1772, 2);
+        LearnTalent(1771);
+        LearnTalent(1772, 2);
 
-    LearnTalent(322);
-    LearnTalent(1772);
-    LearnTalent(1773);
+        LearnTalent(322);
+        LearnTalent(1772);
+        LearnTalent(1773);
 
-    LearnTalent(2235);
-    LearnTalent(1896);
+        LearnTalent(2235);
+        LearnTalent(1896);
 
-    LearnTalent(1774);
-    LearnTalent(1894);
-    LearnTalent(1901);
+        LearnTalent(1774);
+        LearnTalent(1894);
+        LearnTalent(1901);
 
-    LearnTalent(1202);
+        LearnTalent(1202);
 
-    LearnTalent(1897);
-    LearnTalent(1895);
+        LearnTalent(1897);
+        LearnTalent(1895);
 
-    LearnTalent(1858);
+        LearnTalent(1858);
 
-    LearnTalent(406);
-    LearnTalent(401);
+        LearnTalent(406);
+        LearnTalent(401);
 
-    LearnTalent(1181);
+        LearnTalent(1181);
 
-    LearnTalent(442);
+        LearnTalent(442);
 
-    // holy
-    //LearnTalent(406);
-    //LearnTalent(401);
-    //LearnTalent(1181);
-    //LearnTalent(442);
-    //LearnTalent(361);
-    //LearnTalent(408);
-    //LearnTalent(1561);
-    //LearnTalent(402);
-    //LearnTalent(1766);
-    //LearnTalent(404);
-    //LearnTalent(1768);
-    //LearnTalent(1765);
-    //LearnTalent(1767);
-    //LearnTalent(1902);
-    //LearnTalent(1903);
-    //LearnTalent(1911);
-    //LearnTalent(1904);
+        break;
+    }
+    case 1:
+    {
+        // holy
+        LearnTalent(406);
+        LearnTalent(401);
+        LearnTalent(1181);
+        LearnTalent(361);
+        LearnTalent(408);
+        LearnTalent(442);
+        LearnTalent(1561);
+        LearnTalent(402);
+        LearnTalent(1766);
+        LearnTalent(404);
+        LearnTalent(1768);
+        LearnTalent(2279);
+        LearnTalent(1767);
+        LearnTalent(1902);
+        LearnTalent(1815);
+        LearnTalent(1903);
+        LearnTalent(1911);
+        break;
+    }
+    case 2:
+    {
+        // shadow
+        LearnTalent(462);
+        LearnTalent(466);
+        LearnTalent(482);
+        LearnTalent(463);
+        LearnTalent(501);
+        LearnTalent(542);
+        LearnTalent(461);
+        LearnTalent(881);
+        LearnTalent(541);
+        LearnTalent(484);
+        LearnTalent(1777);
+        LearnTalent(1781);
+        LearnTalent(521);
+        LearnTalent(2267);
+        LearnTalent(1778);
+        LearnTalent(1816);
+        LearnTalent(1779);
+        LearnTalent(1908);
+        LearnTalent(1909);
+        LearnTalent(1907);
+        LearnTalent(1910);
 
-    //LearnTalent(1898);
-    //LearnTalent(352);
-    //LearnTalent(344);
-    //LearnTalent(347);
-    //LearnTalent(348);
-    //LearnTalent(343);
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    }
 
     me->SendTalentsInfoData(false);
 
@@ -456,6 +416,7 @@ bool NierAction_Priest::InitializeEquipments(bool pmReset)
         }
         std::unordered_set<uint32> inventoryTypeSet;
         uint32 modType = ItemModType::ITEM_MOD_INTELLECT;
+        modType = -1;
         uint32 equipItemClass = 0;
         uint32 equipItemSubClass = 0;
         if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
@@ -522,6 +483,7 @@ bool NierAction_Priest::InitializeEquipments(bool pmReset)
         {
             equipItemClass = 2;
             equipItemSubClass = 10;
+            inventoryTypeSet.insert(InventoryType::INVTYPE_2HWEAPON);
         }
         else if (checkEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_RANGED)
         {
@@ -566,6 +528,107 @@ void NierAction_Priest::Prepare()
     }
 
     me->Say("Prepared", Language::LANG_UNIVERSAL);
+}
+
+bool NierAction_Priest::DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack)
+{
+    if (!me)
+    {
+        return false;
+    }
+    else if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (me->IsNonMeleeSpellCast(false, false, true))
+    {
+        return true;
+    }
+    if (!pmTarget)
+    {
+        return false;
+    }
+    else if (!pmTarget->IsAlive())
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    else if (!me->IsValidAttackTarget(pmTarget))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    if (!pmTarget->CanSeeOrDetect(me))
+    {
+        if (me->GetTarget() == pmTarget->GetGUID())
+        {
+            ClearTarget();
+        }
+        return false;
+    }
+    if (pmChasing)
+    {
+        if (!nm->Chase(pmTarget, pmDistanceMax, pmDistanceMin, pmHolding, pmForceBack))
+        {
+            if (me->GetTarget() == pmTarget->GetGUID())
+            {
+                ClearTarget();
+            }
+            return false;
+        }
+    }
+    ChooseTarget(pmTarget);
+    me->Attack(pmTarget, true);
+    float targetDistance = me->GetDistance(pmTarget);
+    if (targetDistance < NIER_FAR_DISTANCE)
+    {
+        if (me->nierStrategyMap[me->activeStrategyIndex]->rushing)
+        {
+            // rushing 
+        }
+        else
+        {
+            // wand and pain
+            if (spell_ShadowWord_Pain > 0)
+            {
+                if (CastSpell(pmTarget, spell_ShadowWord_Pain, true, true))
+                {
+                    return true;
+                }
+            }
+            if (spell_DevouringPlague > 0)
+            {
+                if (CastSpell(pmTarget, spell_DevouringPlague, true, true))
+                {
+                    return true;
+                }
+            }
+            bool shooting = false;
+            if (Spell* spell = me->GetCurrentSpell(CURRENT_AUTOREPEAT_SPELL))
+            {
+                if (spell->m_targets.GetUnitTarget()->GetGUID() == pmTarget->GetGUID())
+                {
+                    shooting = true;
+                }
+                else
+                {
+                    me->InterruptSpell(CURRENT_AUTOREPEAT_SPELL, true);
+                }
+            }
+            if (!shooting)
+            {
+                CastSpell(pmTarget, spell_shoot);
+            }
+        }
+    }
+
+    return true;
 }
 
 bool NierAction_Priest::Heal(Unit* pmTarget, bool pmInstantOnly)

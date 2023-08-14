@@ -32,7 +32,7 @@ class NierConfig
         Reset = 0;
         ReviveDelay = 0;
         ManagerCheckDelay = 0;
-        NierCountEachLevel = 0;
+        PartnerCount = 0;
         DPSDelay = 0;
         RandomTeleportDelay_Min = 0;
         RandomTeleportDelay_Max = 0;
@@ -58,7 +58,7 @@ public:
     uint32 Reset;    
     uint32 ReviveDelay;
     uint32 ManagerCheckDelay;
-    uint32 NierCountEachLevel;
+    uint32 PartnerCount;
     uint32 DPSDelay;
     uint32 RandomTeleportDelay_Min;
     uint32 RandomTeleportDelay_Max;

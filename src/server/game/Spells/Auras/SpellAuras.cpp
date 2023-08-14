@@ -1603,7 +1603,8 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                 // Alchemy: Mixology
                 if (caster && caster->HasAura(53042) && caster->GetTypeId() == TYPEID_PLAYER && !caster->ToPlayer()->GetSession()->PlayerLoading())
                 {
-                    // lfm elixir should be 1 and 2
+                    // lfm elixir should be 1 and 2 
+                    //if (sSpellMgr->GetSpellGroup(GetId()) == 1) /*Elixirs*/
                     uint32 spellGroup = sSpellMgr->GetSpellGroup(GetId());
                     if (spellGroup == 1 || spellGroup == 2) /*Elixirs*/
                     {
@@ -1917,6 +1918,16 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                                 owner->CastSpell(owner, 34471, true, 0, GetEffect(0));
                             else
                                 owner->RemoveAurasDueToSpell(34471);
+                        }
+                    }
+                    break;
+                case 34026: // Kill Command
+                    // Dungeon Set 3
+                    if (caster->HasAura(37483))
+                    {
+                        if (apply)
+                        {
+                            caster->CastSpell(caster, 37482, true);
                         }
                     }
                     break;

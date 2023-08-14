@@ -169,7 +169,7 @@ public:
                 }
 
                 Creature* summon = ObjectAccessor::GetCreature(*me, summons[i]);
-                if (!summon)
+                if (!summon || me->GetDistance2d(summon) > 25.0f)
                 {
                     SummonHelpers();
                     return false;
@@ -235,19 +235,13 @@ public:
         {
             float dist = 1.0f;
             for (uint8 i = 0; i < MAX_CARAVAN_SUMMONS; ++i)
-            {
                 if (Creature* summon = ObjectAccessor::GetCreature(*me, summons[i]))
                 {
-                    if (!summon->isMoving())
-                    {
-                        summon->GetMotionMaster()->Clear(false);
-                        summon->StopMoving();
-                        summon->GetMotionMaster()->MoveFollow(me, dist, M_PI, MOTION_SLOT_ACTIVE);
-                        dist += (i == 1 ? 9.5f : 3.0f);
-                        //summon->SetSpeedRate(UnitMoveType::MOVE_RUN, 1.1f);
-                    }
+                    summon->GetMotionMaster()->Clear(false);
+                    summon->StopMoving();
+                    summon->GetMotionMaster()->MoveFollow(me, dist, M_PI, MOTION_SLOT_ACTIVE);
+                    dist += (i == 1 ? 9.5f : 3.0f);
                 }
-            }
         }
 
         void RelocateSummons()
@@ -255,9 +249,6 @@ public:
             for (uint8 i = 0; i < MAX_CARAVAN_SUMMONS; ++i)
                 if (Creature* summon = ObjectAccessor::GetCreature(*me, summons[i]))
                     summon->SetHomePosition(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
-
-            // lfm refresh follow 
-            SummonsFollow();
         }
 
         void ImmuneFlagSet(bool remove, uint32 faction)
@@ -468,8 +459,6 @@ public:
         {
             if (who->GetEntry() == NPC_SMEED && me->IsWithinDistInMap(who, 10.0f) && !me->HasAura(SPELL_KODO_KOMBO_GOSSIP))
             {
-                // lfm scripts
-                me->SetFlag(EUnitFields::UNIT_NPC_FLAGS, NPCFlags::UNIT_NPC_FLAG_GOSSIP);
                 me->SetHomePosition(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
                 me->GetMotionMaster()->Clear();
                 me->GetMotionMaster()->MoveIdle();
@@ -493,9 +482,6 @@ public:
 
                     caster->CastSpell(caster, SPELL_KODO_KOMBO_PLAYER_BUFF, true);
                     DoCast(me, SPELL_KODO_KOMBO_DESPAWN_BUFF, true);
-
-                    // lfm scripts
-                    me->RemoveFlag(EUnitFields::UNIT_NPC_FLAGS, NPCFlags::UNIT_NPC_FLAG_GOSSIP);
                 }
             }
             else if (spell->Id == SPELL_KODO_KOMBO_GOSSIP)

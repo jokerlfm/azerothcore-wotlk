@@ -11,6 +11,7 @@ public:
 	void ResetTalent();
 	bool InitializeEquipments(bool pmReset);
 	void Prepare();
+    bool DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack);
 	bool Heal(Unit* pmTarget, bool pmInstantOnly);
 	bool ReadyTank(Unit* pmTarget);
 	bool GroupHeal(Unit* pmTarget, bool pmInstantOnly);
@@ -21,9 +22,38 @@ public:
 
 	bool Heal_Discipline(Unit* pmTarget, bool pmInstantOnly);
 	bool Heal_Holy(Unit* pmTarget, bool pmInstantOnly);
+
 private:
+    uint32 spell_shoot;
+
+    uint32 spell_MindFlay;
+    uint32 spell_CircleOfHealing;
+
+    uint32 spell_Smite;
 	uint32 spell_Renew;
 	uint32 spell_LesserHeal;
+    uint32 spell_ShadowWord_Pain;
+    uint32 spell_MindBlast;
+    uint32 spell_InnerFire;
+    uint32 spell_ApolishDisease;
+    uint32 spell_HolyFire;
+    uint32 spell_ShadowProtection;
+    uint32 spell_ShackleUndead;
+    uint32 spell_MindSoothe;
+    uint32 spell_PsychicScream;
+    uint32 spell_Levitate;
+    uint32 spell_DevouringPlague;
+    uint32 spell_Fade;
+    uint32 spell_Shadowfiend;
+    uint32 spell_MindVision;
+    uint32 spell_ShadowWord_Death;
+    uint32 spell_MindControl;
+    uint32 spell_PrayerOfMending;
+    uint32 spell_FearWard;
+    uint32 spell_PrayerOfHealing;
+    uint32 spell_PrayerOfShadowProtection;
+    uint32 spell_PrayerOfFortitude;
+    uint32 spell_PrayerOfSpirit;
 	uint32 spell_Heal;
 	uint32 spell_GreaterHeal;
 	uint32 spell_FlashHeal;

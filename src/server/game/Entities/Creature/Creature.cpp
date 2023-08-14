@@ -50,10 +50,10 @@
 #include "World.h"
 #include "WorldPacket.h"
 
-/// @todo: this import is not necessary for compilation and marked as unused by the IDE
-// lfm ming
+ // lfm ming
 #include "MingManager.h"
 
+/// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
 //  there is probably some underlying problem with imports which should properly addressed
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
@@ -724,13 +724,6 @@ void Creature::Update(uint32 diff)
         }
         case ALIVE:
         {
-                // lfm debug
-                //uint32 myEntry = GetEntry();
-                //if (myEntry == 29861)
-                //{
-                //    bool bp = true;
-                //}
-
             Unit::Update(diff);
 
             // creature can be dead after Unit::Update call
@@ -789,17 +782,14 @@ void Creature::Update(uint32 diff)
             {
                 // If we are closer than 50% of the combat reach we are going to reposition the victim
                 if (diff >= m_moveBackwardsMovementTime)
-                {                    
+                {
+                    float MaxRange = GetCollisionRadius() + GetVictim()->GetCollisionRadius();
+
                     // lfm move backwards distance
-                    //float MaxRange = GetCollisionRadius() + GetVictim()->GetCollisionRadius();
-                    //if (IsInDist(victim, MaxRange))
-                    //{
-                    //    AI()->MoveBackwardsChecks();
-                    //}                    
-                    if (GetExactDist(victim) < GetMeleeRange(victim) / 4.0f)
-                    {
+                    MaxRange = std::max(MaxRange, GetCombatReach() / 4.0f);
+
+                    if (IsInDist(victim, MaxRange))
                         AI()->MoveBackwardsChecks();
-                    }
 
                     m_moveBackwardsMovementTime = urand(MOVE_BACKWARDS_CHECK_INTERVAL, MOVE_BACKWARDS_CHECK_INTERVAL * 3);
                 }
@@ -950,31 +940,6 @@ void Creature::Update(uint32 diff)
         }
 
         sScriptMgr->OnCreatureUpdate(this, diff);
-    }
-
-    if (hoverDelay >= 0)
-    {
-        hoverDelay -= diff;
-        if (hoverDelay <= 0)
-        {
-            hoverDelay = urand(10000, 20000);
-            if (!HasUnitMovementFlag(MOVEMENTFLAG_HOVER))
-            {
-                if (const CreatureTemplate* ct = GetCreatureTemplate())
-                {
-                    if (ct->Movement.Flight == CreatureFlightMovementType::DisableGravity || ct->Movement.Flight == CreatureFlightMovementType::CanFly)
-                    {
-                        SetHover(true);
-                        SetDisableGravity(true);
-                        SetFloatValue(UNIT_FIELD_HOVERHEIGHT, DEFAULT_COMBAT_REACH);
-                        //AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_CAN_FLY);
-                        //AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_FLYING);
-                        //AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_MASK_MOVING_FLY);
-                        AddUnitMovementFlag(MovementFlags::MOVEMENTFLAG_HOVER);
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -1572,60 +1537,57 @@ void Creature::SelectLevel(bool changelevel)
     uint32 health = uint32(basehp * healthmod);
 
     // lfm creature health
-    float lfmMultiplier = 1.0f;
-    if (sMingConfig->CreatureHealthMod > 0)
-    {
-        if (CreatureTemplate const* ci = GetCreatureTemplate())
-        {
-            switch (ci->rank)
-            {
-            case CreatureEliteType::CREATURE_ELITE_NORMAL:
-            {
-                if (!IsGuardian() && !IsPet())
-                {
-                    lfmMultiplier = 1.5f;
-                }
-                break;
-            }
-            case CreatureEliteType::CREATURE_ELITE_ELITE:
-            {
-                if (ci->expansion < 1)
-                {
-                    if (ci->maxlevel < 63)
-                    {
-                        lfmMultiplier = 1.5f;
-                    }
-                }
-                else if (ci->expansion < 2)
-                {
-                    if (ci->maxlevel < 73)
-                    {
-                        if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
-                        {
-                            lfmMultiplier = 1.2f;
-                        }
-                    }
-                }
-                break;
-            }
-            case CreatureEliteType::CREATURE_ELITE_RARE:
-            {
-                lfmMultiplier = 2.0f;
-                break;
-            }
-            case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-            {
-                lfmMultiplier = 2.5f;
-                break;
-            }
-            default:
-            {
-                break;
-            }
-            }
-        }
-    }
-    health = health * lfmMultiplier;
+    //float lfmMultiplier = 1.0f;
+    //if (CreatureTemplate const* ci = GetCreatureTemplate())
+    //{
+    //    switch (ci->rank)
+    //    {
+    //    case CreatureEliteType::CREATURE_ELITE_NORMAL:
+    //    {
+    //        if (!IsGuardian() && !IsPet())
+    //        {
+    //            lfmMultiplier = 1.5f;
+    //        }
+    //        break;
+    //    }
+    //    case CreatureEliteType::CREATURE_ELITE_ELITE:
+    //    {
+    //        if (ci->expansion < 1)
+    //        {
+    //            if (ci->maxlevel < 63)
+    //            {
+    //                lfmMultiplier = 1.5f;
+    //            }
+    //        }
+    //        else if (ci->expansion < 2)
+    //        {
+    //            if (ci->maxlevel < 73)
+    //            {
+    //                if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
+    //                {
+    //                    lfmMultiplier = 1.2f;
+    //                }
+    //            }
+    //        }
+    //        break;
+    //    }
+    //    case CreatureEliteType::CREATURE_ELITE_RARE:
+    //    {
+    //        lfmMultiplier = 2.0f;
+    //        break;
+    //    }
+    //    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
+    //    {
+    //        lfmMultiplier = 2.5f;
+    //        break;
+    //    }
+    //    default:
+    //    {
+    //        break;
+    //    }
+    //    }
+    //}
+    //health = health * lfmMultiplier;
 
     SetCreateHealth(health);
     SetMaxHealth(health);
@@ -2541,20 +2503,20 @@ void Creature::CallForHelp(float radius, Unit* target /*= nullptr*/)
 
 bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /*= true*/) const
 {
-    // lfm stun creature will not assist
-    if (HasUnitState(UNIT_STATE_STUNNED))
+    // we don't need help from zombies :)
+    if (!IsAlive())
         return false;
 
+    // lfm stun creature will not assist
+    if (HasUnitState(UNIT_STATE_STUNNED))
+    {
+        return false;
+    }
     // lfm neutral units will do assist
-    // is it true?
     //if (!HasReactState(REACT_AGGRESSIVE))
     //{
     //    return false;
     //}
-
-    // we don't need help from zombies :)
-    if (!IsAlive())
-        return false;
 
     // Xinef: we cannot assist in evade mode
     if (IsInEvadeMode())
@@ -2579,6 +2541,12 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
     if (GetCharmerOrOwnerGUID())
         return false;
 
+    /// @todo: Implement aggro range, detection range and assistance range templates
+    if (m_creatureInfo->HasFlagsExtra(CREATURE_FLAG_EXTRA_IGNORE_ALL_ASSISTANCE_CALLS))
+    {
+        return false;
+    }
+
     // only from same creature faction
     if (checkfaction)
     {
@@ -2591,16 +2559,11 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
             return false;
     }
 
-    // lfm neutral units will do assist
-    // skip non hostile to caster enemy creatures
+    // lfm neutral units will do assist     
     //if (!IsHostileTo(enemy))
     //{
     //    return false;
     //}
-    if (IsFriendlyTo(enemy))
-    {
-        return false;
-    }
 
     // Check if can see the enemy
     if (!CanSeeOrDetect(enemy))

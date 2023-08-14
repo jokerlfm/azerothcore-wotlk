@@ -48,9 +48,6 @@ public:
     explicit Creature(bool isWorldObject = false);
     ~Creature() override;
 
-    // lfm creature hover
-    int hoverDelay;
-
     void AddToWorld() override;
     void RemoveFromWorld() override;
 

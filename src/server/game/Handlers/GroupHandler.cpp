@@ -164,6 +164,7 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket& recvData)
             data << uint32(0);                                      // unk
             player->GetSession()->SendPacket(&data);
         }
+
         return;
     }
 

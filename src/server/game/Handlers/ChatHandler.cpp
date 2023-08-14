@@ -471,7 +471,6 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                         guild->BroadcastToGuild(this, false, msg, lang == LANG_ADDON ? LANG_ADDON : LANG_UNIVERSAL);
                     }
                 }
-                sNierManager->HandleChatCommand(GetPlayer(), msg);
             }
             break;
         case CHAT_MSG_OFFICER:

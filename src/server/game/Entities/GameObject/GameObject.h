@@ -124,9 +124,6 @@ public:
     explicit GameObject();
     ~GameObject() override;
 
-    // lfm vein check
-    int veinCheckDelay;
-
     void BuildValuesUpdate(uint8 updatetype, ByteBuffer* data, Player* target) const override;
 
     void AddToWorld() override;

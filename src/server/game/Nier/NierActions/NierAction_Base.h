@@ -94,7 +94,7 @@ public:
 	virtual bool Petting(bool pmSummon = true, bool pmReset = false);
 	virtual void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
 	virtual void ResetTalent();
-	virtual bool InitializeEquipments(bool pmReset = false);
+    virtual bool InitializeEquipments(bool pmReset = true);
 
 	void RemoveEquipments();
 	void LearnTalent(uint32 pmTalentId, uint32 pmMaxRank = MAX_TALENT_RANK);

@@ -354,7 +354,7 @@ void CreatureAI::MoveBackwardsChecks() {
         return;
     }
 
-    float moveDist = me->GetMeleeRange(victim) / 2.0f;
+    float moveDist = me->GetMeleeRange(victim) / 2;
 
     // lfm backward distance 
     //moveDist = me->GetMeleeRange(victim) / 2.0f;

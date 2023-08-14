@@ -299,9 +299,9 @@ public:
                         if (Creature* ghoul = ObjectAccessor::GetCreature(*me, ghoulFed))
                         {
                             // lfm scripts despawn decaying ghoul after fed.
-                            ghoul->DespawnOrUnsummon(500);
                             //ghoul->SetReactState(REACT_AGGRESSIVE);
                             //ghoul->GetMotionMaster()->MoveTargetedHome();
+                            ghoul->DespawnOrUnsummon(500);
                         }
 
                         if (Unit* owner = me->ToTempSummon()->GetSummonerUnit())
@@ -512,20 +512,13 @@ public:
                     events.ScheduleEvent(EVENT_BETRAYAL_3, 5s);
                     break;
                 case EVENT_BETRAYAL_3:
-                {
                     Talk(SAY_DRAKURU_1);
+                    Talk(SAY_DRAKURU_2);
                     if (Player* player = ObjectAccessor::GetPlayer(*me, playerGUID))
                         player->CastSpell(player, SPELL_SCOURGE_DISGUISE_EXPIRING, true);
                     if (Aura* aur = me->AddAura(SPELL_BLIGHT_FOG, me))
                         aur->SetDuration(22000);
-                    events.ScheduleEvent(30, 11000);
                     break;
-                }
-                case 30:
-                {
-                    Talk(SAY_DRAKURU_2);
-                    break;
-                }
                 case EVENT_BETRAYAL_4:
                     Talk(SAY_DRAKURU_5);
                     events.ScheduleEvent(EVENT_BETRAYAL_5, 6s);
@@ -536,47 +529,28 @@ public:
                     events.ScheduleEvent(EVENT_BETRAYAL_6, 8s);
                     break;
                 case EVENT_BETRAYAL_6:
-                {
+                    me->SummonCreature(NPC_LICH_KING, 6142.9f, -2011.6f, 590.86f, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 41000);
                     events.ScheduleEvent(EVENT_BETRAYAL_7, 8s);
-                    {
-                        ts->SetDefaultMovementType(MovementGeneratorType::IDLE_MOTION_TYPE);
-                        ts->StopMoving();
-                        ts->GetMotionMaster()->Clear();
-                    }
-                    events.ScheduleEvent(EVENT_BETRAYAL_7, 1000);
                     break;
-                }
                 case EVENT_BETRAYAL_7:
-                    me->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 0, 0);
-                    me->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 0);
-                    me->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 2, 0);
                     Talk(SAY_DRAKURU_7);
                     events.ScheduleEvent(EVENT_BETRAYAL_8, 5s);
                     break;
                 case EVENT_BETRAYAL_8:
                     if (Creature* lich = ObjectAccessor::GetCreature(*me, lichGUID))
-                    {
                         lich->AI()->Talk(SAY_LICH_7);
                     events.ScheduleEvent(EVENT_BETRAYAL_9, 6s);
                     break;
                 case EVENT_BETRAYAL_9:
-                {
                     if (Creature* lich = ObjectAccessor::GetCreature(*me, lichGUID))
                     {
                         lich->AI()->Talk(SAY_LICH_8);
                         lich->CastSpell(me, SPELL_TOUCH_OF_DEATH, false);
-                        events.ScheduleEvent(31, 4000);
                     }
                     events.ScheduleEvent(EVENT_BETRAYAL_10, 4s);
                     break;
-                }
-                case 31:
-                {
-                    DoCastSelf(43059, true);
-                    events.ScheduleEvent(EVENT_BETRAYAL_10, 3000);
-                    break;
-                }
                 case EVENT_BETRAYAL_10:
+                    me->SetVisible(false);
                     if (Creature* lich = ObjectAccessor::GetCreature(*me, lichGUID))
                         lich->AI()->Talk(SAY_LICH_9);
                     events.ScheduleEvent(EVENT_BETRAYAL_11, 4s);
@@ -595,7 +569,7 @@ public:
                     if (Creature* lich = ObjectAccessor::GetCreature(*me, lichGUID))
                     {
                         lich->AI()->Talk(SAY_LICH_12);
-                        //lich->GetMotionMaster()->MovePoint(0, 6143.8f, -2011.5f, 590.9f);
+                        lich->GetMotionMaster()->MovePoint(0, 6143.8f, -2011.5f, 590.9f);
                     }
                     events.ScheduleEvent(EVENT_BETRAYAL_14, 7s);
                     break;
