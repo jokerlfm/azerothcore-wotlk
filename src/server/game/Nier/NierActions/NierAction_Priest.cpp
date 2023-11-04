@@ -76,7 +76,6 @@ void NierAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpeci
     uint32 myLevel = me->getLevel();
     if (myLevel != pmTargetLevel)
     {
-        me->resetTalents(true);
         PlayerSpellMap spellMap = me->GetSpellMap();
         for (PlayerSpellMap::const_iterator iter = spellMap.begin(); iter != spellMap.end(); ++iter)
         {
@@ -90,12 +89,13 @@ void NierAction_Priest::InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpeci
         me->LearnDefaultSkills();
         me->learnQuestRewardedSpells();
 
-        ResetTalent();
         RemoveEquipments();
         myLevel = me->getLevel();
     }
     // stave 
     me->learnSpell(227);
+
+    ResetTalent();
 
     if (myLevel >= 1)
     {
