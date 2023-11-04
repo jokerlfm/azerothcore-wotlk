@@ -15,7 +15,6 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Player.h"
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "shadow_labyrinth.h"
@@ -201,6 +200,11 @@ struct npc_voidtraveler : public ScriptedAI
 
     void Reset() override
     {
+<<<<<<< HEAD
+=======
+        me->SetReactState(REACT_PASSIVE);
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         if (TempSummon* summon = me->ToTempSummon())
         {
             if (Unit* vorpil = summon->GetSummonerUnit())

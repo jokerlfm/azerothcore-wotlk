@@ -19,7 +19,6 @@
 #include "Chat.h"
 #include "CombatAI.h"
 #include "CreatureTextMgr.h"
-#include "DBCStructure.h"
 #include "GameEventMgr.h"
 #include "GameTime.h"
 #include "GridNotifiers.h"
@@ -32,6 +31,7 @@
 #include "ScriptedGossip.h"
 #include "SmartAI.h"
 #include "SpellAuras.h"
+#include "TaskScheduler.h"
 #include "WaypointMgr.h"
 #include "World.h"
 
@@ -1006,7 +1006,11 @@ public:
                             {
                                 if (guid != savedPatient->GetGUID()) // Don't kill the last guy we just saved
                                     if (Creature* patient = ObjectAccessor::GetCreature(*me, guid))
+<<<<<<< HEAD
                                         patient->setDeathState(JUST_DIED);
+=======
+                                        patient->setDeathState(DeathState::JustDied);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                             }
                         }
 
@@ -1155,7 +1159,7 @@ public:
             {
                 me->RemoveUnitFlag(UNIT_FLAG_IN_COMBAT);
                 me->SetUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
-                me->setDeathState(JUST_DIED);
+                me->setDeathState(DeathState::JustDied);
                 me->SetDynamicFlag(32);
 
                 if (DoctorGUID)
@@ -2033,6 +2037,7 @@ public:
 
     bool OnGossipHello(Player* player, Creature* creature) override
     {
+<<<<<<< HEAD
         if (!player->HasPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN))
         {
             AddGossipItemFor(player, GOSSIP_MENU_EXP_NPC, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1); // "I no longer wish to gain experience."
@@ -2040,6 +2045,17 @@ public:
         else
         {
             AddGossipItemFor(player, GOSSIP_MENU_EXP_NPC, 1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2); // "I wish to start gaining experience again."
+=======
+        auto toggleXpCost = sWorld->getIntConfig(CONFIG_TOGGLE_XP_COST);
+
+        if (!player->HasPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN))
+        {
+            AddGossipItemFor(player, GOSSIP_MENU_EXP_NPC, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1, toggleXpCost); // "I no longer wish to gain experience."
+        }
+        else
+        {
+            AddGossipItemFor(player, GOSSIP_MENU_EXP_NPC, 1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2, toggleXpCost); // "I wish to start gaining experience again."
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         }
 
         SendGossipMenuFor(player, player->GetGossipTextId(creature), creature);
@@ -2048,43 +2064,29 @@ public:
 
     bool OnGossipSelect(Player* player, Creature* /*creature*/, uint32 /*sender*/, uint32 action) override
     {
-        ClearGossipMenuFor(player);
-        bool noXPGain = player->HasPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
-        bool doSwitch = false;
         auto toggleXpCost = sWorld->getIntConfig(CONFIG_TOGGLE_XP_COST);
+
+        ClearGossipMenuFor(player);
+
+        if (!player->HasEnoughMoney(toggleXpCost))
+        {
+            player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
+            player->PlayerTalkClass->SendCloseGossip();
+            return true;
+        }
+
+        player->ModifyMoney(-toggleXpCost);
 
         switch (action)
         {
             case GOSSIP_ACTION_INFO_DEF + 1://xp off
-                {
-                    if (!noXPGain)//does gain xp
-                        doSwitch = true;//switch to don't gain xp
-                }
+                player->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
                 break;
             case GOSSIP_ACTION_INFO_DEF + 2://xp on
-                {
-                    if (noXPGain)//doesn't gain xp
-                        doSwitch = true;//switch to gain xp
-                }
+                player->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
                 break;
         }
-        if (doSwitch)
-        {
-            if (!player->HasEnoughMoney(toggleXpCost))
-            {
-                player->SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, 0, 0, 0);
-            }
-            else if (noXPGain)
-            {
-                player->ModifyMoney(-toggleXpCost);
-                player->RemovePlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
-            }
-            else if (!noXPGain)
-            {
-                player->ModifyMoney(-toggleXpCost);
-                player->SetPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN);
-            }
-        }
+
         player->PlayerTalkClass->SendCloseGossip();
         return true;
     }
@@ -2536,9 +2538,9 @@ enum VenomhideHatchlingMisc
     ITEM_VENOMHIDE_BABY_TOOTH = 47196,
 
     MODEL_BABY_RAPTOR              = 29251,
-    MODEL_BABY_RAPTOR_REPTILE_EYES = 29809,
-    MODEL_ADOLESCENT_RAPTOR        = 29103,
-    MODEL_FULL_RAPTOR              = 5291,
+    MODEL_BABY_RAPTOR_REPTILE_EYES = 29274,
+    MODEL_ADOLESCENT_RAPTOR        = 29275,
+    MODEL_FULL_RAPTOR              = 29276,
 };
 
 enum VenomhideHatchlingTexts
@@ -2671,6 +2673,7 @@ public:
     }
 };
 
+<<<<<<< HEAD
 // lfm worm
 class npc_worm : public CreatureScript
 {
@@ -3426,6 +3429,45 @@ public:
             OUT_LOAD_INST_DATA_COMPLETE;
         }
     };
+=======
+struct npc_crashin_thrashin_robot : public ScriptedAI
+{
+public:
+    npc_crashin_thrashin_robot(Creature* creature) : ScriptedAI(creature)
+    {
+    }
+
+    void IsSummonedBy(WorldObject* /*summoner*/) override
+    {
+        _scheduler.Schedule(180s, [this](TaskContext /*context*/)
+        {
+            me->KillSelf();
+        });
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        _scheduler.Update(diff);
+
+        ScriptedAI::UpdateAI(diff);
+    }
+
+private:
+    TaskScheduler _scheduler;
+};
+
+struct npc_controller : public PossessedAI
+{
+    npc_controller(Creature* creature) : PossessedAI(creature) { }
+
+    void OnCharmed(bool apply) override
+    {
+        if (!apply)
+        {
+            me->GetCharmerOrOwner()->InterruptNonMeleeSpells(false);
+        }
+    }
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 };
 
 void AddSC_npcs_special()
@@ -3462,4 +3504,6 @@ void AddSC_npcs_special()
     new instance_wailing_caverns_lfm();
 
     RegisterCreatureAI(npc_arcanite_dragonling);
+    RegisterCreatureAI(npc_crashin_thrashin_robot);
+    RegisterCreatureAI(npc_controller);
 }

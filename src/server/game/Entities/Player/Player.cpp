@@ -79,7 +79,6 @@
 #include "Transport.h"
 #include "UpdateData.h"
 #include "UpdateFieldFlags.h"
-#include "UpdateMask.h"
 #include "Util.h"
 #include "Vehicle.h"
 #include "Weather.h"
@@ -387,6 +386,8 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     SetPendingBind(0, 0);
 
     _activeCheats = CHEAT_NONE;
+
+    m_creationTime = 0s;
 
     _cinematicMgr = new CinematicMgr(this);
 
@@ -1023,7 +1024,7 @@ void Player::setDeathState(DeathState s, bool /*despawn = false*/)
 
     bool cur = IsAlive();
 
-    if (s == JUST_DIED)
+    if (s == DeathState::JustDied)
     {
         if (!cur)
         {
@@ -1038,7 +1039,7 @@ void Player::setDeathState(DeathState s, bool /*despawn = false*/)
 
         clearResurrectRequestData();
 
-        //FIXME: is pet dismissed at dying or releasing spirit? if second, add setDeathState(DEAD) to HandleRepopRequestOpcode and define pet unsummon here with (s == DEAD)
+        //FIXME: is pet dismissed at dying or releasing spirit? if second, add setDeathState(DeathState::Dead) to HandleRepopRequestOpcode and define pet unsummon here with (s == DEAD)
         RemovePet(nullptr, PET_SAVE_NOT_IN_SLOT, true);
 
         // save value before aura remove in Unit::setDeathState
@@ -1058,7 +1059,7 @@ void Player::setDeathState(DeathState s, bool /*despawn = false*/)
         ResetAchievementCriteria(ACHIEVEMENT_CRITERIA_CONDITION_NO_DEATH, 0);
     }
     // xinef: enable passive area auras!
-    else if (s == ALIVE)
+    else if (s == DeathState::Alive)
         ClearUnitState(UNIT_STATE_ISOLATED);
 
     Unit::setDeathState(s);
@@ -1067,7 +1068,7 @@ void Player::setDeathState(DeathState s, bool /*despawn = false*/)
         ArenaSpectator::SendCommand_UInt32Value(FindMap(), GetGUID(), "STA", IsAlive() ? 1 : 0);
 
     // restore resurrection spell id for player after aura remove
-    if (s == JUST_DIED && cur && ressSpellId)
+    if (s == DeathState::JustDied && cur && ressSpellId)
         SetUInt32Value(PLAYER_SELF_RES_SPELL, ressSpellId);
 
     if (IsAlive() && !cur)
@@ -1307,6 +1308,8 @@ uint8 Player::GetChatTag() const
         tag |= CHAT_TAG_DND;
     if (isAFK())
         tag |= CHAT_TAG_AFK;
+    if (IsCommentator())
+        tag |= CHAT_TAG_COM;
     if (IsDeveloper())
         tag |= CHAT_TAG_DEV;
 
@@ -1359,6 +1362,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
     // lfm map without expansion check 
     // client without expansion support
+<<<<<<< HEAD
     //if (GetSession()->Expansion() < mEntry->Expansion())
     //{
     //    LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
@@ -1381,6 +1385,24 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     //    LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
     //}
     LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
+=======
+    if (GetSession()->Expansion() < mEntry->Expansion())
+    {
+        LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
+
+        if (GetTransport())
+        {
+            m_transport->RemovePassenger(this, true);
+            RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
+        }
+
+        SendTransferAborted(mapid, TRANSFER_ABORT_INSUF_EXPAN_LVL, mEntry->Expansion());
+
+        return false;                                       // normal client can't teleport to this map...
+    }
+    else
+        LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     // xinef: do this here in case teleport failed in above checks
     if (!(options & TELE_TO_NOT_LEAVE_TAXI) && IsInFlight())
@@ -1413,10 +1435,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
         else
         {
-            m_transport->RemovePassenger(this);
-            m_transport = nullptr;
-            m_movementInfo.transport.Reset();
-            m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+            m_transport->RemovePassenger(this, true);
         }
     }
 
@@ -4424,7 +4443,7 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
     if (GetSession()->IsARecruiter() || (GetSession()->GetRecruiterId() != 0))
         SetDynamicFlag(UNIT_DYNFLAG_REFER_A_FRIEND);
 
-    setDeathState(ALIVE);
+    setDeathState(DeathState::Alive);
     SetMovement(MOVE_LAND_WALK);
     SetMovement(MOVE_UNROOT);
     SetWaterWalking(false);
@@ -4491,7 +4510,7 @@ void Player::KillPlayer()
 
     StopMirrorTimers();                                     //disable timers(bars)
 
-    setDeathState(CORPSE);
+    setDeathState(DeathState::Corpse);
     //SetUnitFlag(UNIT_FLAG_NOT_IN_PVP);
 
     ReplaceAllDynamicFlags(UNIT_DYNFLAG_NONE);
@@ -4675,7 +4694,7 @@ void Player::DurabilityLossAll(double percent, bool inventory)
 
 void Player::DurabilityLoss(Item* item, double percent)
 {
-    if(!item)
+    if(!item || percent == 0.0)
         return;
 
     uint32 pMaxDurability = item ->GetUInt32Value(ITEM_FIELD_MAXDURABILITY);
@@ -5603,14 +5622,11 @@ void Player::SaveRecallPosition()
     m_recallO = GetOrientation();
 }
 
-void Player::SendMessageToSetInRange(WorldPacket const* data, float dist, bool self, bool includeMargin, Player const* skipped_rcvr) const
+void Player::SendMessageToSetInRange(WorldPacket const* data, float dist, bool self, Player const* skipped_rcvr) const
 {
     if (self)
         GetSession()->SendPacket(data);
 
-    dist += GetObjectSize();
-    if (includeMargin)
-        dist += VISIBILITY_COMPENSATION; // pussywizard: to ensure everyone receives all important packets
     Acore::MessageDistDeliverer notifier(this, data, dist, false, skipped_rcvr);
     Cell::VisitWorldObjects(this, notifier, dist);
 }
@@ -7249,6 +7265,9 @@ void Player::CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 
                     continue;
             }
 
+            if (entry && (entry->attributeMask & ENCHANT_PROC_ATTR_WHITE_HIT) && (procVictim & SPELL_PROC_FLAG_MASK))
+                continue;
+
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(pEnchant->spellid[s]);
             if (!spellInfo)
             {
@@ -7297,10 +7316,8 @@ void Player::CastItemCombatSpell(Unit* target, WeaponAttackType attType, uint32 
                         item->SetEnchantmentCharges(EnchantmentSlot(e_slot), charges);
                 }
 
-                if (spellInfo->IsPositive())
-                    CastSpell(this, spellInfo, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD), item);
-                else
-                    CastSpell(target, spellInfo, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD), item);
+                Unit* unitTarget = spellInfo->IsPositive() ? this : target;
+                CastSpell(unitTarget, spellInfo, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_IGNORE_SPELL_AND_CATEGORY_CD), item);
             }
         }
     }
@@ -8065,6 +8082,12 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
     // need know merged fishing/corpse loot type for achievements
     loot->loot_type = loot_type;
+
+    if (!sScriptMgr->OnAllowedToLootContainerCheck(this, guid))
+    {
+        SendLootError(guid, LOOT_ERROR_DIDNT_KILL);
+        return;
+    }
 
     if (permission != NONE_PERMISSION)
     {
@@ -9045,20 +9068,6 @@ void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
     else
     {
         pet->CombatStop();
-
-        if (returnreagent)
-        {
-            switch (pet->GetEntry())
-            {
-                //warlock pets except imp are removed(?) when logging out
-                case 1860:
-                case 1863:
-                case 417:
-                case 17252:
-                    mode = PET_SAVE_NOT_IN_SLOT;
-                    break;
-            }
-        }
 
         // only if current pet in slot
         pet->SavePetToDB(mode);
@@ -11351,7 +11360,7 @@ WorldLocation Player::GetStartPosition() const
     return WorldLocation(mapId, info->positionX, info->positionY, info->positionZ, 0);
 }
 
-bool Player::HaveAtClient(WorldObject const* u) const
+bool Player::HaveAtClient(Object const* u) const
 {
     if (u == this)
     {
@@ -13159,14 +13168,11 @@ void Player::SetViewpoint(WorldObject* target, bool apply)
         UpdateVisibilityOf(target);
 
         if (target->isType(TYPEMASK_UNIT) && !GetVehicle())
-            ((Unit*)target)->AddPlayerToVision(this);
+            static_cast<Unit*>(target)->AddPlayerToVision(this);
         SetSeer(target);
     }
     else
     {
-        //must immediately set seer back otherwise may crash
-        m_seer = this;
-
         LOG_DEBUG("maps", "Player::CreateViewpoint: Player {} remove seer", GetName());
 
         if (!RemoveGuidValue(PLAYER_FARSIGHT, target->GetGUID()))
@@ -13339,6 +13345,8 @@ void Player::SetTitle(CharTitlesEntry const* title, bool lost)
     data << uint32(title->bit_index);
     data << uint32(lost ? 0 : 1);                           // 1 - earned, 0 - lost
     GetSession()->SendPacket(&data);
+
+    UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_OWN_RANK);
 }
 
 uint32 Player::GetRuneBaseCooldown(uint8 index, bool skipGrace)
@@ -13615,8 +13623,13 @@ uint32 Player::CalculateTalentsPoints() const
     return uint32(talentPointsForLevel * sWorld->getRate(RATE_TALENT));
 }
 
-bool Player::canFlyInZone(uint32 mapid, uint32 zone, SpellInfo const* bySpell) const
+bool Player::canFlyInZone(uint32 mapid, uint32 zone, SpellInfo const* bySpell)
 {
+    if (!sScriptMgr->OnCanPlayerFlyInZone(this, mapid,zone,bySpell))
+    {
+        return false;
+    }
+
     // continent checked in SpellInfo::CheckLocation at cast and area update
     uint32 v_map = GetVirtualMapForMapAndZone(mapid, zone);
     if (v_map == 571 && !bySpell->HasAttribute(SPELL_ATTR7_IGNORES_COLD_WEATHER_FLYING_REQUIREMENT))

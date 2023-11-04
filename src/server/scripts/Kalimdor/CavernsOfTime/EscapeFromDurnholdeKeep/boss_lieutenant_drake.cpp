@@ -67,6 +67,7 @@ struct boss_lieutenant_drake : public BossAI
         _JustEngagedWith();
         Talk(SAY_AGGRO);
         scheduler.Schedule(4s, [this](TaskContext context)
+<<<<<<< HEAD
         {
             DoCastSelf(SPELL_WHIRLWIND);
             context.Repeat(25s);
@@ -117,6 +118,54 @@ struct boss_lieutenant_drake : public BossAI
             instance->SetData(DATA_ESCORT_PROGRESS, ENCOUNTER_PROGRESS_DRAKE_KILLED);
         }
     }
+=======
+        {
+            DoCastSelf(SPELL_WHIRLWIND);
+            context.Repeat(25s);
+        }).Schedule(14s, [this](TaskContext context)
+        {
+            if (roll_chance_i(40))
+            {
+                Talk(SAY_SHOUT);
+            }
+            DoCastSelf(SPELL_FRIGHTENING_SHOUT);
+            context.Repeat(25s);
+        }).Schedule(9s, [this](TaskContext context)
+        {
+            if (roll_chance_i(40))
+            {
+                Talk(SAY_MORTAL);
+            }
+            DoCastVictim(SPELL_MORTAL_STRIKE);
+            context.Repeat(10s);
+        }).Schedule(18s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_HAMSTRING);
+            context.Repeat(25s);
+        }).Schedule(1s, [this](TaskContext context)
+        {
+            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 40.0f))
+            {
+                DoCast(target, SPELL_EXPLODING_SHOT);
+            }
+            context.Repeat(25s);
+        });
+    }
+
+    void KilledUnit(Unit* victim) override
+    {
+        if (victim->GetTypeId() == TYPEID_PLAYER)
+        {
+            Talk(SAY_SLAY);
+        }
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        _JustDied();
+        Talk(SAY_DEATH);
+    }
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     void MovementInform(uint32 type, uint32 point) override
     {

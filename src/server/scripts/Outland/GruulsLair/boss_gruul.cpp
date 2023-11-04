@@ -87,11 +87,19 @@ struct boss_gruul : public BossAI
                 _caveInTimer = _caveInTimer - 1500ms;
             }
             context.Repeat(_caveInTimer);
+<<<<<<< HEAD
         }).Schedule(20s, [this](TaskContext context)
         {
             DoCastSelf(SPELL_REVERBERATION);
             context.Repeat(22s);
         }).Schedule(10s, [this](TaskContext context)
+=======
+        }).Schedule(39900ms, 55700ms, [this](TaskContext context)
+        {
+            DoCastSelf(SPELL_REVERBERATION);
+            context.Repeat(39900ms, 55700ms);
+        }).Schedule(5600ms, [this](TaskContext context)
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         {
             if (Unit* target = SelectTarget(SelectTargetMethod::MaxThreat, 1, 5.0f))
             {
@@ -101,7 +109,11 @@ struct boss_gruul : public BossAI
             {
                 DoCastVictim(SPELL_HURTFUL_STRIKE);
             }
+<<<<<<< HEAD
             context.Repeat(15s);
+=======
+            context.Repeat(8400ms);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         }).Schedule(35s, [this](TaskContext context)
         {
             Talk(SAY_SLAM);
