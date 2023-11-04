@@ -432,6 +432,7 @@ public:
 /*######
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## npc_rotting_forest_rager
 ######*/
 
@@ -464,6 +465,8 @@ public:
 };
 
 /*######
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -740,7 +743,10 @@ void AddSC_terokkar_forest()
     new npc_unkor_the_ruthless();
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     new npc_rotting_forest_rager();
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======

@@ -89,6 +89,7 @@ struct boss_gruul : public BossAI
             context.Repeat(_caveInTimer);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         }).Schedule(20s, [this](TaskContext context)
         {
             DoCastSelf(SPELL_REVERBERATION);
@@ -97,12 +98,17 @@ struct boss_gruul : public BossAI
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         }).Schedule(39900ms, 55700ms, [this](TaskContext context)
         {
             DoCastSelf(SPELL_REVERBERATION);
             context.Repeat(39900ms, 55700ms);
         }).Schedule(5600ms, [this](TaskContext context)
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -117,7 +123,11 @@ struct boss_gruul : public BossAI
             }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             context.Repeat(15s);
+=======
+            context.Repeat(8400ms);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             context.Repeat(8400ms);
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

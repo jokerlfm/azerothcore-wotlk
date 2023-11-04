@@ -57,6 +57,7 @@ struct boss_lieutenant_drake : public BossAI
         me->GetMotionMaster()->MovePath(pathId, false);
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     void Reset() override
     {
@@ -135,6 +136,20 @@ struct boss_lieutenant_drake : public BossAI
         scheduler.Schedule(4s, [this](TaskContext context)
         {
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+
+    void Reset() override
+    {
+        _Reset();
+    }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _JustEngagedWith();
+        Talk(SAY_AGGRO);
+        scheduler.Schedule(4s, [this](TaskContext context)
+        {
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             DoCastSelf(SPELL_WHIRLWIND);
             context.Repeat(25s);
         }).Schedule(14s, [this](TaskContext context)
@@ -166,6 +181,7 @@ struct boss_lieutenant_drake : public BossAI
             context.Repeat(25s);
         });
     }
+<<<<<<< HEAD
 
     void KilledUnit(Unit* victim) override
     {
@@ -175,12 +191,26 @@ struct boss_lieutenant_drake : public BossAI
         }
     }
 
+=======
+
+    void KilledUnit(Unit* victim) override
+    {
+        if (victim->GetTypeId() == TYPEID_PLAYER)
+        {
+            Talk(SAY_SLAY);
+        }
+    }
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     void JustDied(Unit* /*killer*/) override
     {
         _JustDied();
         Talk(SAY_DEATH);
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -198,11 +228,19 @@ struct boss_lieutenant_drake : public BossAI
             {
                 case 7:
                     Talk(SAY_ENTER);
+<<<<<<< HEAD
                     break;
                 case 10:
                     pathId = (me->GetEntry() * 10) + 1;
                     runSecondPath = true;
                     break;
+=======
+                    break;
+                case 10:
+                    pathId = (me->GetEntry() * 10) + 1;
+                    runSecondPath = true;
+                    break;
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 default:
                     break;
             }

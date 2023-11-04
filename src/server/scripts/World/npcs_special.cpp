@@ -1008,7 +1008,11 @@ public:
                                     if (Creature* patient = ObjectAccessor::GetCreature(*me, guid))
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                                         patient->setDeathState(JUST_DIED);
+=======
+                                        patient->setDeathState(DeathState::JustDied);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
                                         patient->setDeathState(DeathState::JustDied);
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -2043,6 +2047,7 @@ public:
     {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if (!player->HasPlayerFlag(PLAYER_FLAGS_NO_XP_GAIN))
         {
             AddGossipItemFor(player, GOSSIP_MENU_EXP_NPC, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1); // "I no longer wish to gain experience."
@@ -2051,6 +2056,8 @@ public:
         {
             AddGossipItemFor(player, GOSSIP_MENU_EXP_NPC, 1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2); // "I wish to start gaining experience again."
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         auto toggleXpCost = sWorld->getIntConfig(CONFIG_TOGGLE_XP_COST);
@@ -2063,6 +2070,9 @@ public:
         {
             AddGossipItemFor(player, GOSSIP_MENU_EXP_NPC, 1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2, toggleXpCost); // "I wish to start gaining experience again."
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -2683,6 +2693,7 @@ public:
     }
 };
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 // lfm worm
@@ -3443,6 +3454,8 @@ public:
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 struct npc_crashin_thrashin_robot : public ScriptedAI
 {
 public:
@@ -3481,6 +3494,9 @@ struct npc_controller : public PossessedAI
         }
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

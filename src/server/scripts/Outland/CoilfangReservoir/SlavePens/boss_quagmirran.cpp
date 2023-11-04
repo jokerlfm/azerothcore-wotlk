@@ -25,8 +25,12 @@ enum Spells
     SPELL_CLEAVE                = 40504,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     SPELL_POISON_BOLT_VOLLEY_N  = 34780,
     SPELL_POISON_BOLT_VOLLEY_H  = 39340,
+=======
+    SPELL_POISON_BOLT_VOLLEY    = 34780,
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
     SPELL_POISON_BOLT_VOLLEY    = 34780,
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -48,11 +52,14 @@ struct boss_quagmirran : public BossAI
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     void Reset() override
     {
         _Reset();
     }
 
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -73,6 +80,7 @@ struct boss_quagmirran : public BossAI
         {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             DoCastVictim(SPELL_ACID_SPRAY);
             context.Repeat(25s);
         }).Schedule(31800ms, [this](TaskContext context)
@@ -81,12 +89,17 @@ struct boss_quagmirran : public BossAI
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             DoCastRandomTarget(SPELL_ACID_SPRAY);
             context.Repeat(25s);
         }).Schedule(31800ms, [this](TaskContext context)
         {
             DoCastAOE(SPELL_POISON_BOLT_VOLLEY);
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -100,7 +113,11 @@ void AddSC_boss_quagmirran()
     RegisterTheSlavePensCreatureAI(boss_quagmirran);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 }
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

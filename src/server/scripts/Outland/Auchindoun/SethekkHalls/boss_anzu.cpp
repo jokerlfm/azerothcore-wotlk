@@ -37,6 +37,7 @@ enum Spells
     SPELL_SHADOWFORM            = 40973
 };
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 enum Npc
 {
@@ -57,6 +58,9 @@ enum Spirits
 
 =======
 
+=======
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 enum Npc
 {
     NPC_BROOD_OF_ANZU           = 23132,
@@ -71,6 +75,9 @@ enum Spirits
     SPELL_FALCON                = 40241,
     SPELL_EAGLE                 = 40240,
 
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     SPELL_DURATION              = 40250,
 
@@ -81,6 +88,9 @@ enum Spirits
 
     MAX_DRUID_SPELLS            = 27
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -125,6 +135,7 @@ struct boss_anzu : public BossAI
     {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         summons.Despawn(summon);
         summons.RemoveNotExisting();
         if (summons.empty())
@@ -135,6 +146,8 @@ struct boss_anzu : public BossAI
 
     void Reset() override
     {
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -151,6 +164,10 @@ struct boss_anzu : public BossAI
         _JustEngagedWith();
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        SummonSpirits();
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
         SummonSpirits();
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -191,7 +208,10 @@ struct boss_anzu : public BossAI
         }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     }
@@ -202,6 +222,9 @@ struct boss_anzu : public BossAI
         me->SummonCreature(NPC_FALCON_SPIRIT, AnzuSpiritPos[1], TEMPSUMMON_MANUAL_DESPAWN);
         me->SummonCreature(NPC_EAGLE_SPIRIT, AnzuSpiritPos[2], TEMPSUMMON_MANUAL_DESPAWN);
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -238,7 +261,10 @@ struct boss_anzu : public BossAI
         DoMeleeAttackIfReady();
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     }
@@ -283,11 +309,15 @@ struct npc_anzu_spirit : public ScriptedAI
                 task.Repeat(2400ms);
             });
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     }
 
     void Reset() override
     {
         _scheduler.CancelAll();
+<<<<<<< HEAD
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     }
 
@@ -297,6 +327,10 @@ struct npc_anzu_spirit : public ScriptedAI
     void Reset() override
     {
         _scheduler.CancelAll();
+    }
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
     }
 
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

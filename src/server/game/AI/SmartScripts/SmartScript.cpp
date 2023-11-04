@@ -654,11 +654,14 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
                               me->GetGUID().ToString(), e.action.cast.spell, target->GetGUID().ToString(), e.action.cast.castFlags);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 }
                 else
                 {
                     LOG_DEBUG("scripts.ai", "Spell {} not cast because it has flag SMARTCAST_AURA_NOT_PRESENT and the target {} already has the aura",
                               e.action.cast.spell, target->GetGUID().ToString());
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -2894,7 +2897,10 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
         }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         case SMART_ACTION_PLAY_SPELL_VISUAL:
@@ -3046,6 +3052,9 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
             break;
         }
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -4402,6 +4411,7 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
             GetWorldObjectsInDist(targets, static_cast<float>(e.event.nearPlayerNegation.radius));
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
             if (!targets.empty())
             {
@@ -4499,11 +4509,37 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
 
             if (!targets.empty())
             {
+=======
+
+            if (!targets.empty())
+            {
+                for (WorldObject* target : targets)
+                {
+                    if (IsPlayer(target))
+                        playerCount++;
+                }
+
+                if (playerCount < e.event.nearPlayerNegation.maxCount)
+                    ProcessAction(e, unit);
+            }
+            RecalcTimer(e, e.event.nearPlayerNegation.repeatMin, e.event.nearPlayerNegation.repeatMax);
+            break;
+        }
+        case SMART_EVENT_NEAR_UNIT:
+        {
+            uint32 unitCount = 0;
+            ObjectVector targets;
+            GetWorldObjectsInDist(targets, static_cast<float>(e.event.nearUnit.range));
+
+            if (!targets.empty())
+            {
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 if (e.event.nearUnit.type)
                 {
                     for (WorldObject* target : targets)
                     {
                         if (IsGameObject(target) && target->GetEntry() == e.event.nearUnit.entry)
+<<<<<<< HEAD
 =======
         case SMART_EVENT_NEAR_UNIT_NEGATION:
         {
@@ -4519,6 +4555,8 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
                     {
                         if (IsGameObject(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                             unitCount++;
                     }
                 }
@@ -4527,15 +4565,22 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
                     for (WorldObject* target : targets)
                     {
 <<<<<<< HEAD
+<<<<<<< HEAD
                         if (IsCreature(target) && target->GetEntry() == e.event.nearUnit.entry)
 =======
                         if (IsCreature(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+                        if (IsCreature(target) && target->GetEntry() == e.event.nearUnit.entry)
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                             unitCount++;
                     }
                 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 if (unitCount >= e.event.nearUnit.count)
                     ProcessAction(e, unit);
             }
@@ -4570,10 +4615,13 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
                 if (unitCount < e.event.nearUnitNegation.count)
                     ProcessAction(e, unit);
             }
+<<<<<<< HEAD
 =======
                 if (unitCount < e.event.nearUnitNegation.count)
                     ProcessAction(e, unit);
             }
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             RecalcTimer(e, e.event.nearUnitNegation.timer, e.event.nearUnitNegation.timer);
             break;
@@ -4608,6 +4656,9 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
         }
         case SMART_EVENT_AREA_RANGE:
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -4617,7 +4668,10 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             float range = static_cast<float>(e.event.areaCasting.range);
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -4627,6 +4681,7 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
             {
                 if (Unit* target = ObjectAccessor::GetUnit(*me, (*i)->getUnitGuid()))
                 {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
                     if (e.event.areaCasting.range && !me->IsWithinDistInMap(target, range))
@@ -4645,12 +4700,17 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                     if (!(me->IsInRange(target, (float)e.event.minMaxRepeat.rangeMin, (float)e.event.minMaxRepeat.rangeMax)))
                         continue;
 
                     ProcessAction(e, target);
                     RecalcTimer(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax);
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -4661,7 +4721,11 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
             // If no targets are found and it's off cooldown, check again
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             RecalcTimer(e, e.event.areaCasting.checkTimer, e.event.areaCasting.checkTimer);
+=======
+            RecalcTimer(e, 1200, 1200);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             RecalcTimer(e, 1200, 1200);
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -4702,11 +4766,17 @@ void SmartScript::InitTimer(SmartScriptHolder& e)
         case SMART_EVENT_NEAR_UNIT:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
             break;
         case SMART_EVENT_AREA_CASTING:
             RecalcTimer(e, e.event.areaCasting.repeatMin, e.event.areaCasting.repeatMax);
             break;
+=======
+        case SMART_EVENT_NEAR_UNIT_NEGATION:
+            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
+            break;
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
         case SMART_EVENT_NEAR_UNIT_NEGATION:
             RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
@@ -4773,6 +4843,10 @@ void SmartScript::UpdateTimer(SmartScriptHolder& e, uint32 const diff)
             case SMART_EVENT_NEAR_UNIT:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+            case SMART_EVENT_NEAR_UNIT_NEGATION:
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             case SMART_EVENT_NEAR_UNIT_NEGATION:
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

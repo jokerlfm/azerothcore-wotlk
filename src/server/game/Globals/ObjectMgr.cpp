@@ -776,6 +776,9 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -2962,6 +2965,7 @@ void ObjectMgr::LoadItemTemplates()
                     itemTemplate.SoundOverrideSubclass = dbcitem->SoundOverrideSubclassID;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             }
             if (itemTemplate.Material != dbcitem->Material)
             {
@@ -2970,11 +2974,16 @@ void ObjectMgr::LoadItemTemplates()
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 }
                 if (itemTemplate.Material != dbcitem->Material)
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct material ({}), must be {}.", entry, itemTemplate.Material, dbcitem->Material);
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -2986,6 +2995,7 @@ void ObjectMgr::LoadItemTemplates()
                     itemTemplate.InventoryType = dbcitem->InventoryType;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             }
             if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
             {
@@ -2994,11 +3004,16 @@ void ObjectMgr::LoadItemTemplates()
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 }
                 if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct display id ({}), must be {}.", entry, itemTemplate.DisplayInfoID, dbcitem->DisplayInfoID);
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

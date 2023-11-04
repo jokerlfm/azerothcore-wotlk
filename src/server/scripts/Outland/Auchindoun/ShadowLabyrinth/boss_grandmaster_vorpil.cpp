@@ -40,10 +40,17 @@ enum Spells
     SPELL_SACRIFICE             = 33587,
     SPELL_SHADOW_NOVA           = 33846,
     SPELL_EMPOWERING_SHADOWS    = 33783,
+<<<<<<< HEAD
 
     SPELL_VOID_PORTAL_VISUAL    = 33569
 };
 
+=======
+
+    SPELL_VOID_PORTAL_VISUAL    = 33569
+};
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 enum Npc
 {
     NPC_VOID_TRAVELER           = 19226,
@@ -202,6 +209,11 @@ struct npc_voidtraveler : public ScriptedAI
     {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        me->SetReactState(REACT_PASSIVE);
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
         me->SetReactState(REACT_PASSIVE);
 
