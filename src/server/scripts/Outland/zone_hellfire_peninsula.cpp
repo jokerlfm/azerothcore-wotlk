@@ -397,7 +397,10 @@ public:
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 enum Aledis
 {
     SAY_CHALLENGE = 0,
@@ -505,6 +508,9 @@ private:
     ObjectGuid _playerGUID;
 };
 
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 enum Beacon
 {
@@ -574,6 +580,11 @@ void AddSC_hellfire_peninsula()
     new npc_fel_guard_hound();
     new go_beacon();
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+    RegisterCreatureAI(npc_magister_aledis);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 
     RegisterCreatureAI(npc_magister_aledis);

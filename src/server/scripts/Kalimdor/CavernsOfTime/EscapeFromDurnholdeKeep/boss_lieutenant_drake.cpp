@@ -56,6 +56,7 @@ struct boss_lieutenant_drake : public BossAI
         pathId = me->GetEntry() * 10;
         me->GetMotionMaster()->MovePath(pathId, false);
     }
+<<<<<<< HEAD
 
     void Reset() override
     {
@@ -120,6 +121,20 @@ struct boss_lieutenant_drake : public BossAI
     }
 =======
         {
+=======
+
+    void Reset() override
+    {
+        _Reset();
+    }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _JustEngagedWith();
+        Talk(SAY_AGGRO);
+        scheduler.Schedule(4s, [this](TaskContext context)
+        {
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             DoCastSelf(SPELL_WHIRLWIND);
             context.Repeat(25s);
         }).Schedule(14s, [this](TaskContext context)
@@ -165,6 +180,9 @@ struct boss_lieutenant_drake : public BossAI
         _JustDied();
         Talk(SAY_DEATH);
     }
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     void MovementInform(uint32 type, uint32 point) override

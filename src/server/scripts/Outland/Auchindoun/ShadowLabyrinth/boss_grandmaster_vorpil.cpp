@@ -201,6 +201,11 @@ struct npc_voidtraveler : public ScriptedAI
     void Reset() override
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        me->SetReactState(REACT_PASSIVE);
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
         me->SetReactState(REACT_PASSIVE);
 

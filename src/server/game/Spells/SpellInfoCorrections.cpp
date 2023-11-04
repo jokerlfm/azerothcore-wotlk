@@ -4512,13 +4512,19 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
      // Silence
     ApplySpellFix({ 18278 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx4 |= SPELL_ATTR4_NOT_IN_ARENA_OR_RATED_BATTLEGROUND;
     });
 
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     // Absorb Life
     ApplySpellFix({ 34239 }, [](SpellInfo* spellInfo)
@@ -4552,7 +4558,10 @@ void SpellMgr::LoadSpellInfoCorrections()
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     // Mulgore Hatchling (periodic)
     ApplySpellFix({ 62586 }, [](SpellInfo* spellInfo)
     {
@@ -4607,6 +4616,9 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_1].SpellClassMask[0] = 6;
     });
 
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)
     {

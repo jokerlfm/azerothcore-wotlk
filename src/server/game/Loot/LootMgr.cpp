@@ -1739,7 +1739,13 @@ void LootTemplate::Process(Loot& loot, LootStore const& store, uint16 lootMode, 
             if (isTopLevel)
             {
 <<<<<<< HEAD
+<<<<<<< HEAD
                 group->Process(loot, player, store, lootMode, sWorld->getRate(RATE_DROP_ITEM_GROUP_AMOUNT));
+=======
+                uint32 groupAmount = sWorld->getRate(RATE_DROP_ITEM_GROUP_AMOUNT);
+                sScriptMgr->OnAfterCalculateLootGroupAmount(player, loot, lootMode, groupAmount, store);
+                group->Process(loot, player, store, lootMode, groupAmount);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
                 uint32 groupAmount = sWorld->getRate(RATE_DROP_ITEM_GROUP_AMOUNT);
                 sScriptMgr->OnAfterCalculateLootGroupAmount(player, loot, lootMode, groupAmount, store);

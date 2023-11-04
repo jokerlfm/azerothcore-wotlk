@@ -775,6 +775,9 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
         sScriptMgr->OnAfterDatabaseLoadCreatureTemplates(_creatureTemplateStoreFast);
     }
 
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 }
 
@@ -2958,16 +2961,22 @@ void ObjectMgr::LoadItemTemplates()
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct SoundOverrideSubclass ({}), must be {}.", entry, itemTemplate.SoundOverrideSubclass, dbcitem->SoundOverrideSubclassID);
                     itemTemplate.SoundOverrideSubclass = dbcitem->SoundOverrideSubclassID;
 <<<<<<< HEAD
+<<<<<<< HEAD
             }
             if (itemTemplate.Material != dbcitem->Material)
             {
                 LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct material ({}), must be {}.", entry, itemTemplate.Material, dbcitem->Material);
                 if (enforceDBCAttributes)
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 }
                 if (itemTemplate.Material != dbcitem->Material)
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct material ({}), must be {}.", entry, itemTemplate.Material, dbcitem->Material);
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                     itemTemplate.Material = dbcitem->Material;
                 }
@@ -2976,16 +2985,22 @@ void ObjectMgr::LoadItemTemplates()
                     LOG_ERROR("sql.sql", "Item (Entry: {}) has wrong InventoryType value ({}), must be {}.", entry, itemTemplate.InventoryType, dbcitem->InventoryType);
                     itemTemplate.InventoryType = dbcitem->InventoryType;
 <<<<<<< HEAD
+<<<<<<< HEAD
             }
             if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
             {
                 LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct display id ({}), must be {}.", entry, itemTemplate.DisplayInfoID, dbcitem->DisplayInfoID);
                 if (enforceDBCAttributes)
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 }
                 if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct display id ({}), must be {}.", entry, itemTemplate.DisplayInfoID, dbcitem->DisplayInfoID);
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                     itemTemplate.DisplayInfoID = dbcitem->DisplayInfoID;
                 }

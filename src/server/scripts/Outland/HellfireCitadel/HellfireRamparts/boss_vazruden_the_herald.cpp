@@ -67,7 +67,11 @@ struct boss_vazruden_the_herald : public BossAI
     void Reset() override
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
         BossAI::Reset();
+=======
+        _Reset();
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
         _Reset();
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -258,6 +262,10 @@ struct boss_vazruden : public ScriptedAI
     void Reset() override
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        _scheduler.CancelAll();
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
         _scheduler.CancelAll();
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

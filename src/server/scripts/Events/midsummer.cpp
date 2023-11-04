@@ -48,7 +48,10 @@ public:
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 enum torchToss
 {
     GO_TORCH_TARGET_BRAZIER         = 187708,
