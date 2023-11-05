@@ -396,17 +396,6 @@ public:
     }
 };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 enum Aledis
 {
     SAY_CHALLENGE = 0,
@@ -514,16 +503,6 @@ private:
     ObjectGuid _playerGUID;
 };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 enum Beacon
 {
     NPC_STONESCHYE_WHELP        = 16927,
@@ -591,24 +570,6 @@ void AddSC_hellfire_peninsula()
     new npc_wounded_blood_elf();
     new npc_fel_guard_hound();
     new go_beacon();
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 
     RegisterCreatureAI(npc_magister_aledis);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-
-    RegisterCreatureAI(npc_magister_aledis);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-
-    RegisterCreatureAI(npc_magister_aledis);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-
-    RegisterCreatureAI(npc_magister_aledis);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 }

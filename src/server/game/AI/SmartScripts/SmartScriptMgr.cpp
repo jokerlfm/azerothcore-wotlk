@@ -290,24 +290,18 @@ void SmartAIMgr::LoadSmartAIFromDB()
             case SMART_EVENT_AREA_RANGE:
             case SMART_EVENT_AREA_CASTING:
             case SMART_EVENT_IS_BEHIND_TARGET:
-                if (temp.event.minMaxRepeat.repeatMin == 0 && temp.event.minMaxRepeat.repeatMax == 0)
-                    temp.event.event_flags |= SMART_EVENT_FLAG_NOT_REPEATABLE;
-                break;
 <<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
+            case SMART_EVENT_AREA_RANGE:
+            case SMART_EVENT_AREA_CASTING:
 <<<<<<< HEAD
             case SMART_EVENT_AREA_CASTING:
                 if (temp.event.areaCasting.repeatMin == 0 && temp.event.areaCasting.repeatMax == 0)
-                    temp.event.event_flags |= SMART_EVENT_FLAG_NOT_REPEATABLE;
-                break;
 =======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+                if (temp.event.minMaxRepeat.repeatMin == 0 && temp.event.minMaxRepeat.repeatMax == 0)
             case SMART_EVENT_VICTIM_CASTING:
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
             case SMART_EVENT_VICTIM_CASTING:
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
             case SMART_EVENT_VICTIM_CASTING:
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -609,9 +603,9 @@ bool SmartAIMgr::CheckUnusedEventParams(SmartScriptHolder const& e)
             case SMART_EVENT_NEAR_PLAYERS: return sizeof(SmartEvent::nearPlayer);
             case SMART_EVENT_NEAR_PLAYERS_NEGATION: return sizeof(SmartEvent::nearPlayerNegation);
             case SMART_EVENT_NEAR_UNIT: return sizeof(SmartEvent::nearUnit);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
+            case SMART_EVENT_NEAR_UNIT_NEGATION: return sizeof(SmartEvent::nearUnitNegation);
+            case SMART_EVENT_AREA_CASTING: return sizeof(SmartEvent::minMaxRepeat);
+            case SMART_EVENT_AREA_RANGE: return sizeof(SmartEvent::minMaxRepeat);
 <<<<<<< HEAD
             case SMART_EVENT_AREA_CASTING: return sizeof(SmartEvent::areaCasting);
 =======
@@ -827,9 +821,9 @@ bool SmartAIMgr::CheckUnusedActionParams(SmartScriptHolder const& e)
             case SMART_ACTION_DISABLE: return sizeof(SmartAction::disable);
             case SMART_ACTION_SET_SCALE: return sizeof(SmartAction::setScale);
             case SMART_ACTION_SUMMON_RADIAL: return sizeof(SmartAction::radialSummon);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
+            case SMART_ACTION_PLAY_SPELL_VISUAL: return sizeof(SmartAction::spellVisual);
+            case SMART_ACTION_FOLLOW_GROUP: return sizeof(SmartAction::followGroup);
+            case SMART_ACTION_SET_ORIENTATION_TARGET: return sizeof(SmartAction::orientationTarget);
 <<<<<<< HEAD
 =======
             case SMART_ACTION_PLAY_SPELL_VISUAL: return sizeof(SmartAction::spellVisual);
@@ -1046,7 +1040,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 if (!IsMinMaxValid(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax))
                     return false;
 
-=======
+                if (!IsMinMaxValid(e, e.event.minMaxRepeat.rangeMin, e.event.minMaxRepeat.rangeMax))
                     return false;
 
                 if (!IsMinMaxValid(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax))
@@ -1411,7 +1405,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
             case SMART_EVENT_GO_STATE_CHANGED:
             case SMART_EVENT_GO_EVENT_INFORM:
             case SMART_EVENT_NEAR_UNIT:
-<<<<<<< HEAD
+            case SMART_EVENT_NEAR_UNIT_NEGATION:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -2079,9 +2073,9 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
         case SMART_ACTION_DISABLE:
         case SMART_ACTION_SET_SCALE:
         case SMART_ACTION_SUMMON_RADIAL:
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
+        case SMART_ACTION_PLAY_SPELL_VISUAL:
+        case SMART_ACTION_FOLLOW_GROUP:
+        case SMART_ACTION_SET_ORIENTATION_TARGET:
 <<<<<<< HEAD
 =======
         case SMART_ACTION_PLAY_SPELL_VISUAL:

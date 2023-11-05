@@ -759,12 +759,12 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
     creatureTemplate.flags_extra = fields[69].Get<uint32>();
     creatureTemplate.ScriptID = GetScriptId(fields[70].Get<std::string>());
 
-    // lfm creature templates
-    if (creatureTemplate.GossipMenuId > 0)
+    // useful if the creature template load is being triggered from outside this class
+    if (triggerHook)
     {
-        creatureTemplate.npcflag |= NPCFlags::UNIT_NPC_FLAG_GOSSIP;
+        sScriptMgr->OnAfterDatabaseLoadCreatureTemplates(_creatureTemplateStoreFast);
     }
-    creatureTemplate.type_flags |= CreatureTypeFlags::CREATURE_TYPE_FLAG_FORCE_GOSSIP;
+
 =======
     creatureTemplate.flags_extra           = fields[69].Get<uint32>();
     creatureTemplate.ScriptID              = GetScriptId(fields[70].Get<std::string>());
@@ -2970,11 +2970,10 @@ void ObjectMgr::LoadItemTemplates()
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
-            }
-            if (itemTemplate.Material != dbcitem->Material)
-            {
-                LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct material ({}), must be {}.", entry, itemTemplate.Material, dbcitem->Material);
-                if (enforceDBCAttributes)
+                }
+                if (itemTemplate.Material != dbcitem->Material)
+                {
+                    LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct material ({}), must be {}.", entry, itemTemplate.Material, dbcitem->Material);
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -3006,11 +3005,10 @@ void ObjectMgr::LoadItemTemplates()
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
-            }
-            if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
-            {
-                LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct display id ({}), must be {}.", entry, itemTemplate.DisplayInfoID, dbcitem->DisplayInfoID);
-                if (enforceDBCAttributes)
+                }
+                if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
+                {
+                    LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct display id ({}), must be {}.", entry, itemTemplate.DisplayInfoID, dbcitem->DisplayInfoID);
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

@@ -85,23 +85,7 @@ struct boss_high_king_maulgar : public BossAI
                 context.Repeat(35s);
             }).Schedule(0ms, [this](TaskContext context)
             {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-                DoCastSelf(SPELL_ROAR);
-=======
                 DoCastVictim(SPELL_ROAR);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-                DoCastVictim(SPELL_ROAR);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-                DoCastVictim(SPELL_ROAR);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-                DoCastVictim(SPELL_ROAR);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 context.Repeat(20600ms, 29100ms);
             });
         });

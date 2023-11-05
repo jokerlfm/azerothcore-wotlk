@@ -2470,7 +2470,7 @@ public: /* PlayerScript */
     bool CanSendErrorAlreadyLooted(Player* player);
     void OnAfterCreatureLoot(Player* player);
     void OnAfterCreatureLootMoney(Player* player);
-<<<<<<< HEAD
+    bool OnCanPlayerFlyInZone(Player* player, uint32 mapId, uint32 zoneId, SpellInfo const* bySpell);
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD

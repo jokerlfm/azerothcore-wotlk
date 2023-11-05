@@ -39,7 +39,6 @@ enum Spells
     SPELL_MORTAL_STRIKE      = 31911,
     SPELL_FRIGHTENING_SHOUT  = 33789
 };
-<<<<<<< HEAD
 
 struct boss_lieutenant_drake : public BossAI
 {
@@ -57,8 +56,6 @@ struct boss_lieutenant_drake : public BossAI
         pathId = me->GetEntry() * 10;
         me->GetMotionMaster()->MovePath(pathId, false);
     }
-<<<<<<< HEAD
-<<<<<<< HEAD
 
     void Reset() override
     {
@@ -70,7 +67,6 @@ struct boss_lieutenant_drake : public BossAI
         _JustEngagedWith();
         Talk(SAY_AGGRO);
         scheduler.Schedule(4s, [this](TaskContext context)
-<<<<<<< HEAD
         {
             DoCastSelf(SPELL_WHIRLWIND);
             context.Repeat(25s);
@@ -116,150 +112,6 @@ struct boss_lieutenant_drake : public BossAI
     {
         _JustDied();
         Talk(SAY_DEATH);
-        if (InstanceScript* instance = me->GetInstanceScript())
-        {
-            instance->SetData(DATA_ESCORT_PROGRESS, ENCOUNTER_PROGRESS_DRAKE_KILLED);
-        }
-    }
-=======
-        {
-=======
-
-    void Reset() override
-    {
-        _Reset();
-    }
-
-    void JustEngagedWith(Unit* /*who*/) override
-    {
-        _JustEngagedWith();
-        Talk(SAY_AGGRO);
-        scheduler.Schedule(4s, [this](TaskContext context)
-        {
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-
-    void Reset() override
-    {
-        _Reset();
-    }
-
-=======
-
-struct boss_lieutenant_drake : public BossAI
-{
-    boss_lieutenant_drake(Creature* creature) : BossAI(creature, DATA_LIEUTENANT_DRAKE)
-    {
-        scheduler.SetValidator([this]
-        {
-            return !me->HasUnitState(UNIT_STATE_CASTING);
-        });
-    }
-
-    void InitializeAI() override
-    {
-        runSecondPath = false;
-        pathId = me->GetEntry() * 10;
-        me->GetMotionMaster()->MovePath(pathId, false);
-    }
-
-    void Reset() override
-    {
-        _Reset();
-    }
-
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-    void JustEngagedWith(Unit* /*who*/) override
-    {
-        _JustEngagedWith();
-        Talk(SAY_AGGRO);
-        scheduler.Schedule(4s, [this](TaskContext context)
-        {
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-            DoCastSelf(SPELL_WHIRLWIND);
-            context.Repeat(25s);
-        }).Schedule(14s, [this](TaskContext context)
-        {
-            if (roll_chance_i(40))
-            {
-                Talk(SAY_SHOUT);
-            }
-            DoCastSelf(SPELL_FRIGHTENING_SHOUT);
-            context.Repeat(25s);
-        }).Schedule(9s, [this](TaskContext context)
-        {
-            if (roll_chance_i(40))
-            {
-                Talk(SAY_MORTAL);
-            }
-            DoCastVictim(SPELL_MORTAL_STRIKE);
-            context.Repeat(10s);
-        }).Schedule(18s, [this](TaskContext context)
-        {
-            DoCastVictim(SPELL_HAMSTRING);
-            context.Repeat(25s);
-        }).Schedule(1s, [this](TaskContext context)
-        {
-            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 1, 40.0f))
-            {
-                DoCast(target, SPELL_EXPLODING_SHOT);
-            }
-            context.Repeat(25s);
-        });
-    }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-
-    void KilledUnit(Unit* victim) override
-    {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
-        {
-            Talk(SAY_SLAY);
-        }
-    }
-
-<<<<<<< HEAD
-=======
-
-    void KilledUnit(Unit* victim) override
-    {
-        if (victim->GetTypeId() == TYPEID_PLAYER)
-        {
-            Talk(SAY_SLAY);
-        }
-    }
-
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-    void JustDied(Unit* /*killer*/) override
-    {
-        _JustDied();
-        Talk(SAY_DEATH);
-    }
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-
-    void MovementInform(uint32 type, uint32 point) override
-    {
-        if (type != WAYPOINT_MOTION_TYPE)
-        {
-            return;
-        }
-
-=======
-    void JustDied(Unit* /*killer*/) override
-    {
-        _JustDied();
-        Talk(SAY_DEATH);
     }
 
     void MovementInform(uint32 type, uint32 point) override
@@ -269,32 +121,17 @@ struct boss_lieutenant_drake : public BossAI
             return;
         }
 
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         if (pathId == me->GetEntry() * 10)
         {
             switch (point)
             {
                 case 7:
                     Talk(SAY_ENTER);
-<<<<<<< HEAD
-<<<<<<< HEAD
                     break;
                 case 10:
                     pathId = (me->GetEntry() * 10) + 1;
                     runSecondPath = true;
                     break;
-=======
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                    break;
-                case 10:
-                    pathId = (me->GetEntry() * 10) + 1;
-                    runSecondPath = true;
-                    break;
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 default:
                     break;
             }

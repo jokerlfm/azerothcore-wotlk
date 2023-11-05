@@ -123,21 +123,21 @@ struct boss_malchezaar : public BossAI
             _phase = PHASE_THREE;
             clearweapons();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-            me->SummonCreature(NPC_MALCHEZARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
-=======
             me->SummonCreature(NPC_MALCHEZAARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            me->SummonCreature(NPC_MALCHEZAARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            me->SummonCreature(NPC_MALCHEZAARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
+
+            scheduler.Schedule(20s, 30s, [this](TaskContext context)
+            {
+                DoCastRandomTarget(SPELL_AMPLIFY_DAMAGE, 1);
+                context.Repeat();
+            }).Schedule(20s, [this](TaskContext context)
+            {
+                DoCastRandomTarget(SPELL_SHADOW_WORD_PAIN);
+                context.SetGroup(GROUP_SHADOW_WORD_PAIN);
+                context.Repeat();
+            });
+
+            scheduler.CancelGroup(GROUP_ENFEEBLE);
+        });
             me->SummonCreature(NPC_MALCHEZAARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
@@ -261,11 +261,10 @@ struct boss_malchezaar : public BossAI
         });
     }
 
+    void SpellHitTarget(Unit* target, SpellInfo const* spell) override
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
-<<<<<<< HEAD
-    void EnfeebleHealthEffect()
 =======
     void SpellHitTarget(Unit* target, SpellInfo const* spell) override
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

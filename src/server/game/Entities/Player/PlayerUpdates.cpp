@@ -417,14 +417,6 @@ void Player::Update(uint32 p_time)
 <<<<<<< HEAD
 <<<<<<< HEAD
 
-    if (!IsBeingTeleported() && bRequestForcedVisibilityUpdate)
-    {
-        bRequestForcedVisibilityUpdate = false;
-        UpdateObjectVisibility(true, true);
-        m_delayed_unit_relocation_timer = 0;
-        RemoveFromNotify(NOTIFY_VISIBILITY_CHANGED);
-    }
-
     // lfm auto fish
     if (fishingDelay > 0)
     {

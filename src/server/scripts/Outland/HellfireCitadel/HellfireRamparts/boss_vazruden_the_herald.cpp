@@ -66,23 +66,7 @@ struct boss_vazruden_the_herald : public BossAI
 
     void Reset() override
     {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-        BossAI::Reset();
-=======
         _Reset();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        _Reset();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        _Reset();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        _Reset();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         me->SetVisible(true);
         me->SetReactState(REACT_PASSIVE);
         me->SummonCreature(NPC_HELLFIRE_SENTRY, -1372.56f, 1724.31f, 82.967f, 5.3058f);
@@ -269,22 +253,7 @@ struct boss_vazruden : public ScriptedAI
 
     void Reset() override
     {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
         _scheduler.CancelAll();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        _scheduler.CancelAll();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        _scheduler.CancelAll();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        _scheduler.CancelAll();
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         _nazanCalled = false;
     }
 
