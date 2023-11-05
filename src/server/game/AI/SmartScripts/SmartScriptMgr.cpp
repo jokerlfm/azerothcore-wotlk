@@ -249,12 +249,15 @@ void SmartAIMgr::LoadSmartAIFromDB()
         temp.target.o = fields[29].Get<float>();
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
         // lfm smart target none will set to self
         if (temp.target.type == SMARTAI_TARGETS::SMART_TARGET_NONE)
         {
             temp.target.type = SMARTAI_TARGETS::SMART_TARGET_SELF;
         }
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -293,10 +296,14 @@ void SmartAIMgr::LoadSmartAIFromDB()
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             case SMART_EVENT_AREA_CASTING:
                 if (temp.event.areaCasting.repeatMin == 0 && temp.event.areaCasting.repeatMax == 0)
                     temp.event.event_flags |= SMART_EVENT_FLAG_NOT_REPEATABLE;
                 break;
+=======
+            case SMART_EVENT_VICTIM_CASTING:
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             case SMART_EVENT_VICTIM_CASTING:
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -605,7 +612,13 @@ bool SmartAIMgr::CheckUnusedEventParams(SmartScriptHolder const& e)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             case SMART_EVENT_AREA_CASTING: return sizeof(SmartEvent::areaCasting);
+=======
+            case SMART_EVENT_NEAR_UNIT_NEGATION: return sizeof(SmartEvent::nearUnitNegation);
+            case SMART_EVENT_AREA_CASTING: return sizeof(SmartEvent::minMaxRepeat);
+            case SMART_EVENT_AREA_RANGE: return sizeof(SmartEvent::minMaxRepeat);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             case SMART_EVENT_NEAR_UNIT_NEGATION: return sizeof(SmartEvent::nearUnitNegation);
             case SMART_EVENT_AREA_CASTING: return sizeof(SmartEvent::minMaxRepeat);
@@ -817,6 +830,12 @@ bool SmartAIMgr::CheckUnusedActionParams(SmartScriptHolder const& e)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+            case SMART_ACTION_PLAY_SPELL_VISUAL: return sizeof(SmartAction::spellVisual);
+            case SMART_ACTION_FOLLOW_GROUP: return sizeof(SmartAction::followGroup);
+            case SMART_ACTION_SET_ORIENTATION_TARGET: return sizeof(SmartAction::orientationTarget);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             case SMART_ACTION_PLAY_SPELL_VISUAL: return sizeof(SmartAction::spellVisual);
             case SMART_ACTION_FOLLOW_GROUP: return sizeof(SmartAction::followGroup);
@@ -1021,6 +1040,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 if (!IsMinMaxValid(e, e.event.minMaxRepeat.min, e.event.minMaxRepeat.max))
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                     return false;
 
                 if (!IsMinMaxValid(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax))
@@ -1036,6 +1056,16 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 if (!IsMinMaxValid(e, e.event.minMaxRepeat.rangeMin, e.event.minMaxRepeat.rangeMax))
                     return false;
 
+=======
+                    return false;
+
+                if (!IsMinMaxValid(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax))
+                    return false;
+
+                if (!IsMinMaxValid(e, e.event.minMaxRepeat.rangeMin, e.event.minMaxRepeat.rangeMax))
+                    return false;
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
                     return false;
 
@@ -1384,6 +1414,10 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+            case SMART_EVENT_NEAR_UNIT_NEGATION:
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             case SMART_EVENT_NEAR_UNIT_NEGATION:
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -2048,6 +2082,12 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        case SMART_ACTION_PLAY_SPELL_VISUAL:
+        case SMART_ACTION_FOLLOW_GROUP:
+        case SMART_ACTION_SET_ORIENTATION_TARGET:
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
         case SMART_ACTION_PLAY_SPELL_VISUAL:
         case SMART_ACTION_FOLLOW_GROUP:

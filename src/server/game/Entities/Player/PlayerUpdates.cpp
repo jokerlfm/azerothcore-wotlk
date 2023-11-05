@@ -415,6 +415,7 @@ void Player::Update(uint32 p_time)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     if (!IsBeingTeleported() && bRequestForcedVisibilityUpdate)
     {
@@ -446,6 +447,8 @@ void Player::Update(uint32 p_time)
             }
         }
     }
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======

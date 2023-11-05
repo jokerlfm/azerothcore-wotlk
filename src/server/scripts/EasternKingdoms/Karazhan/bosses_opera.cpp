@@ -129,6 +129,7 @@ void DespawnAll(InstanceScript* instance)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         boss_dorotheeAI(Creature* creature) : ScriptedAI(creature)
         {
             SetCombatMovement(false);
@@ -187,6 +188,28 @@ void DoActions(InstanceScript* instance)
     uint32 datas[4] = {DATA_DOROTHEE, DATA_ROAR, DATA_STRAWMAN, DATA_TINHEAD};
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
+=======
+        roar->DespawnOrUnsummon();
+    }
+    if (Creature* strawman = instance->GetCreature(DATA_STRAWMAN))
+    {
+        strawman->DespawnOrUnsummon();
+    }
+    if (Creature* tinhead = instance->GetCreature(DATA_TINHEAD))
+    {
+        tinhead->DespawnOrUnsummon();
+    }
+    if (Creature* tito = instance->GetCreature(DATA_TITO))
+    {
+        tito->DespawnOrUnsummon();
+    }
+}
+
+void DoActions(InstanceScript* instance)
+{
+    uint32 datas[4] = {DATA_DOROTHEE, DATA_ROAR, DATA_STRAWMAN, DATA_TINHEAD};
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     for (uint32 data : datas)
     {
         if (Creature* actionCreature = instance->GetCreature(data))
@@ -195,6 +218,7 @@ void DoActions(InstanceScript* instance)
         }
     }
 }
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 =======
@@ -231,6 +255,9 @@ void DoActions(InstanceScript* instance)
 =======
 
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 struct boss_dorothee : public ScriptedAI
 {
     boss_dorothee(Creature* creature) : ScriptedAI(creature)
@@ -238,6 +265,7 @@ struct boss_dorothee : public ScriptedAI
         SetCombatMovement(false);
         //this is kinda a big no-no. but it will prevent her from moving to chase targets. she should just cast her spells. in this case, since there is not really something to LOS her with or get out of range this would work. but a more elegant solution would be better
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -284,6 +312,19 @@ struct boss_dorothee : public ScriptedAI
     bool titoDied;
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
+=======
+        instance = creature->GetInstanceScript();
+
+        _scheduler.SetValidator([this]
+        {
+            return !me->HasUnitState(UNIT_STATE_CASTING);
+        });
+    }
+
+    InstanceScript* instance;
+    bool titoDied;
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     void DoAction(int32 action) override
     {
         if (action == ACTION_RELEASE)
@@ -307,6 +348,7 @@ struct boss_dorothee : public ScriptedAI
     {
         _scheduler.Schedule(1ms, [this](TaskContext context)
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -392,10 +434,30 @@ struct boss_dorothee : public ScriptedAI
     }
 
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+            DoCastRandomTarget(SPELL_WATERBOLT);
+            context.Repeat(1500ms);
+        }).Schedule(15s, [this](TaskContext context)
+        {
+            DoCastSelf(SPELL_SCREAM);
+            context.Repeat(30s);
+        }).Schedule(41s, [this](TaskContext)
+        {
+            SummonTito();
+        });
+    }
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+    }
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     void SummonTito()
     {
         if (Creature* pTito = me->SummonCreature(CREATURE_TITO, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 30000))
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
             if(!IntroDone)
@@ -457,12 +519,15 @@ struct boss_dorothee : public ScriptedAI
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             Talk(SAY_DOROTHEE_SUMMON);
             pTito->AI()->AttackStart(me->GetVictim());
             pTito->SetInCombatWithZone();
             titoDied = false;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -504,11 +569,26 @@ struct boss_dorothee : public ScriptedAI
 =======
     void SummonedCreatureDies(Creature* creature, Unit* /*killer*/) override
     {
+=======
+        }
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        Talk(SAY_DOROTHEE_DEATH);
+        SummonCroneIfReady(instance, me);
+        me->DespawnOrUnsummon();
+    }
+
+    void SummonedCreatureDies(Creature* creature, Unit* /*killer*/) override
+    {
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         if (creature->GetEntry() == NPC_TITO)
         {
             Talk(SAY_DOROTHEE_TITO_DEATH);
         }
     }
+<<<<<<< HEAD
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     void EnterEvadeMode(EvadeReason reason) override
@@ -518,6 +598,13 @@ struct boss_dorothee : public ScriptedAI
 <<<<<<< HEAD
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+
+    void EnterEvadeMode(EvadeReason reason) override
+    {
+        ScriptedAI::EnterEvadeMode(reason);
+
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         if (!me->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
         {
@@ -533,6 +620,7 @@ struct boss_dorothee : public ScriptedAI
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             if (DorotheeGUID)
             {
                 Creature* Dorothee = ObjectAccessor::GetCreature(*me, DorotheeGUID);
@@ -543,6 +631,9 @@ struct boss_dorothee : public ScriptedAI
                 }
             }
             me->DespawnOrUnsummon();
+=======
+            Talk(SAY_DOROTHEE_AGGRO);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             Talk(SAY_DOROTHEE_AGGRO);
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -575,6 +666,7 @@ struct npc_tito : public ScriptedAI
         instance = creature->GetInstanceScript();
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1319,6 +1411,153 @@ struct boss_strawman : public ScriptedAI
 
         if (!me->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
         {
+=======
+    InstanceScript* instance;
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _scheduler.Schedule(10s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_YIPPING);
+            context.Repeat(10s);
+        });
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        _scheduler.Update(diff);
+
+        DoMeleeAttackIfReady();
+    }
+private:
+    TaskScheduler _scheduler;
+};
+
+struct boss_roar : public ScriptedAI
+{
+    boss_roar(Creature* creature) : ScriptedAI(creature)
+    {
+        instance = creature->GetInstanceScript();
+
+        _scheduler.SetValidator([this]
+        {
+            return !me->HasUnitState(UNIT_STATE_CASTING);
+        });
+    }
+
+    InstanceScript* instance;
+
+    void DoAction(int32 action) override
+    {
+        if (action == ACTION_RELEASE)
+        {
+            _scheduler.Schedule(16670ms, [this](TaskContext)
+            {
+                me->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+                me->SetImmuneToPC(false);
+                me->SetInCombatWithZone();
+            });
+        }
+    }
+
+    void EnterEvadeMode(EvadeReason reason) override
+    {
+        ScriptedAI::EnterEvadeMode(reason);
+
+        if (!me->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        {
+            instance->SetBossState(DATA_OPERA_PERFORMANCE, FAIL);
+            DespawnAll(instance);
+        }
+    }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        Talk(SAY_ROAR_AGGRO);
+
+        _scheduler.Schedule(5s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_MANGLE);
+            context.Repeat(5s, 8s);
+        }).Schedule(10s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_SHRED);
+            context.Repeat(10s, 15s);
+        }).Schedule(15s, [this](TaskContext context)
+        {
+            //why is this also on roar??? same id
+            DoCastSelf(SPELL_FRIGHTENED_SCREAM);
+            context.Repeat(20s, 30s);
+        });
+    }
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        Talk(SAY_ROAR_DEATH);
+        SummonCroneIfReady(instance, me);
+        me->DespawnOrUnsummon();
+    }
+
+    void KilledUnit(Unit* /*victim*/) override
+    {
+        Talk(SAY_ROAR_SLAY);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        _scheduler.Update(diff);
+
+        if (!UpdateVictim())
+            return;
+
+        DoMeleeAttackIfReady();
+    }
+private:
+    TaskScheduler _scheduler;
+};
+
+struct boss_strawman : public ScriptedAI
+{
+    boss_strawman(Creature* creature) : ScriptedAI(creature)
+    {
+        instance = creature->GetInstanceScript();
+
+        _scheduler.SetValidator([this]
+        {
+            return !me->HasUnitState(UNIT_STATE_CASTING);
+        });
+    }
+
+    InstanceScript* instance;
+
+    void DoAction(int32 action) override
+    {
+        if (action == ACTION_RELEASE)
+        {
+            _scheduler.Schedule(26300ms, [this](TaskContext)
+            {
+                me->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+                me->SetImmuneToPC(false);
+                me->SetInCombatWithZone();
+            });
+        }
+    }
+
+    void EnterEvadeMode(EvadeReason reason) override
+    {
+        ScriptedAI::EnterEvadeMode(reason);
+
+        if (!me->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        {
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             instance->SetBossState(DATA_OPERA_PERFORMANCE, FAIL);
             DespawnAll(instance);
         }
@@ -1326,6 +1565,7 @@ struct boss_strawman : public ScriptedAI
     void JustEngagedWith(Unit* /*who*/) override
     {
         Talk(SAY_STRAWMAN_AGGRO);
+<<<<<<< HEAD
 
         _scheduler.Schedule(5s, [this](TaskContext context)
         {
@@ -1423,10 +1663,20 @@ struct boss_tinhead : public ScriptedAI
             context.Repeat(15s);
         }).Schedule(7s, [this](TaskContext context)
         {
+=======
+
+        _scheduler.Schedule(5s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_BRAIN_BASH);
+            context.Repeat(15s);
+        }).Schedule(7s, [this](TaskContext context)
+        {
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             DoCastRandomTarget(SPELL_BRAIN_WIPE);
             context.Repeat(20s);
         });
     }
+<<<<<<< HEAD
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     void JustReachedHome() override
@@ -1434,10 +1684,19 @@ struct boss_tinhead : public ScriptedAI
         me->DespawnOrUnsummon();
     }
 
+=======
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+    }
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     void SpellHit(Unit* /*caster*/, SpellInfo const* Spell) override
     {
         if ((Spell->SchoolMask == SPELL_SCHOOL_MASK_FIRE) && roll_chance_i(10))
         {
+<<<<<<< HEAD
 <<<<<<< HEAD
             if (AggroTimer)
             {
@@ -1476,10 +1735,13 @@ struct boss_tinhead : public ScriptedAI
                     RustTimer -= diff;
             }
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             /*
                 if (not direct damage(aoe, dot))
                     return;
             */
+<<<<<<< HEAD
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
             DoCast(me, SPELL_BURNING_STRAW, true);
@@ -1493,6 +1755,11 @@ class boss_crone : public CreatureScript
 public:
     boss_crone() : CreatureScript("boss_crone") { }
 =======
+=======
+
+            DoCast(me, SPELL_BURNING_STRAW, true);
+        }
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     }
 
     void JustDied(Unit* /*killer*/) override
@@ -1506,6 +1773,7 @@ public:
     {
         Talk(SAY_STRAWMAN_SLAY);
     }
+<<<<<<< HEAD
 
     void UpdateAI(uint32 diff) override
     {
@@ -1863,6 +2131,206 @@ struct npc_cyclone : public ScriptedAI
 
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
+        _scheduler.SetValidator([this]
+        {
+            return !me->HasUnitState(UNIT_STATE_CASTING);
+        });
+    }
+
+    InstanceScript* instance;
+
+    void DoAction(int32 action) override
+    {
+        if (action == ACTION_RELEASE)
+        {
+            _scheduler.Schedule(34470ms, [this](TaskContext)
+            {
+                me->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+                me->SetImmuneToPC(false);
+                me->SetInCombatWithZone();
+            });
+        }
+    }
+
+    void Reset() override
+    {
+        _rustCount = 0;
+    }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        Talk(SAY_TINHEAD_AGGRO);
+
+        _scheduler.Schedule(5s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_CLEAVE);
+            context.Repeat(5s);
+        }).Schedule(15s, [this](TaskContext context)
+        {
+            if (_rustCount < 8)
+            {
+                ++_rustCount;
+                Talk(EMOTE_RUST);
+                DoCastSelf(SPELL_RUST);
+                context.Repeat(6s);
+            }
+        });
+    }
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+    }
+
+    void EnterEvadeMode(EvadeReason reason) override
+    {
+        ScriptedAI::EnterEvadeMode(reason);
+
+        if (!me->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        {
+            instance->SetBossState(DATA_OPERA_PERFORMANCE, FAIL);
+            DespawnAll(instance);
+        }
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        Talk(SAY_TINHEAD_DEATH);
+        SummonCroneIfReady(instance, me);
+        me->DespawnOrUnsummon();
+    }
+
+    void KilledUnit(Unit* /*victim*/) override
+    {
+        Talk(SAY_TINHEAD_SLAY);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        _scheduler.Update(diff);
+
+        if (!UpdateVictim())
+            return;
+
+        DoMeleeAttackIfReady();
+    }
+private:
+    TaskScheduler _scheduler;
+    uint8 _rustCount;
+};
+
+struct boss_crone : public ScriptedAI
+{
+    boss_crone(Creature* creature) : ScriptedAI(creature)
+    {
+        instance = creature->GetInstanceScript();
+    }
+
+    InstanceScript* instance;
+
+    void Reset() override
+    {
+        me->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+    }
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+    }
+
+    void KilledUnit(Unit* /*victim*/) override
+    {
+        Talk(SAY_CRONE_SLAY);
+    }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        Talk(SAY_CRONE_AGGRO);
+        DoZoneInCombat();
+
+        _scheduler.Schedule(22s, [this](TaskContext context)
+        {
+            if (Creature* Cyclone = DoSpawnCreature(CREATURE_CYCLONE, float(urand(0, 9)), float(urand(0, 9)), 0, 0, TEMPSUMMON_TIMED_DESPAWN, 15000))
+            Cyclone->CastSpell(Cyclone, SPELL_CYCLONE_VISUAL, true);
+            context.Repeat(22s);
+        }).Schedule(8s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_CHAIN_LIGHTNING);
+            context.Repeat(8s);
+        });
+
+    }
+
+    void EnterEvadeMode(EvadeReason reason) override
+    {
+        ScriptedAI::EnterEvadeMode(reason);
+
+        instance->SetBossState(DATA_OPERA_PERFORMANCE, FAIL);
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        Talk(SAY_CRONE_DEATH);
+
+        instance->SetBossState(DATA_OPERA_PERFORMANCE, DONE);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        _scheduler.Update(diff);
+
+        DoMeleeAttackIfReady();
+    }
+private:
+    TaskScheduler _scheduler;
+};
+
+struct npc_cyclone : public ScriptedAI
+{
+    npc_cyclone(Creature* creature) : ScriptedAI(creature) { }
+
+    void Reset() override { }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _scheduler.Schedule(1s, [this](TaskContext context)
+        {
+            Position pos = me->GetRandomNearPosition(10);
+            me->GetMotionMaster()->MovePoint(0, pos);
+            context.Repeat(3s, 5s);
+        });
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!me->HasAura(SPELL_KNOCKBACK))
+            DoCast(me, SPELL_KNOCKBACK, true);
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+
+    void UpdateAI(uint32 diff) override
+    {
+        _scheduler.Update(diff);
+
+        if (!UpdateVictim())
+            return;
+
+        DoMeleeAttackIfReady();
+    }
+private:
+    TaskScheduler _scheduler;
+};
+
+struct boss_tinhead : public ScriptedAI
+{
+    boss_tinhead(Creature* creature) : ScriptedAI(creature)
+    {
+        instance = creature->GetInstanceScript();
+
         _scheduler.SetValidator([this]
         {
             return !me->HasUnitState(UNIT_STATE_CASTING);
@@ -2114,6 +2582,7 @@ struct npc_grandmother : public CreatureScript
 struct boss_bigbadwolf : public ScriptedAI
 {
     boss_bigbadwolf(Creature* creature) : ScriptedAI(creature)
+<<<<<<< HEAD
     {
         instance = creature->GetInstanceScript();
 <<<<<<< HEAD
@@ -2166,11 +2635,17 @@ struct boss_bigbadwolf : public ScriptedAI
 
 =======
 
+=======
+    {
+        instance = creature->GetInstanceScript();
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         _scheduler.SetValidator([this]
         {
             return !me->HasUnitState(UNIT_STATE_CASTING);
         });
     }
+<<<<<<< HEAD
 
     InstanceScript* instance;
 
@@ -2262,6 +2737,69 @@ struct boss_bigbadwolf : public ScriptedAI
 
         DoMeleeAttackIfReady();
 
+=======
+
+    InstanceScript* instance;
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        instance->DoUseDoorOrButton(instance->GetGuidData(DATA_GO_STAGEDOORLEFT));
+        Talk(SAY_WOLF_AGGRO);
+        DoZoneInCombat();
+
+        _scheduler.Schedule(30s, [this](TaskContext context)
+        {
+            if (Unit* target = SelectTarget(SelectTargetMethod::Random, 0, 100, true))
+            {
+                Talk(SAY_WOLF_HOOD);
+                DoCast(target, SPELL_LITTLE_RED_RIDING_HOOD, true);
+                target->CastSpell(me, SPELL_PICNIC_BASKET_SMELL, true);
+            }
+
+            context.Repeat(40s);
+        }).Schedule(25s, 35s, [this](TaskContext context)
+        {
+            DoCastAOE(SPELL_TERRIFYING_HOWL);
+            context.Repeat(25s, 35s);
+        }).Schedule(5s, [this](TaskContext context)
+        {
+            DoCastVictim(SPELL_WIDE_SWIPE);
+            context.Repeat(25s, 30s);
+        });
+    }
+
+    void KilledUnit(Unit* /*victim*/) override
+    {
+        Talk(SAY_WOLF_SLAY);
+    }
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+    }
+
+    void EnterEvadeMode(EvadeReason reason) override
+    {
+        ScriptedAI::EnterEvadeMode(reason);
+
+        instance->SetBossState(DATA_OPERA_PERFORMANCE, FAIL);
+    }
+
+    void JustDied(Unit* /*killer*/) override
+    {
+        DoPlaySoundToSet(me, SOUND_WOLF_DEATH);
+
+        instance->SetBossState(DATA_OPERA_PERFORMANCE, DONE);
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        if (!UpdateVictim())
+            return;
+
+        DoMeleeAttackIfReady();
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         _scheduler.Update(diff);
     }
 private:
@@ -2503,6 +3041,7 @@ struct boss_julianne : public ScriptedAI
         });
     }
 
+<<<<<<< HEAD
     void JustEngagedWith(Unit* /*who*/) override
     {
         ScheduleCombat();
@@ -2533,9 +3072,28 @@ struct boss_julianne : public ScriptedAI
                     summonedRomulo = true;
                 });
             });
+=======
+struct boss_julianne : public ScriptedAI
+{
+    boss_julianne(Creature* creature) : ScriptedAI(creature)
+    {
+        instance = creature->GetInstanceScript();
+        isFakingDeath = false;
+    }
+
+    void Reset() override
+    {
+        phase = PHASE_JULIANNE;
+
+        if (isFakingDeath)
+        {
+            Resurrect(me);
+            isFakingDeath = false;
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         }
     }
 
+<<<<<<< HEAD
     void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
     {
         if (damage < me->GetHealth())
@@ -2644,10 +3202,132 @@ struct boss_julianne : public ScriptedAI
 
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         if (!UpdateVictim())
+=======
+        summonedRomulo = false;
+        me->SetImmuneToPC(true);
+
+        _scheduler.Schedule(1s, [this](TaskContext)
+        {
+            Talk(SAY_JULIANNE_ENTER);
+        }).Schedule(10s, [this](TaskContext)
+        {
+            Talk(SAY_JULIANNE_AGGRO);
+            me->RemoveUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+            me->SetImmuneToPC(false);
+            me->SetInCombatWithZone();
+        });
+    }
+
+    void DoAction(int32 action) override
+    {
+        switch(action)
+        {
+            case ACTION_FAKING_DEATH:
+                isFakingDeath = false;
+                break;
+            case ACTION_COMBAT_SCHEDULE:
+                ScheduleCombat();
+                break;
+            case ACTION_RESS_ROMULO:
+                me->m_Events.AddEventAtOffset([this]
+                {
+                    if (Creature* romulo = instance->GetCreature(DATA_ROMULO))
+                    {
+                        Talk(SAY_JULIANNE_RESURRECT);
+                        Resurrect(romulo);
+                        romulo->AI()->DoAction(ACTION_FAKING_DEATH);
+                        romulo->AI()->Talk(SAY_ROMULO_RESURRECT);
+                    }
+                }, 1s);
+                break;
+            case ACTION_DO_RESURRECT:
+                phase = PHASE_BOTH;
+                isFakingDeath = false;
+                Resurrect(me);
+                me->ResumeChasingVictim();
+                break;
+            case ACTION_CANCEL_COMBAT:
+                _scheduler.CancelGroup(GROUP_COMBAT);
+                break;
+        }
+    }
+
+    void ScheduleCombat()
+    {
+        _scheduler.Schedule(30s, GROUP_COMBAT, [this](TaskContext context)
+        {
+            DoCastRandomTarget(SPELL_BLINDING_PASSION);
+            context.Repeat(30s, 45s);
+        }).Schedule(15s, GROUP_COMBAT, [this](TaskContext context)
+        {
+            DoCastSelf(SPELL_DEVOTION);
+            context.Repeat(15s, 45s);
+        }).Schedule(5s, GROUP_COMBAT, [this](TaskContext context)
+        {
+            DoCastRandomTarget(SPELL_POWERFUL_ATTRACTION);
+            context.Repeat(5s, 30s);
+        }).Schedule(25s, GROUP_COMBAT, [this](TaskContext context)
+        {
+            if (urand(0, 1) && summonedRomulo)
+            {
+                if (Creature* romulo = instance->GetCreature(DATA_ROMULO))
+                {
+                    if (!romulo->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE))
+                    {
+                        DoCast(romulo, SPELL_ETERNAL_AFFECTION);
+                    }
+                }
+            }
+            else
+            {
+                DoCast(me, SPELL_ETERNAL_AFFECTION);
+            }
+            context.Repeat(45s, 60s);
+        });
+    }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        ScheduleCombat();
+    }
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+    }
+
+    void SpellHit(Unit* /*caster*/, SpellInfo const* Spell) override
+    {
+        if (Spell->Id == SPELL_DRINK_POISON)
+        {
+            Talk(SAY_JULIANNE_DEATH01);
+            _scheduler.CancelGroup(GROUP_COMBAT);
+            _scheduler.Schedule(2500ms, GROUP_RP, [this](TaskContext)
+            {
+                //will do this 2secs after spell hit. this is time to display visual as expected
+                PretendToDie(me);
+                phase = PHASE_ROMULO;
+                _scheduler.Schedule(10s, GROUP_RP, [this](TaskContext)
+                {
+                    if (Creature* romulo = me->SummonCreature(CREATURE_ROMULO, ROMULO_X, ROMULO_Y, me->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, HOUR * 2 * IN_MILLISECONDS))
+                    {
+                        romulo->SetInCombatWithZone();
+                    }
+                    summonedRomulo = true;
+                });
+            });
+        }
+    }
+
+    void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
+    {
+        if (damage < me->GetHealth())
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         {
             return;
         }
 
+<<<<<<< HEAD
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         if (!isFakingDeath)
@@ -2690,9 +3370,30 @@ struct boss_romulo : public ScriptedAI
             case ACTION_CANCEL_COMBAT:
                 _scheduler.CancelGroup(GROUP_COMBAT);
                 break;
+=======
+        damage = me->GetHealth() - 1;
+
+        if (phase == PHASE_JULIANNE)
+        {
+            me->ClearTarget();
+
+            if (isFakingDeath)
+            {
+                return;
+            }
+
+            me->InterruptNonMeleeSpells(true);
+            DoCast(me, SPELL_DRINK_POISON);
+
+            me->GetMotionMaster()->Clear();
+
+            isFakingDeath = true;
+            return;
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         }
     }
 
+<<<<<<< HEAD
     void JustReachedHome() override
     {
         me->DespawnOrUnsummon();
@@ -2785,6 +3486,113 @@ struct boss_romulo : public ScriptedAI
         if (phase == PHASE_ROMULO)
         {
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+        if (phase == PHASE_BOTH && !isFakingDeath)
+        {
+            PretendToDie(me);
+            isFakingDeath = true;
+            instance->DoAction(ACTION_SCHEDULE_RAJ_CHECK);
+        }
+    }
+
+    void EnterEvadeMode(EvadeReason reason) override
+    {
+        ScriptedAI::EnterEvadeMode(reason);
+
+        if (!me->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        {
+            me->DespawnOrUnsummon();
+            instance->SetBossState(DATA_OPERA_PERFORMANCE, FAIL);
+        }
+    }
+
+    void JustDied(Unit*) override
+    {
+        Talk(SAY_JULIANNE_DEATH02);
+
+        instance->SetBossState(DATA_OPERA_PERFORMANCE, DONE);
+    }
+
+    void KilledUnit(Unit* victim) override
+    {
+        if (victim != me)
+        {
+            Talk(SAY_JULIANNE_SLAY);
+        }
+    }
+
+    void UpdateAI(uint32 diff) override
+    {
+        _scheduler.Update(diff);
+
+        if (!UpdateVictim())
+        {
+            return;
+        }
+
+        if (!isFakingDeath)
+        {
+            DoMeleeAttackIfReady();
+        }
+    }
+private:
+    InstanceScript* instance;
+    uint32 phase;
+    bool isFakingDeath;
+    bool summonedRomulo;
+    TaskScheduler _scheduler;
+};
+
+struct boss_romulo : public ScriptedAI
+{
+    boss_romulo(Creature* creature) : ScriptedAI(creature)
+    {
+        instance = creature->GetInstanceScript();
+    }
+
+    void Reset() override
+    {
+        phase = PHASE_ROMULO;
+        isFakingDeath = false;
+    }
+
+    void DoAction(int32 action) override
+    {
+        switch(action)
+        {
+            case ACTION_FAKING_DEATH:
+                isFakingDeath = false;
+                break;
+            case ACTION_COMBAT_SCHEDULE:
+                ScheduleCombat();
+                break;
+            case ACTION_CANCEL_COMBAT:
+                _scheduler.CancelGroup(GROUP_COMBAT);
+                break;
+        }
+    }
+
+    void JustReachedHome() override
+    {
+        me->DespawnOrUnsummon();
+        if (Creature* julianne = instance->GetCreature(DATA_JULIANNE))
+        {
+            julianne->DespawnOrUnsummon();
+        }
+    }
+
+    void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
+    {
+        if (damage < me->GetHealth())
+        {
+            return;
+        }
+
+        damage = me->GetHealth() - 1;
+
+        if (phase == PHASE_ROMULO)
+        {
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             Talk(SAY_ROMULO_DEATH);
             PretendToDie(me);
             isFakingDeath = true;
@@ -2811,6 +3619,9 @@ struct boss_romulo : public ScriptedAI
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

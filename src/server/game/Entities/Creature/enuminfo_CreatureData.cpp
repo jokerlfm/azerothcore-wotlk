@@ -58,11 +58,14 @@ AC_API_EXPORT EnumText EnumUtils<CreatureFlagsExtra>::ToString(CreatureFlagsExtr
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         case CREATURE_FLAG_EXTRA_MODULE: return { "CREATURE_FLAG_EXTRA_MODULE", "CREATURE_FLAG_EXTRA_MODULE", "Used by module creatures to avoid blizzlike checks." };
         case CREATURE_FLAG_EXTRA_DONT_CALL_ASSISTANCE: return { "CREATURE_FLAG_EXTRA_DONT_CALL_ASSISTANCE", "Creature does not call for assistance on initial aggro", "" };
         case CREATURE_FLAG_EXTRA_IGNORE_ALL_ASSISTANCE_CALLS: return { "CREATURE_FLAG_EXTRA_IGNORE_ALL_ASSISTANCE_CALLS", "Prevents creature from responding to assistance calls", "" };
         case CREATURE_FLAG_DONT_OVERRIDE_ENTRY_SAI: return { "CREATURE_FLAG_DONT_OVERRIDE_ENTRY_SAI", "Creature entry SAI won't be overriden by GUID SAI", "" };
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -73,6 +76,9 @@ AC_API_EXPORT EnumText EnumUtils<CreatureFlagsExtra>::ToString(CreatureFlagsExtr
         case CREATURE_FLAG_DONT_OVERRIDE_ENTRY_SAI: return { "CREATURE_FLAG_DONT_OVERRIDE_ENTRY_SAI", "CREATURE_FLAG_DONT_OVERRIDE_ENTRY_SAI", "Load both ENTRY and GUID specific SAI" };
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

@@ -399,7 +399,10 @@ public:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -513,6 +516,9 @@ private:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -588,6 +594,11 @@ void AddSC_hellfire_peninsula()
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+    RegisterCreatureAI(npc_magister_aledis);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 
     RegisterCreatureAI(npc_magister_aledis);

@@ -126,7 +126,11 @@ struct boss_malchezaar : public BossAI
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             me->SummonCreature(NPC_MALCHEZARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
+=======
+            me->SummonCreature(NPC_MALCHEZAARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
             me->SummonCreature(NPC_MALCHEZAARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -260,7 +264,11 @@ struct boss_malchezaar : public BossAI
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     void EnfeebleHealthEffect()
+=======
+    void SpellHitTarget(Unit* target, SpellInfo const* spell) override
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
     void SpellHitTarget(Unit* target, SpellInfo const* spell) override
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607

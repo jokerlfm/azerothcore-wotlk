@@ -39,6 +39,7 @@ enum Spells
     SPELL_MORTAL_STRIKE      = 31911,
     SPELL_FRIGHTENING_SHOUT  = 33789
 };
+<<<<<<< HEAD
 
 struct boss_lieutenant_drake : public BossAI
 {
@@ -143,12 +144,40 @@ struct boss_lieutenant_drake : public BossAI
         _Reset();
     }
 
+=======
+
+struct boss_lieutenant_drake : public BossAI
+{
+    boss_lieutenant_drake(Creature* creature) : BossAI(creature, DATA_LIEUTENANT_DRAKE)
+    {
+        scheduler.SetValidator([this]
+        {
+            return !me->HasUnitState(UNIT_STATE_CASTING);
+        });
+    }
+
+    void InitializeAI() override
+    {
+        runSecondPath = false;
+        pathId = me->GetEntry() * 10;
+        me->GetMotionMaster()->MovePath(pathId, false);
+    }
+
+    void Reset() override
+    {
+        _Reset();
+    }
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     void JustEngagedWith(Unit* /*who*/) override
     {
         _JustEngagedWith();
         Talk(SAY_AGGRO);
         scheduler.Schedule(4s, [this](TaskContext context)
         {
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             DoCastSelf(SPELL_WHIRLWIND);
             context.Repeat(25s);
@@ -182,6 +211,9 @@ struct boss_lieutenant_drake : public BossAI
         });
     }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     void KilledUnit(Unit* victim) override
     {
@@ -191,6 +223,7 @@ struct boss_lieutenant_drake : public BossAI
         }
     }
 
+<<<<<<< HEAD
 =======
 
     void KilledUnit(Unit* victim) override
@@ -222,6 +255,21 @@ struct boss_lieutenant_drake : public BossAI
             return;
         }
 
+=======
+    void JustDied(Unit* /*killer*/) override
+    {
+        _JustDied();
+        Talk(SAY_DEATH);
+    }
+
+    void MovementInform(uint32 type, uint32 point) override
+    {
+        if (type != WAYPOINT_MOTION_TYPE)
+        {
+            return;
+        }
+
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         if (pathId == me->GetEntry() * 10)
         {
             switch (point)
@@ -229,17 +277,23 @@ struct boss_lieutenant_drake : public BossAI
                 case 7:
                     Talk(SAY_ENTER);
 <<<<<<< HEAD
+<<<<<<< HEAD
                     break;
                 case 10:
                     pathId = (me->GetEntry() * 10) + 1;
                     runSecondPath = true;
                     break;
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                     break;
                 case 10:
                     pathId = (me->GetEntry() * 10) + 1;
                     runSecondPath = true;
                     break;
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 default:
                     break;

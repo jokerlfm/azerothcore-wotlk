@@ -212,6 +212,7 @@ enum SMART_EVENT
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     SMART_EVENT_AREA_CASTING             = 104,      // spellId (0: any), range (0: any), repeatMin, repeatMax, checkTimer
 
     SMART_EVENT_AC_END                   = 105
@@ -225,12 +226,17 @@ enum SMART_EVENT
 =======
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     SMART_EVENT_NEAR_UNIT_NEGATION       = 104,      // type (0: creature 1: gob), entry, count, range, timer
     SMART_EVENT_AREA_CASTING             = 105,      // min, max, repeatMin, repeatMax, rangeMin, rangeMax
     SMART_EVENT_AREA_RANGE               = 106,      // min, max, repeatMin, repeatMax, rangeMin, rangeMax
 
     SMART_EVENT_AC_END                   = 107
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -521,6 +527,7 @@ struct SmartEvent
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             uint32 spellId;
             uint32 range;
             uint32 repeatMin;
@@ -528,6 +535,8 @@ struct SmartEvent
             uint32 checkTimer;
         } areaCasting;
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -540,6 +549,9 @@ struct SmartEvent
         } nearUnitNegation;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -753,9 +765,12 @@ enum SMART_ACTION
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     SMART_ACTION_AC_END                             = 229,    // placeholder
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -767,6 +782,9 @@ enum SMART_ACTION
     SMART_ACTION_AC_END                             = 232,    // placeholder
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -1471,7 +1489,10 @@ struct SmartAction
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
@@ -1500,6 +1521,9 @@ struct SmartAction
         } orientationTarget;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
+=======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
 >>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
@@ -1913,7 +1937,13 @@ const uint32 SmartAIEventMask[SMART_EVENT_AC_END][2] =
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     {SMART_EVENT_AREA_CASTING,              SMART_SCRIPT_TYPE_MASK_CREATURE }
+=======
+    {SMART_EVENT_NEAR_UNIT_NEGATION,        SMART_SCRIPT_TYPE_MASK_CREATURE + SMART_SCRIPT_TYPE_MASK_GAMEOBJECT },
+    {SMART_EVENT_AREA_CASTING,              SMART_SCRIPT_TYPE_MASK_CREATURE },
+    {SMART_EVENT_AREA_RANGE,                SMART_SCRIPT_TYPE_MASK_CREATURE }
+>>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 =======
     {SMART_EVENT_NEAR_UNIT_NEGATION,        SMART_SCRIPT_TYPE_MASK_CREATURE + SMART_SCRIPT_TYPE_MASK_GAMEOBJECT },
     {SMART_EVENT_AREA_CASTING,              SMART_SCRIPT_TYPE_MASK_CREATURE },
