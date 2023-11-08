@@ -49,14 +49,14 @@
 #include "World.h"
 #include "WorldPacket.h"
 
- // lfm ming
-#include "MingManager.h"
-
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
 //  there is probably some underlying problem with imports which should properly addressed
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
 #include "GridNotifiersImpl.h"
+
+ // lfm ming
+#include "MingManager.h"
 
 CreatureMovementData::CreatureMovementData() : Ground(CreatureGroundMovementType::Run), Flight(CreatureFlightMovementType::None),
                                                Swim(true), Rooted(false), Chase(CreatureChaseMovementType::Run),
@@ -778,9 +778,6 @@ void Creature::Update(uint32 diff)
                 if (diff >= m_moveBackwardsMovementTime)
                 {
                     float MaxRange = GetCollisionRadius() + GetVictim()->GetCollisionRadius();
-
-                    // lfm move backwards distance
-                    MaxRange = std::max(MaxRange, GetCombatReach() / 4.0f);
 
                     if (IsInDist(victim, MaxRange))
                         AI()->MoveBackwardsChecks();
@@ -1532,59 +1529,6 @@ void Creature::SelectLevel(bool changelevel)
 
     uint32 basehp = std::max<uint32>(1, stats->GenerateHealth(cInfo));
     uint32 health = uint32(basehp * healthmod);
-
-    // lfm creature health
-    //float lfmMultiplier = 1.0f;
-    //if (CreatureTemplate const* ci = GetCreatureTemplate())
-    //{
-    //    switch (ci->rank)
-    //    {
-    //    case CreatureEliteType::CREATURE_ELITE_NORMAL:
-    //    {
-    //        if (!IsGuardian() && !IsPet())
-    //        {
-    //            lfmMultiplier = 1.5f;
-    //        }
-    //        break;
-    //    }
-    //    case CreatureEliteType::CREATURE_ELITE_ELITE:
-    //    {
-    //        if (ci->expansion < 1)
-    //        {
-    //            if (ci->maxlevel < 63)
-    //            {
-    //                lfmMultiplier = 1.5f;
-    //            }
-    //        }
-    //        else if (ci->expansion < 2)
-    //        {
-    //            if (ci->maxlevel < 73)
-    //            {
-    //                if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
-    //                {
-    //                    lfmMultiplier = 1.2f;
-    //                }
-    //            }
-    //        }
-    //        break;
-    //    }
-    //    case CreatureEliteType::CREATURE_ELITE_RARE:
-    //    {
-    //        lfmMultiplier = 2.0f;
-    //        break;
-    //    }
-    //    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-    //    {
-    //        lfmMultiplier = 2.5f;
-    //        break;
-    //    }
-    //    default:
-    //    {
-    //        break;
-    //    }
-    //    }
-    //}
-    //health = health * lfmMultiplier;
 
     SetCreateHealth(health);
     SetMaxHealth(health);
@@ -2516,10 +2460,6 @@ void Creature::CallForHelp(float radius, Unit* target /*= nullptr*/)
 
 bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /*= true*/) const
 {
-    // we don't need help from zombies :)
-    if (!IsAlive())
-        return false;
-
     // lfm stun creature will not assist
     if (HasUnitState(UNIT_STATE_STUNNED))
     {
@@ -2530,6 +2470,16 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
     //{
     //    return false;
     //}
+
+    // lfm neutral units will do assist     
+    //if (!IsHostileTo(enemy))
+    //{
+    //    return false;
+    //}
+
+    // we don't need help from zombies :)
+    if (!IsAlive())
+        return false;
 
     // Xinef: we cannot assist in evade mode
     if (IsInEvadeMode())
@@ -2571,12 +2521,6 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
         if (!IsFriendlyTo(u))
             return false;
     }
-
-    // lfm neutral units will do assist     
-    //if (!IsHostileTo(enemy))
-    //{
-    //    return false;
-    //}
 
     // Check if can see the enemy
     if (!CanSeeOrDetect(enemy))

@@ -7032,13 +7032,11 @@ bool Player::_LoadHomeBind(PreparedQueryResult result)
         MapEntry const* bindMapEntry = sMapStore.LookupEntry(m_homebindMapId);
 
         // accept saved data only for valid position (and non instanceable), and accessable
-        if (MapMgr::IsValidMapCoord(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ, m_homebindO) && !bindMapEntry->Instanceable() 
+        if (MapMgr::IsValidMapCoord(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ, m_homebindO) && !bindMapEntry->Instanceable()
             // lfm no expansion check for map 
-            // && GetSession()->Expansion() >= bindMapEntry->Expansion()
+            //&& GetSession()->Expansion() >= bindMapEntry->Expansion()
             )
-        {
             ok = true;
-        }
         else
         {
             CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_PLAYER_HOMEBIND);

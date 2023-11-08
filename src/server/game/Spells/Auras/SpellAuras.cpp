@@ -1606,7 +1606,7 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
                     // lfm elixir should be 1 and 2 
                     //if (sSpellMgr->GetSpellGroup(GetId()) == 1) /*Elixirs*/
                     uint32 spellGroup = sSpellMgr->GetSpellGroup(GetId());
-                    if (spellGroup == 1 || spellGroup == 2) /*Elixirs*/
+                    if (spellGroup == 1 || spellGroup == 2) /*Elixirs*/                    
                     {
                         if (caster->HasSpell(GetSpellInfo()->Effects[EFFECT_0].TriggerSpell))
                         {

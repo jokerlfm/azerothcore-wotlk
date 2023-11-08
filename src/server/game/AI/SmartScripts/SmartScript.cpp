@@ -652,18 +652,6 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
                     me->CastSpell(target->ToUnit(), e.action.cast.spell, triggerFlags);
                     LOG_DEBUG("scripts.ai", "SmartScript::ProcessAction:: SMART_ACTION_CAST: Unit {} casts spell {} on target {} with castflags {}",
                               me->GetGUID().ToString(), e.action.cast.spell, target->GetGUID().ToString(), e.action.cast.castFlags);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                 }
             }
             break;
@@ -3041,27 +3029,6 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
             }
             break;
         }
-                    for (WorldObject* facingTarget : facingTargets)
-                        for (WorldObject* target : targets)
-                            target->ToCreature()->SetFacingToObject(facingTarget);
-
-                    break;
-                }
-                default:
-                    break;
-            }
-            break;
-        }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         default:
             LOG_ERROR("sql.sql", "SmartScript::ProcessAction: Entry {} SourceType {}, Event {}, Unhandled Action type {}", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
             break;
@@ -4413,10 +4380,6 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
             uint32 playerCount = 0;
             ObjectVector targets;
             GetWorldObjectsInDist(targets, static_cast<float>(e.event.nearPlayerNegation.radius));
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 
             if (!targets.empty())
             {
@@ -4543,292 +4506,6 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
 
             // If no targets are found and it's off cooldown, check again
             RecalcTimer(e, 1200, 1200);
-                        if (IsGameObject(target) && target->GetEntry() == e.event.nearUnit.entry)
-<<<<<<< HEAD
-=======
-        case SMART_EVENT_NEAR_UNIT_NEGATION:
-        {
-            uint32 unitCount = 0;
-            ObjectVector targets;
-            GetWorldObjectsInDist(targets, static_cast<float>(e.event.nearUnitNegation.range));
-
-            if (!targets.empty())
-            {
-                if (e.event.nearUnitNegation.type)
-                {
-                    for (WorldObject* target : targets)
-                    {
-                        if (IsGameObject(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                            unitCount++;
-                    }
-                }
-                else
-                {
-                    for (WorldObject* target : targets)
-                    {
-<<<<<<< HEAD
-<<<<<<< HEAD
-                        if (IsCreature(target) && target->GetEntry() == e.event.nearUnit.entry)
-=======
-                        if (IsCreature(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-                        if (IsCreature(target) && target->GetEntry() == e.event.nearUnit.entry)
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                            unitCount++;
-                    }
-                }
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                if (unitCount >= e.event.nearUnit.count)
-                    ProcessAction(e, unit);
-            }
-            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
-            break;
-        }
-        case SMART_EVENT_NEAR_UNIT_NEGATION:
-        {
-            uint32 unitCount = 0;
-            ObjectVector targets;
-            GetWorldObjectsInDist(targets, static_cast<float>(e.event.nearUnitNegation.range));
-
-            if (!targets.empty())
-            {
-                if (e.event.nearUnitNegation.type)
-                {
-                    for (WorldObject* target : targets)
-                    {
-                        if (IsGameObject(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
-                            unitCount++;
-                    }
-                }
-                else
-                {
-                    for (WorldObject* target : targets)
-                    {
-                        if (IsCreature(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
-                            unitCount++;
-                    }
-                }
-
-                if (unitCount < e.event.nearUnitNegation.count)
-                    ProcessAction(e, unit);
-            }
-<<<<<<< HEAD
-=======
-                if (unitCount < e.event.nearUnitNegation.count)
-                    ProcessAction(e, unit);
-            }
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-
-            if (!targets.empty())
-            {
-                for (WorldObject* target : targets)
-                {
-                    if (IsPlayer(target))
-                        playerCount++;
-                }
-
-                if (playerCount < e.event.nearPlayerNegation.maxCount)
-                    ProcessAction(e, unit);
-            }
-            RecalcTimer(e, e.event.nearPlayerNegation.repeatMin, e.event.nearPlayerNegation.repeatMax);
-            break;
-        }
-        case SMART_EVENT_NEAR_UNIT:
-        {
-            uint32 unitCount = 0;
-            ObjectVector targets;
-            GetWorldObjectsInDist(targets, static_cast<float>(e.event.nearUnit.range));
-
-            if (!targets.empty())
-            {
-                if (e.event.nearUnit.type)
-                {
-                    for (WorldObject* target : targets)
-                    {
-                        if (IsGameObject(target) && target->GetEntry() == e.event.nearUnit.entry)
-                            unitCount++;
-                    }
-                }
-                else
-                {
-                    for (WorldObject* target : targets)
-                    {
-                        if (IsCreature(target) && target->GetEntry() == e.event.nearUnit.entry)
-                            unitCount++;
-                    }
-                }
-
-                if (unitCount >= e.event.nearUnit.count)
-                    ProcessAction(e, unit);
-            }
-            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
-            break;
-        }
-        case SMART_EVENT_NEAR_UNIT_NEGATION:
-        {
-            uint32 unitCount = 0;
-            ObjectVector targets;
-            GetWorldObjectsInDist(targets, static_cast<float>(e.event.nearUnitNegation.range));
-
-            if (!targets.empty())
-            {
-                if (e.event.nearUnitNegation.type)
-                {
-                    for (WorldObject* target : targets)
-                    {
-                        if (IsGameObject(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
-                            unitCount++;
-                    }
-                }
-                else
-                {
-                    for (WorldObject* target : targets)
-                    {
-                        if (IsCreature(target) && target->GetEntry() == e.event.nearUnitNegation.entry)
-                            unitCount++;
-                    }
-                }
-
-                if (unitCount < e.event.nearUnitNegation.count)
-                    ProcessAction(e, unit);
-            }
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-            RecalcTimer(e, e.event.nearUnitNegation.timer, e.event.nearUnitNegation.timer);
-            break;
-        }
-        case SMART_EVENT_AREA_CASTING:
-        {
-            if (!me || !me->IsEngaged())
-                return;
-
-            ThreatContainer::StorageType threatList = me->GetThreatMgr().GetThreatList();
-            for (ThreatContainer::StorageType::const_iterator i = threatList.begin(); i != threatList.end(); ++i)
-            {
-                if (Unit* target = ObjectAccessor::GetUnit(*me, (*i)->getUnitGuid()))
-                {
-                    if (!target || !IsPlayer(target) || !target->IsNonMeleeSpellCast(false, false, true))
-                        continue;
-
-                    if (!(me->IsInRange(target, (float)e.event.minMaxRepeat.rangeMin, (float)e.event.minMaxRepeat.rangeMax)))
-                        continue;
-
-                    ProcessAction(e, target);
-                    RecalcTimer(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax);
-                    return;
-                }
-
-                // If no targets are found and it's off cooldown, check again in 1200ms
-                RecalcTimer(e, 1200, 1200);
-                break;
-            }
-
-            break;
-        }
-        case SMART_EVENT_AREA_RANGE:
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-        {
-            if (!me || !me->IsEngaged())
-                return;
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-            float range = static_cast<float>(e.event.areaCasting.range);
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-            ThreatContainer::StorageType threatList = me->GetThreatMgr().GetThreatList();
-            for (ThreatContainer::StorageType::const_iterator i = threatList.begin(); i != threatList.end(); ++i)
-            {
-                if (Unit* target = ObjectAccessor::GetUnit(*me, (*i)->getUnitGuid()))
-                {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-                    if (e.event.areaCasting.range && !me->IsWithinDistInMap(target, range))
-                        continue;
-
-                    if (!target || !target->IsNonMeleeSpellCast(false, false, true))
-                        continue;
-
-                    if (e.event.areaCasting.spellId > 0)
-                        if (Spell* currSpell = target->GetCurrentSpell(CURRENT_GENERIC_SPELL))
-                            if (currSpell->m_spellInfo->Id != e.event.areaCasting.spellId)
-                                continue;
-
-                    ProcessAction(e, target);
-                    RecalcTimer(e, e.event.areaCasting.repeatMin, e.event.areaCasting.repeatMin);
-=======
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                    if (!(me->IsInRange(target, (float)e.event.minMaxRepeat.rangeMin, (float)e.event.minMaxRepeat.rangeMax)))
-                        continue;
-
-                    ProcessAction(e, target);
-                    RecalcTimer(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                    return;
-                }
-            }
-
-            // If no targets are found and it's off cooldown, check again
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-            RecalcTimer(e, e.event.areaCasting.checkTimer, e.event.areaCasting.checkTimer);
-=======
-            RecalcTimer(e, 1200, 1200);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            RecalcTimer(e, 1200, 1200);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            RecalcTimer(e, 1200, 1200);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            RecalcTimer(e, 1200, 1200);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             break;
         }
         default:
@@ -4864,32 +4541,6 @@ void SmartScript::InitTimer(SmartScriptHolder& e)
         case SMART_EVENT_NEAR_UNIT_NEGATION:
             RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
             break;
-<<<<<<< HEAD
-            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
-            break;
-        case SMART_EVENT_AREA_CASTING:
-            RecalcTimer(e, e.event.areaCasting.repeatMin, e.event.areaCasting.repeatMax);
-            break;
-=======
-        case SMART_EVENT_NEAR_UNIT_NEGATION:
-            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
-            break;
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        case SMART_EVENT_NEAR_UNIT_NEGATION:
-            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
-            break;
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        case SMART_EVENT_NEAR_UNIT_NEGATION:
-            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
-            break;
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-        case SMART_EVENT_NEAR_UNIT_NEGATION:
-            RecalcTimer(e, e.event.nearUnit.timer, e.event.nearUnit.timer);
-            break;
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
         default:
             e.active = true;
             break;
@@ -4945,21 +4596,6 @@ void SmartScript::UpdateTimer(SmartScriptHolder& e, uint32 const diff)
             case SMART_EVENT_NEAR_PLAYERS_NEGATION:
             case SMART_EVENT_NEAR_UNIT:
             case SMART_EVENT_NEAR_UNIT_NEGATION:
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            case SMART_EVENT_NEAR_UNIT_NEGATION:
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            case SMART_EVENT_NEAR_UNIT_NEGATION:
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            case SMART_EVENT_NEAR_UNIT_NEGATION:
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-            case SMART_EVENT_NEAR_UNIT_NEGATION:
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             case SMART_EVENT_UPDATE:
             case SMART_EVENT_UPDATE_OOC:
             case SMART_EVENT_UPDATE_IC:

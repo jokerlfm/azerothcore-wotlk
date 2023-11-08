@@ -663,46 +663,46 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
         creatureTemplate.KillCredit[i] = fields[4 + i].Get<uint32>();
     }
 
-    creatureTemplate.Modelid1 = fields[6].Get<uint32>();
-    creatureTemplate.Modelid2 = fields[7].Get<uint32>();
-    creatureTemplate.Modelid3 = fields[8].Get<uint32>();
-    creatureTemplate.Modelid4 = fields[9].Get<uint32>();
-    creatureTemplate.Name = fields[10].Get<std::string>();
-    creatureTemplate.SubName = fields[11].Get<std::string>();
-    creatureTemplate.IconName = fields[12].Get<std::string>();
-    creatureTemplate.GossipMenuId = fields[13].Get<uint32>();
-    creatureTemplate.minlevel = fields[14].Get<uint8>();
-    creatureTemplate.maxlevel = fields[15].Get<uint8>();
-    creatureTemplate.expansion = uint32(fields[16].Get<int16>());
-    creatureTemplate.faction = uint32(fields[17].Get<uint16>());
-    creatureTemplate.npcflag = fields[18].Get<uint32>();
-    creatureTemplate.speed_walk = fields[19].Get<float>();
-    creatureTemplate.speed_run = fields[20].Get<float>();
-    creatureTemplate.speed_swim = fields[21].Get<float>();
-    creatureTemplate.speed_flight = fields[22].Get<float>();
-    creatureTemplate.detection_range = fields[23].Get<float>();
-    creatureTemplate.scale = fields[24].Get<float>();
-    creatureTemplate.rank = uint32(fields[25].Get<uint8>());
-    creatureTemplate.dmgschool = uint32(fields[26].Get<int8>());
-    creatureTemplate.DamageModifier = fields[27].Get<float>();
-    creatureTemplate.BaseAttackTime = fields[28].Get<uint32>();
-    creatureTemplate.RangeAttackTime = fields[29].Get<uint32>();
-    creatureTemplate.BaseVariance = fields[30].Get<float>();
-    creatureTemplate.RangeVariance = fields[31].Get<float>();
-    creatureTemplate.unit_class = uint32(fields[32].Get<uint8>());
-    creatureTemplate.unit_flags = fields[33].Get<uint32>();
-    creatureTemplate.unit_flags2 = fields[34].Get<uint32>();
-    creatureTemplate.dynamicflags = fields[35].Get<uint32>();
-    creatureTemplate.family = uint32(fields[36].Get<uint8>());
-    creatureTemplate.trainer_type = uint32(fields[37].Get<uint8>());
-    creatureTemplate.trainer_spell = fields[38].Get<uint32>();
-    creatureTemplate.trainer_class = uint32(fields[39].Get<uint8>());
-    creatureTemplate.trainer_race = uint32(fields[40].Get<uint8>());
-    creatureTemplate.type = uint32(fields[41].Get<uint8>());
-    creatureTemplate.type_flags = fields[42].Get<uint32>();
-    creatureTemplate.lootid = fields[43].Get<uint32>();
+    creatureTemplate.Modelid1         = fields[6].Get<uint32>();
+    creatureTemplate.Modelid2         = fields[7].Get<uint32>();
+    creatureTemplate.Modelid3         = fields[8].Get<uint32>();
+    creatureTemplate.Modelid4         = fields[9].Get<uint32>();
+    creatureTemplate.Name             = fields[10].Get<std::string>();
+    creatureTemplate.SubName          = fields[11].Get<std::string>();
+    creatureTemplate.IconName         = fields[12].Get<std::string>();
+    creatureTemplate.GossipMenuId     = fields[13].Get<uint32>();
+    creatureTemplate.minlevel         = fields[14].Get<uint8>();
+    creatureTemplate.maxlevel         = fields[15].Get<uint8>();
+    creatureTemplate.expansion        = uint32(fields[16].Get<int16>());
+    creatureTemplate.faction          = uint32(fields[17].Get<uint16>());
+    creatureTemplate.npcflag          = fields[18].Get<uint32>();
+    creatureTemplate.speed_walk       = fields[19].Get<float>();
+    creatureTemplate.speed_run        = fields[20].Get<float>();
+    creatureTemplate.speed_swim       = fields[21].Get<float>();
+    creatureTemplate.speed_flight     = fields[22].Get<float>();
+    creatureTemplate.detection_range  = fields[23].Get<float>();
+    creatureTemplate.scale            = fields[24].Get<float>();
+    creatureTemplate.rank             = uint32(fields[25].Get<uint8>());
+    creatureTemplate.dmgschool        = uint32(fields[26].Get<int8>());
+    creatureTemplate.DamageModifier   = fields[27].Get<float>();
+    creatureTemplate.BaseAttackTime   = fields[28].Get<uint32>();
+    creatureTemplate.RangeAttackTime  = fields[29].Get<uint32>();
+    creatureTemplate.BaseVariance     = fields[30].Get<float>();
+    creatureTemplate.RangeVariance    = fields[31].Get<float>();
+    creatureTemplate.unit_class       = uint32(fields[32].Get<uint8>());
+    creatureTemplate.unit_flags       = fields[33].Get<uint32>();
+    creatureTemplate.unit_flags2      = fields[34].Get<uint32>();
+    creatureTemplate.dynamicflags     = fields[35].Get<uint32>();
+    creatureTemplate.family           = uint32(fields[36].Get<uint8>());
+    creatureTemplate.trainer_type     = uint32(fields[37].Get<uint8>());
+    creatureTemplate.trainer_spell    = fields[38].Get<uint32>();
+    creatureTemplate.trainer_class    = uint32(fields[39].Get<uint8>());
+    creatureTemplate.trainer_race     = uint32(fields[40].Get<uint8>());
+    creatureTemplate.type             = uint32(fields[41].Get<uint8>());
+    creatureTemplate.type_flags       = fields[42].Get<uint32>();
+    creatureTemplate.lootid           = fields[43].Get<uint32>();
     creatureTemplate.pickpocketLootId = fields[44].Get<uint32>();
-    creatureTemplate.SkinLootId = fields[45].Get<uint32>();
+    creatureTemplate.SkinLootId       = fields[45].Get<uint32>();
 
     for (uint8 i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
     {
@@ -715,11 +715,11 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
     }
 
     creatureTemplate.PetSpellDataId = fields[46].Get<uint32>();
-    creatureTemplate.VehicleId = fields[47].Get<uint32>();
-    creatureTemplate.mingold = fields[48].Get<uint32>();
-    creatureTemplate.maxgold = fields[49].Get<uint32>();
-    creatureTemplate.AIName = fields[50].Get<std::string>();
-    creatureTemplate.MovementType = uint32(fields[51].Get<uint8>());
+    creatureTemplate.VehicleId      = fields[47].Get<uint32>();
+    creatureTemplate.mingold        = fields[48].Get<uint32>();
+    creatureTemplate.maxgold        = fields[49].Get<uint32>();
+    creatureTemplate.AIName         = fields[50].Get<std::string>();
+    creatureTemplate.MovementType   = uint32(fields[51].Get<uint8>());
     if (!fields[52].IsNull())
     {
         creatureTemplate.Movement.Ground = static_cast<CreatureGroundMovementType>(fields[52].Get<uint8>());
@@ -745,27 +745,16 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
         creatureTemplate.Movement.InteractionPauseTimer = fields[58].Get<uint32>();
     }
 
-    creatureTemplate.HoverHeight = fields[59].Get<float>();
-    creatureTemplate.ModHealth = fields[60].Get<float>();
-    creatureTemplate.ModMana = fields[61].Get<float>();
-    creatureTemplate.ModArmor = fields[62].Get<float>();
-    creatureTemplate.ModExperience = fields[63].Get<float>();
-    creatureTemplate.RacialLeader = fields[64].Get<bool>();
-    creatureTemplate.movementId = fields[65].Get<uint32>();
-    creatureTemplate.RegenHealth = fields[66].Get<bool>();
-    creatureTemplate.MechanicImmuneMask = fields[67].Get<uint32>();
+    creatureTemplate.HoverHeight           = fields[59].Get<float>();
+    creatureTemplate.ModHealth             = fields[60].Get<float>();
+    creatureTemplate.ModMana               = fields[61].Get<float>();
+    creatureTemplate.ModArmor              = fields[62].Get<float>();
+    creatureTemplate.ModExperience         = fields[63].Get<float>();
+    creatureTemplate.RacialLeader          = fields[64].Get<bool>();
+    creatureTemplate.movementId            = fields[65].Get<uint32>();
+    creatureTemplate.RegenHealth           = fields[66].Get<bool>();
+    creatureTemplate.MechanicImmuneMask    = fields[67].Get<uint32>();
     creatureTemplate.SpellSchoolImmuneMask = fields[68].Get<uint8>();
-<<<<<<< HEAD
-    creatureTemplate.flags_extra = fields[69].Get<uint32>();
-    creatureTemplate.ScriptID = GetScriptId(fields[70].Get<std::string>());
-
-    // useful if the creature template load is being triggered from outside this class
-    if (triggerHook)
-    {
-        sScriptMgr->OnAfterDatabaseLoadCreatureTemplates(_creatureTemplateStoreFast);
-    }
-
-=======
     creatureTemplate.flags_extra           = fields[69].Get<uint32>();
     creatureTemplate.ScriptID              = GetScriptId(fields[70].Get<std::string>());
 
@@ -775,16 +764,6 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
         sScriptMgr->OnAfterDatabaseLoadCreatureTemplates(_creatureTemplateStoreFast);
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 }
 
 void ObjectMgr::LoadCreatureTemplateResistances()
@@ -2966,70 +2945,20 @@ void ObjectMgr::LoadItemTemplates()
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct SoundOverrideSubclass ({}), must be {}.", entry, itemTemplate.SoundOverrideSubclass, dbcitem->SoundOverrideSubclassID);
                     itemTemplate.SoundOverrideSubclass = dbcitem->SoundOverrideSubclassID;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
                 }
                 if (itemTemplate.Material != dbcitem->Material)
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct material ({}), must be {}.", entry, itemTemplate.Material, dbcitem->Material);
-=======
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                }
-                if (itemTemplate.Material != dbcitem->Material)
-                {
-                    LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct material ({}), must be {}.", entry, itemTemplate.Material, dbcitem->Material);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                     itemTemplate.Material = dbcitem->Material;
                 }
                 if (itemTemplate.InventoryType != dbcitem->InventoryType)
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) has wrong InventoryType value ({}), must be {}.", entry, itemTemplate.InventoryType, dbcitem->InventoryType);
                     itemTemplate.InventoryType = dbcitem->InventoryType;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
                 }
                 if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
                 {
                     LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct display id ({}), must be {}.", entry, itemTemplate.DisplayInfoID, dbcitem->DisplayInfoID);
-=======
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-                }
-                if (itemTemplate.DisplayInfoID != dbcitem->DisplayInfoID)
-                {
-                    LOG_ERROR("sql.sql", "Item (Entry: {}) does not have a correct display id ({}), must be {}.", entry, itemTemplate.DisplayInfoID, dbcitem->DisplayInfoID);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
                     itemTemplate.DisplayInfoID = dbcitem->DisplayInfoID;
                 }
                 if (itemTemplate.Sheath != dbcitem->SheatheType)

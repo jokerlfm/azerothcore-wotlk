@@ -2471,21 +2471,6 @@ public: /* PlayerScript */
     void OnAfterCreatureLoot(Player* player);
     void OnAfterCreatureLootMoney(Player* player);
     bool OnCanPlayerFlyInZone(Player* player, uint32 mapId, uint32 zoneId, SpellInfo const* bySpell);
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    bool OnCanPlayerFlyInZone(Player* player, uint32 mapId, uint32 zoneId, SpellInfo const* bySpell);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-    bool OnCanPlayerFlyInZone(Player* player, uint32 mapId, uint32 zoneId, SpellInfo const* bySpell);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-    bool OnCanPlayerFlyInZone(Player* player, uint32 mapId, uint32 zoneId, SpellInfo const* bySpell);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-    bool OnCanPlayerFlyInZone(Player* player, uint32 mapId, uint32 zoneId, SpellInfo const* bySpell);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     // Anti cheat
     void AnticheatSetSkipOnePacketForASH(Player* player, bool apply);

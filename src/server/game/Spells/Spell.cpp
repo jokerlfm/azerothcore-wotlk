@@ -5613,13 +5613,6 @@ void Spell::HandleEffects(Unit* pUnitTarget, Item* pItemTarget, GameObject* pGOT
     LOG_DEBUG("spells.aura", "Spell: {} Effect : {}", m_spellInfo->Id, eff);
 
     // we do not need DamageMultiplier here.
-
-    // lfm debug
-    if (GetSpellInfo()->Id == 8092)
-    {
-        bool breakPoint = true;
-    }
-
     damage = CalculateSpellDamage(i, nullptr);
 
     bool preventDefault = CallScriptEffectHandlers((SpellEffIndex)i, mode);
@@ -6226,13 +6219,13 @@ SpellCastResult Spell::CheckCast(bool strict)
                         m_preGeneratedPath = std::make_unique<PathGenerator>(m_caster);
                         m_preGeneratedPath->SetPathLengthLimit(range);
 
-                        // first try with raycast, if it fails fall back to normal path                        
+                        // first try with raycast, if it fails fall back to normal path
+                        
                         // lfm charge to a little further 
                         //bool result = m_preGeneratedPath->CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
                         Position pos;
                         target->GetNearPoint(target, pos.m_positionX, pos.m_positionY, pos.m_positionZ, target->GetObjectSize(), std::min(MELEE_RANGE, target->GetCombatReach() / 2.0f), target->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
                         bool result = m_preGeneratedPath->CalculatePath(pos.m_positionX, pos.m_positionY, pos.m_positionZ, false);
-
 
                         if (m_preGeneratedPath->GetPathType() & PATHFIND_SHORT)
                             return SPELL_FAILED_NOPATH;
@@ -7776,17 +7769,19 @@ void Spell::Delayed() // only called in DealDamage()
     //if (m_spellState == SPELL_STATE_DELAYED)
     //    return;                                             // spell is active and can't be time-backed
 
-    // lfm spell delay will be always active and base delay time is 1000 
-    int32 delaytime = 1000;
-    //if (isDelayableNoMore())                                 // Spells may only be delayed twice
-    //    return;
-    //// spells not loosing casting time (slam, dynamites, bombs..)
-    ////if (!(m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_DAMAGE))
-    ////    return;
-    ////check pushback reduce
-    //int32 delaytime = 500;                                  // spellcasting delay is normally 500ms
+    if (isDelayableNoMore())                                 // Spells may only be delayed twice
+        return;
 
-    int32 delayReduce = 100;                                // must be initialized to 100 for percent modifiers
+    // spells not loosing casting time (slam, dynamites, bombs..)
+    //if (!(m_spellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_DAMAGE))
+    //    return;
+
+    //check pushback reduce
+    int32 delaytime = 500;                                  // spellcasting delay is normally 500ms
+
+    // lfm spell delay time is 1000 
+    delaytime = 1000;
+
     m_caster->ToPlayer()->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, delayReduce, this);
     delayReduce += m_caster->GetTotalAuraModifier(SPELL_AURA_REDUCE_PUSHBACK) - 100;
     if (delayReduce >= 100)

@@ -88,14 +88,14 @@
 #include "Tokenize.h"
 #include "StringConvert.h"
 
- // lfm ming
-#include "MingManager.h"
-
 /// @todo: this import is not necessary for compilation and marked as unused by the IDE
 //  however, for some reasons removing it would cause a damn linking issue
 //  there is probably some underlying problem with imports which should properly addressed
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
 #include "GridNotifiersImpl.h"
+
+ // lfm ming
+#include "MingManager.h"
 
 enum CharacterFlags
 {
@@ -1362,17 +1362,13 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
     // lfm map without expansion check 
     // client without expansion support
-<<<<<<< HEAD
     //if (GetSession()->Expansion() < mEntry->Expansion())
     //{
     //    LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
 
     //    if (GetTransport())
     //    {
-    //        m_transport->RemovePassenger(this);
-    //        m_transport = nullptr;
-    //        m_movementInfo.transport.Reset();
-    //        m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+    //        m_transport->RemovePassenger(this, true);
     //        RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
     //    }
 
@@ -1381,28 +1377,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     //    return false;                                       // normal client can't teleport to this map...
     //}
     //else
-    //{
-    //    LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
-    //}
-    LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
-=======
-    if (GetSession()->Expansion() < mEntry->Expansion())
-    {
-        LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
-
-        if (GetTransport())
-        {
-            m_transport->RemovePassenger(this, true);
-            RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
-        }
-
-        SendTransferAborted(mapid, TRANSFER_ABORT_INSUF_EXPAN_LVL, mEntry->Expansion());
-
-        return false;                                       // normal client can't teleport to this map...
-    }
-    else
         LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 
     // xinef: do this here in case teleport failed in above checks
     if (!(options & TELE_TO_NOT_LEAVE_TAXI) && IsInFlight())
@@ -2139,16 +2114,9 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask)
     //            if (faction->reputationListID >= 0 && GetReputationMgr().GetRank(faction) <= REP_UNFRIENDLY)
     //                return nullptr;
 
-    // lfm gossip selection distance 
     // not too far
-    //if (!creature->IsWithinDistInMap(this, INTERACTION_DISTANCE))
-    //{
-    //    return nullptr;
-    //}
-    if (!creature->IsWithinDistInMap(this, TRADE_DISTANCE))
-    {
+    if (!creature->IsWithinDistInMap(this, INTERACTION_DISTANCE))
         return nullptr;
-    }
 
     // pussywizard: many npcs have missing conditions for class training and rogue trainer can for eg. train dual wield to a shaman :/ too many to change in sql and watch in the future
     // pussywizard: this function is not used when talking, but when already taking action (buy spell, reset talents, show spell list)
@@ -12003,28 +11971,28 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
             }
 
             // lfm default spell skill exceptions
-            if (pAbility->Spell == 2050)
-            {
-                // Lesser Heal
-                continue;
-            }
-            // lfm race spell exceptions
-            if (getRace() == Races::RACE_DWARF)
-            {
-                if (pAbility->Spell == 20595)
-                {
-                    // gun 
-                    continue;
-                }
-            }
-            else if (getRace() == Races::RACE_HUMAN)
-            {
-                if (pAbility->Spell == 20864)
-                {
-                    // gun 
-                    continue;
-                }
-            }
+            //if (pAbility->Spell == 2050)
+            //{
+            //    // Lesser Heal
+            //    continue;
+            //}
+            //// lfm race spell exceptions
+            //if (getRace() == Races::RACE_DWARF)
+            //{
+            //    if (pAbility->Spell == 20595)
+            //    {
+            //        // gun 
+            //        continue;
+            //    }
+            //}
+            //else if (getRace() == Races::RACE_HUMAN)
+            //{
+            //    if (pAbility->Spell == 20864)
+            //    {
+            //        // gun 
+            //        continue;
+            //    }
+            //}
             //if (!sMingManager->IsDKSpellsException(pAbility->Spell))
             //{
             //    if (!IsInWorld())
@@ -12036,6 +12004,7 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
             //        learnSpell(pAbility->Spell, true, true);
             //    }
             //}
+
             if (!IsInWorld())
             {
                 addSpell(pAbility->Spell, SPEC_MASK_ALL, true, true);

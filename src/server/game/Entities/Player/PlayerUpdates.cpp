@@ -412,10 +412,6 @@ void Player::Update(uint32 p_time)
         SetHasDelayedTeleport(false);
         TeleportTo(teleportStore_dest, teleportStore_options);
     }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 
     // lfm auto fish
     if (fishingDelay > 0)
@@ -439,14 +435,6 @@ void Player::Update(uint32 p_time)
             }
         }
     }
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 }
 
 void Player::UpdateMirrorTimers()
@@ -883,6 +871,7 @@ bool Player::UpdateFishingSkill()
     /* Whenever the player clicks on the fishing gameobject the
      * core will decide based on a probability if the skill raises or not.
      */
+
      // lfm fishing skill increase rate will always be 20%
     //return UpdateSkillPro(
     //    SKILL_FISHING,

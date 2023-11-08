@@ -60,7 +60,6 @@ enum torchToss
     SPELL_TORCH_TOSS_TRAINING       = 45716,
 };
 
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
 struct npc_midsummer_torch_target : public ScriptedAI
 {
     npc_midsummer_torch_target(Creature* creature) : ScriptedAI(creature)

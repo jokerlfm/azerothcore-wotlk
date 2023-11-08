@@ -80,25 +80,8 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     bool const mutualChase = IsMutualChase(owner, target);
     float const hitboxSum = owner->GetCombatReach() + target->GetCombatReach();
     float const minTarget = (_range ? _range->MinTolerance : 0.0f) + hitboxSum;
-    // lfm chase distance
-    //float const maxRange = _range ? _range->MaxRange + hitboxSum : owner->GetMeleeRange(target); // melee range already includes hitboxes
-    //float const maxTarget = _range ? _range->MaxTolerance + hitboxSum : CONTACT_DISTANCE + hitboxSum;
-    float maxRange = _range ? _range->MaxRange + hitboxSum : owner->GetMeleeRange(target); // melee range already includes hitboxes
-    float maxTarget = _range ? _range->MaxTolerance + hitboxSum : CONTACT_DISTANCE + hitboxSum;
-    if (!_range)
-    {
-        if (maxRange > 2.0f)
-        {
-            maxRange = maxRange - 1.0f;
-            maxTarget = maxRange;
-        }
-        else if (maxRange > 1.0f)
-        {
-            maxRange = maxRange - 0.5f;
-            maxTarget = maxRange;
-        }
-    }
-
+    float const maxRange = _range ? _range->MaxRange + hitboxSum : owner->GetMeleeRange(target); // melee range already includes hitboxes
+    float const maxTarget = _range ? _range->MaxTolerance + hitboxSum : CONTACT_DISTANCE + hitboxSum;
     Optional<ChaseAngle> angle = mutualChase ? Optional<ChaseAngle>() : _angle;
 
     i_recheckDistance.Update(time_diff);
@@ -125,6 +108,10 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
 
     if (owner->HasUnitState(UNIT_STATE_CHASE_MOVE) && owner->movespline->Finalized())
     {
+        owner->ClearUnitState(UNIT_STATE_CHASE_MOVE);
+        owner->SetInFront(target);
+        MovementInform(owner);
+
         if (owner->IsWithinMeleeRange(this->i_target.getTarget()))
         {
             owner->Attack(this->i_target.getTarget(), true);
@@ -140,10 +127,6 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
                 cOwner2->SetCannotReachTarget(this->i_target.getTarget()->GetGUID());
             }
         }
-
-        owner->ClearUnitState(UNIT_STATE_CHASE_MOVE);
-        owner->SetInFront(target);
-        MovementInform(owner);
 
         i_recalculateTravel = false;
         i_path = nullptr;
@@ -202,7 +185,7 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     else
     {
         // otherwise, we fall back to nearpoint finding
-        target->GetNearPoint(owner, x, y, z, (moveToward ? maxTarget : minTarget) - hitboxSum, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));        
+        target->GetNearPoint(owner, x, y, z, (moveToward ? maxTarget : minTarget) - hitboxSum, 0, angle ? target->ToAbsoluteAngle(angle->RelativeAngle) : target->GetAngle(owner));
         shortenPath = false;
     }
 
@@ -223,9 +206,7 @@ bool ChaseMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
     }
 
     if (shortenPath)
-    {
-        i_path->ShortenPathUntilDist(G3D::Vector3(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ()), maxTarget);        
-    }
+        i_path->ShortenPathUntilDist(G3D::Vector3(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ()), maxTarget);
 
     if (cOwner)
     {
@@ -493,7 +474,7 @@ bool FollowMovementGenerator<T>::DoUpdate(T* owner, uint32 time_diff)
         else
             i_path->Clear();
 
-        target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - target->GetOrientation());        
+        target->MovePositionToFirstCollision(targetPosition, owner->GetCombatReach() + _range, target->ToAbsoluteAngle(_angle.RelativeAngle) - target->GetOrientation());
 
         float x, y, z;
         targetPosition.GetPosition(x, y, z);

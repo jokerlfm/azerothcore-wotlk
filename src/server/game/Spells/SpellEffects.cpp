@@ -5014,16 +5014,12 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
         float speed = G3D::fuzzyGt(m_spellInfo->Speed, 0.0f) ? m_spellInfo->Speed : SPEED_CHARGE;
         // Spell is not using explicit target - no generated path
         if (!m_preGeneratedPath)
-        {
-<<<<<<< HEAD
+        {            
+            Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
+
             // lfm charge to a little further 
-            //Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
-            Position pos;
             unitTarget->GetNearPoint(unitTarget, pos.m_positionX, pos.m_positionY, pos.m_positionZ, unitTarget->GetObjectSize(), std::min(MELEE_RANGE, unitTarget->GetCombatReach() / 2.0f), unitTarget->GetAngle(m_caster->GetPositionX(), m_caster->GetPositionY()), 0.0f);
 
-=======
-            Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
             m_caster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed, EVENT_CHARGE, nullptr, false, 0.0f, targetGUID);
         }
         else

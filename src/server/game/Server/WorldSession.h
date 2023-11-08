@@ -272,6 +272,7 @@ class CharacterCreateInfo
     // lfm nier
 //protected:
 public:
+
     /// User specified variables
     std::string Name;
     uint8 Race = 0;

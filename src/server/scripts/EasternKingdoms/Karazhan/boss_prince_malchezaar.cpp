@@ -138,22 +138,6 @@ struct boss_malchezaar : public BossAI
 
             scheduler.CancelGroup(GROUP_ENFEEBLE);
         });
-            me->SummonCreature(NPC_MALCHEZAARS_AXE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 10000);
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-
-            scheduler.Schedule(20s, 30s, [this](TaskContext context)
-            {
-                DoCastRandomTarget(SPELL_AMPLIFY_DAMAGE, 1);
-                context.Repeat();
-            }).Schedule(20s, [this](TaskContext context)
-            {
-                DoCastRandomTarget(SPELL_SHADOW_WORD_PAIN);
-                context.SetGroup(GROUP_SHADOW_WORD_PAIN);
-                context.Repeat();
-            });
-
-            scheduler.CancelGroup(GROUP_ENFEEBLE);
-        });
     }
 
     void KilledUnit(Unit* /*victim*/) override
@@ -262,21 +246,6 @@ struct boss_malchezaar : public BossAI
     }
 
     void SpellHitTarget(Unit* target, SpellInfo const* spell) override
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    void SpellHitTarget(Unit* target, SpellInfo const* spell) override
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-    void SpellHitTarget(Unit* target, SpellInfo const* spell) override
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-    void SpellHitTarget(Unit* target, SpellInfo const* spell) override
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
-=======
-    void SpellHitTarget(Unit* target, SpellInfo const* spell) override
->>>>>>> fb83c22dd292b16ea1adf51bc9329f6224ed1607
     {
         if (spell->Id == SPELL_ENFEEBLE)
         {

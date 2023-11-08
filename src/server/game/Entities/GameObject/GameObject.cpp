@@ -1799,7 +1799,7 @@ void GameObject::Use(Unit* user)
                             else
                                 chance = 100;
 
-                            // lfm fish chance will not be lower
+                            // lfm fish chance 
                             if (skill < zone_skill)
                             {
                                 chance = 5;

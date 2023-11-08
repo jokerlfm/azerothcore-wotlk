@@ -1152,72 +1152,6 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
     float totalPct         = addTotalPct ? GetModifierValue(unitMod, TOTAL_PCT) : 1.0f;
     float dmgMultiplier    = GetCreatureTemplate()->DamageModifier; // = DamageModifier * _GetDamageMod(rank);
 
-    // lfm creature damage
-    //float lfmMultiplier = 1.0f;
-    //if (CreatureTemplate const* ci = GetCreatureTemplate())
-    //{
-    //    switch (ci->rank)
-    //    {
-    //    case CreatureEliteType::CREATURE_ELITE_NORMAL:
-    //    {
-    //        if (!IsGuardian() && !IsPet())
-    //        {
-    //            lfmMultiplier = 1.5f;
-    //            if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
-    //            {
-    //                lfmMultiplier = 1.2f;
-    //            }
-    //        }
-    //        break;
-    //    }
-    //    case CreatureEliteType::CREATURE_ELITE_ELITE:
-    //    {
-    //        if (ci->expansion < 1)
-    //        {
-    //            if (ci->maxlevel < 63)
-    //            {
-    //                lfmMultiplier = 1.5f;
-    //            }
-    //        }
-    //        else if (ci->expansion < 2)
-    //        {
-    //            if (ci->maxlevel < 73)
-    //            {
-    //                if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
-    //                {
-    //                    lfmMultiplier = 1.2f;
-    //                }
-    //            }
-    //        }
-    //        break;
-    //    }
-    //    case CreatureEliteType::CREATURE_ELITE_RARE:
-    //    {
-    //        lfmMultiplier = 2.0f;
-    //        if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
-    //        {
-    //            lfmMultiplier = 1.5f;
-    //        }
-    //        break;
-    //    }
-    //    case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-    //    {
-    //        lfmMultiplier = 2.5f;
-    //        if (ci->unit_class == UnitClass::UNIT_CLASS_MAGE)
-    //        {
-    //            lfmMultiplier = 2.0f;
-    //        }
-    //        break;
-    //    }
-    //    default:
-    //    {
-    //        break;
-    //    }
-    //    }
-    //}
-    //minDamage = minDamage * lfmMultiplier;
-    //maxDamage = maxDamage * lfmMultiplier;
-
     minDamage = ((weaponMinDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;
     maxDamage = ((weaponMaxDamage + baseValue) * dmgMultiplier * basePct + totalValue) * totalPct;
 
@@ -1376,12 +1310,11 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
 
     if (GetEntry() == NPC_IMP)                                     // imp's attack power
         val = GetStat(STAT_STRENGTH) - 10.0f;
-    else if (IsPetGhoul())
+    else if (IsPetGhoul())                                         // DK's ghoul attack power
     {
         // lfm ghoul base power 
-        // DK's ghoul attack power
         //val = 589 /*xinef: base ap!*/ + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY);
-    }
+    }        
     else
         val = 2 * GetStat(STAT_STRENGTH) - 20.0f;
 

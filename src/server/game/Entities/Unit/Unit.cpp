@@ -333,6 +333,7 @@ Unit::Unit(bool isWorldObject) : WorldObject(isWorldObject),
 
     // lfm vendor replacement
     vendorReplaceCheckDelay = urand(10000, 30000);
+
 }
 
 ////////////////////////////////////////////////////////////
@@ -2734,17 +2735,6 @@ bool Unit::GetMeleeAttackPoint(Unit* attacker, Position& pos)
 
     float x, y, z;
     float distance = meleeReach - GetObjectSize();
-
-    // lfm melee attack closer    
-    //if (distance > 2.0f)
-    //{
-    //    distance = distance - 2.0f;
-    //}
-    //else if (distance > 1.0f)
-    //{
-    //    distance = distance - 1.0f;
-    //}
-
     GetNearPoint(attacker, x, y, z, distance, 0.0f, absAngle);
 
     if (!GetMap()->CanReachPositionAndGetValidCoords(this, x, y, z, true, true))
@@ -11819,68 +11809,7 @@ uint32 Unit::SpellDamageBonusDone(Unit* victim, SpellInfo const* spellProto, uin
     float tmpDamage = (float(pdamage) + DoneTotal) * DoneTotalMod;
     // apply spellmod to Done damage (flat and pct)
     if (Player* modOwner = GetSpellModOwner())
-    {
         modOwner->ApplySpellMod(spellProto->Id, damagetype == DOT ? SPELLMOD_DOT : SPELLMOD_DAMAGE, tmpDamage);
-    }
-    else
-    {
-        // lfm creature spell damage mod 
-        //if (GetTypeId() == TypeID::TYPEID_UNIT)
-        //{
-        //    if (Creature* meCreature = ToCreature())
-        //    {
-        //        if (const CreatureTemplate* ci = meCreature->GetCreatureTemplate())
-        //        {
-        //            switch (ci->rank)
-        //            {
-        //            case CreatureEliteType::CREATURE_ELITE_NORMAL:
-        //            {
-        //                if (!IsGuardian() && !IsPet())
-        //                {
-        //                    tmpDamage = tmpDamage * 1.5f;
-        //                }
-        //                break;
-        //            }
-        //            case CreatureEliteType::CREATURE_ELITE_ELITE:
-        //            {
-        //                if (ci->expansion < 1)
-        //                {
-        //                    if (ci->maxlevel < 63)
-        //                    {
-        //                        tmpDamage = tmpDamage * 1.2f;
-        //                    }
-        //                }
-        //                else if (ci->expansion < 2)
-        //                {
-        //                    if (ci->maxlevel < 73)
-        //                    {
-        //                        if (sMingManager->instanceEncounterEntrySet.find(ci->Entry) == sMingManager->instanceEncounterEntrySet.end())
-        //                        {
-        //                            tmpDamage = tmpDamage * 1.2f;
-        //                        }
-        //                    }
-        //                }
-        //                break;
-        //            }
-        //            case CreatureEliteType::CREATURE_ELITE_RARE:
-        //            {
-        //                tmpDamage = tmpDamage * 2.0f;
-        //                break;
-        //            }
-        //            case CreatureEliteType::CREATURE_ELITE_RAREELITE:
-        //            {
-        //                tmpDamage = tmpDamage * 2.5f;
-        //                break;
-        //            }
-        //            default:
-        //            {
-        //                break;
-        //            }
-        //            }
-        //        }
-        //    }
-        //}
-    }
 
     return uint32(std::max(tmpDamage, 0.0f));
 }

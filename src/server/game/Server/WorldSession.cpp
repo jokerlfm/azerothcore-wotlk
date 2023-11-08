@@ -51,9 +51,6 @@
 #include "WorldSocket.h"
 #include <zlib.h>
 
-// lfm nier
-#include "NierAction_Rogue.h"
-
 namespace
 {
     std::string const DefaultPlayerName = "<none>";

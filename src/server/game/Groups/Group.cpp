@@ -1626,6 +1626,7 @@ uint32 Group::GetTargetIconByGuid(ObjectGuid ogTarget)
     return -1;
 }
 
+// lfm nier
 ObjectGuid Group::GetGuidByTargetIcon(uint32 icon)
 {
     if (icon >= 0 && icon < TARGETICONCOUNT)
