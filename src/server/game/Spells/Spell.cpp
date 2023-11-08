@@ -7782,6 +7782,7 @@ void Spell::Delayed() // only called in DealDamage()
     // lfm spell delay time is 1000 
     delaytime = 1000;
 
+    int32 delayReduce = 100;
     m_caster->ToPlayer()->ApplySpellMod(m_spellInfo->Id, SPELLMOD_NOT_LOSE_CASTING_TIME, delayReduce, this);
     delayReduce += m_caster->GetTotalAuraModifier(SPELL_AURA_REDUCE_PUSHBACK) - 100;
     if (delayReduce >= 100)
