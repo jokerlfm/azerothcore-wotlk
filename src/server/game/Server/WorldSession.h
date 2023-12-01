@@ -335,6 +335,8 @@ public:
     WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldSocket> sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale, uint32 recruiter, bool isARecruiter, bool skipQueue, uint32 TotalTime);
     ~WorldSession();
 
+    bool IsGMAccount() const;
+
     // lfm nier
     bool isNier;
 
