@@ -1808,8 +1808,8 @@ void ObjectMgr::LoadCreatureModelInfo()
         modelInfo.modelid_other_gender = fields[4].Get<uint32>();
 
         // lfm combat size smaller
-        modelInfo.bounding_radius = modelInfo.bounding_radius * 0.7f;
-        modelInfo.combat_reach = modelInfo.combat_reach * 0.7f;
+        modelInfo.bounding_radius = 0.5f;
+        modelInfo.combat_reach = 1.0f;
 
         // Checks
 
