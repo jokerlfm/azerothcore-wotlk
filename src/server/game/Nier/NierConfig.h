@@ -30,14 +30,6 @@ class NierConfig
     {
         Enable = 0;
         Reset = 0;
-        ReviveDelay = 0;
-        ManagerCheckDelay = 0;
-        PartnerCount = 0;
-        DPSDelay = 0;
-        RandomTeleportDelay_Min = 0;
-        RandomTeleportDelay_Max = 0;
-        AssembleDelay = 0;
-        CorpseRunDelay = 0;
     }
     NierConfig(NierConfig const&) = delete;
     NierConfig& operator=(NierConfig const&) = delete;
@@ -55,15 +47,7 @@ public:
 public:
     bool StartNier();
     uint32 Enable;
-    uint32 Reset;    
-    uint32 ReviveDelay;
-    uint32 ManagerCheckDelay;
-    uint32 PartnerCount;
-    uint32 DPSDelay;
-    uint32 RandomTeleportDelay_Min;
-    uint32 RandomTeleportDelay_Max;
-    uint32 AssembleDelay;
-    uint32 CorpseRunDelay;
+    uint32 Reset;
 
     std::string const GetFilename();
     std::string const GetConfigPath();

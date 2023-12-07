@@ -417,12 +417,14 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     fishingDelay = 0;
 
     // lfm nier
+    masterId = 0;
     groupRole = 0;
     isNier = false;
-    nierAction = nullptr;
-    nierStrategyMap.clear();
-    activeStrategyIndex = 0;
-
+    partners.clear();
+    rivals.clear();
+    comrades.clear();
+    enemies.clear();    
+    strategy = nullptr;
     sScriptMgr->OnConstructPlayer(this);
 }
 
@@ -1368,10 +1370,10 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
     //    if (GetTransport())
     //    {
-            m_transport->RemovePassenger(this);
-            m_transport = nullptr;
-            m_movementInfo.transport.Reset();
-            m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+            //m_transport->RemovePassenger(this);
+            //m_transport = nullptr;
+            //m_movementInfo.transport.Reset();
+            //m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
 
     //    SendTransferAborted(mapid, TRANSFER_ABORT_INSUF_EXPAN_LVL, mEntry->Expansion());
 
@@ -2372,7 +2374,10 @@ void Player::GiveXP(uint32 xp, Unit* victim, float group_rate, bool isLFGReward)
     {
         return;
     }
-
+    if (isNier)
+    {
+        return;
+    }
     if (!IsAlive() && !GetBattlegroundId() && !isLFGReward)
     {
         return;
@@ -2541,6 +2546,23 @@ void Player::GiveLevel(uint8 level)
     SendQuestGiverStatusMultiple();
 
     sScriptMgr->OnPlayerLevelChanged(this, oldLevel);
+
+    if (!isNier)
+    {
+        if (level >= 10)
+        {
+            for (std::unordered_set<Nier_Base*>::iterator nit = this->partners.begin(); nit != this->partners.end(); nit++)
+            {
+                if (Nier_Base* nb = *nit)
+                {
+                    if (nb->entityState == NierState::NierState_Online)
+                    {
+                        nb->entityState = NierState::NierState_LevelUp;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void Player::InitTalentForLevel()
@@ -5161,7 +5183,9 @@ float Player::OCTRegenHPPerSpirit()
     if (baseSpirit > 50)
         baseSpirit = 50;
     float moreSpirit = spirit - baseSpirit;
-    float regen = (baseSpirit * baseRatio->ratio + moreSpirit * moreRatio->ratio) * 2;
+    // lfm regen should not multiple 2 
+    //float regen = (baseSpirit * baseRatio->ratio + moreSpirit * moreRatio->ratio) * 2;
+    float regen = (baseSpirit * baseRatio->ratio + moreSpirit * moreRatio->ratio);
     return regen;
 }
 

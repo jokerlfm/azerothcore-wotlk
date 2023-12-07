@@ -758,6 +758,9 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
     creatureTemplate.flags_extra           = fields[69].Get<uint32>();
     creatureTemplate.ScriptID              = GetScriptId(fields[70].Get<std::string>());
 
+    // lfm npc force gossip
+    creatureTemplate.type_flags |= CreatureTypeFlags::CREATURE_TYPE_FLAG_FORCE_GOSSIP;
+
     // useful if the creature template load is being triggered from outside this class
     if (triggerHook)
     {
@@ -1808,8 +1811,8 @@ void ObjectMgr::LoadCreatureModelInfo()
         modelInfo.modelid_other_gender = fields[4].Get<uint32>();
 
         // lfm combat size smaller
-        modelInfo.bounding_radius = 0.5f;
-        modelInfo.combat_reach = 1.0f;
+        //modelInfo.bounding_radius = 0.5f;
+        modelInfo.combat_reach = modelInfo.bounding_radius + CONTACT_DISTANCE;
 
         // Checks
 
@@ -2563,6 +2566,22 @@ void ObjectMgr::LoadGameobjects()
             continue;
         }
 
+        // lfm ming vein
+        if (sMingConfig->Enable)
+        {
+            if (sMingManager->IsVein(entry))
+            {
+                uint32 eachMapId = fields[2].Get<uint32>();
+                float eachX = fields[3].Get<float>();
+                float eachY = fields[4].Get<float>();
+                float eachZ = fields[5].Get<float>();
+                if (!sMingManager->AddVein(guid, eachMapId, Position(eachX, eachY, eachZ), 200.0f))
+                {
+                    continue;
+                }
+            }
+        }
+
         GameObjectData& data = _gameObjectDataStore[guid];
 
         data.id             = entry;
@@ -2889,17 +2908,6 @@ void ObjectMgr::LoadItemTemplates()
         itemTemplate.MinMoneyLoot            = fields[135].Get<uint32>();
         itemTemplate.MaxMoneyLoot            = fields[136].Get<uint32>();
         itemTemplate.FlagsCu                 = fields[137].Get<uint32>();
-
-        // lfm nier equips
-        if (itemTemplate.Quality > ItemQualities::ITEM_QUALITY_NORMAL && itemTemplate.Quality < ItemQualities::ITEM_QUALITY_EPIC)
-        {
-            int requiredLevel = itemTemplate.RequiredLevel;
-            if (requiredLevel == 0)
-            {
-                requiredLevel = itemTemplate.ItemLevel;
-            }
-            sNierManager->equipsMap[itemTemplate.InventoryType][requiredLevel][sNierManager->equipsMap[itemTemplate.InventoryType][requiredLevel].size()] = itemTemplate.ItemId;
-        }
 
         // lfm npc vendor items 
         bool canSell = false;

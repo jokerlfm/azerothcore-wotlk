@@ -1,30 +1,27 @@
-#ifndef NIER_ACTION_PRIEST_H
-#define NIER_ACTION_PRIEST_H
+#ifndef NIER_PRIEST_H
+#define NIER_PRIEST_H
 
-#include "NierAction_Base.h"
+#include "Nier_Base.h"
 
-class NierAction_Priest :public NierAction_Base
+class Nier_Priest :public Nier_Base
 {
 public:
-	NierAction_Priest(Player* pmMe);
-	void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
-	void ResetTalent();
-	bool InitializeEquipments(bool pmReset);
-	void Prepare();
-    bool DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack);
-	bool Heal(Unit* pmTarget, bool pmInstantOnly);
-	bool ReadyTank(Unit* pmTarget);
-	bool GroupHeal(Unit* pmTarget, bool pmInstantOnly);
-	bool SimpleHeal(Unit* pmTarget, bool pmInstantOnly);
-	bool Cure(Unit* pmTarget);
-	bool Buff(Unit* pmTarget);
-	bool Revive(Player* pmTarget);
+    Nier_Priest();
 
-	bool Heal_Discipline(Unit* pmTarget, bool pmInstantOnly);
-	bool Heal_Holy(Unit* pmTarget, bool pmInstantOnly);
+    void Prepare();
+    void Update(uint32 pDiff);
+    void Update_Online(uint32 pDiff);
+    void InitializeCharacter();
 
-private:
-    uint32 spell_shoot;
+    bool Tank(Unit* pTarget);
+    bool Heal(Unit* pTarget);
+    bool DPS(Unit* pTarget, Unit* pTank, bool pRushing);
+    bool Buff();
+    bool Cure();
+    bool Revive();
+
+public:
+    uint32 spell_Shoot;
 
     uint32 spell_MindFlay;
     uint32 spell_CircleOfHealing;

@@ -1,39 +1,26 @@
 #include "NierManager.h"
-#include "NierStrategies/NierStrategy_Base.h"
+
 #include "NierConfig.h"
-#include "NierActions/NierAction_Base.h"
-#include "NierActions/NierAction_Druid.h"
-#include "NierActions/NierAction_Hunter.h"
-#include "NierActions/NierAction_Mage.h"
-#include "NierActions/NierAction_Paladin.h"
-#include "NierActions/NierAction_Priest.h"
-#include "NierActions/NierAction_Rogue.h"
-#include "NierActions/NierAction_Shaman.h"
-#include "NierActions/NierAction_Warlock.h"
-#include "NierActions/NierAction_Warrior.h"
-
 #include "MingManager.h"
-
 #include "GameTime.h"
 #include "Item.h"
 #include "InstanceSaveMgr.h"
 #include "Player.h"
 #include "Group.h"
-#include "World/World.h"
-#include "Accounts/AccountMgr.h"
-#include <boost/chrono/duration.hpp>
+#include "World.h"
+#include "AccountMgr.h"
 #include "MoveSplineInit.h"
+#include "GridNotifiers.h"
+
+#include <boost/chrono/duration.hpp>
 
 NierManager::NierManager()
 {
-    checkDelay = 0;
     allianceRaces.clear();
     hordeRaces.clear();
-    nameIndex = 0;
     nierNameMap.clear();
-    nierEntityMap.clear();
     characterTalentTabNameMap.clear();
-    equipsMap.clear();
+    trainerMap.clear();
 }
 
 void NierManager::InitializeManager()
@@ -44,8 +31,6 @@ void NierManager::InitializeManager()
     }
 
     sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Initialize nier");
-
-    checkDelay = sNierConfig->ManagerCheckDelay;
 
     allianceRaces.clear();
     allianceRaces[CLASS_WARRIOR][allianceRaces[CLASS_WARRIOR].size()] = RACE_HUMAN;
@@ -147,30 +132,22 @@ void NierManager::InitializeManager()
     characterTalentTabNameMap[Classes::CLASS_DRUID][1] = "Feral";
     characterTalentTabNameMap[Classes::CLASS_DRUID][2] = "Restoration";
 
-    if (sNierConfig->Reset)
-    {
-        DeleteNiers();
-    }
+    trainerMap.clear();
+    trainerMap[Classes::CLASS_WARRIOR] = 914;
+    trainerMap[Classes::CLASS_PALADIN] = 928;
+    trainerMap[Classes::CLASS_HUNTER] = 5115;
+    trainerMap[Classes::CLASS_ROGUE] = 4214;
+    trainerMap[Classes::CLASS_PRIEST] = 3046;
+    trainerMap[Classes::CLASS_SHAMAN] = 3032;
+    trainerMap[Classes::CLASS_MAGE] = 3047;
+    trainerMap[Classes::CLASS_WARLOCK] = 5173;
+    trainerMap[Classes::CLASS_DRUID] = 4217;
 
-    QueryResult nierQR = CharacterDatabase.Query("SELECT entry, master_id, account_name, account_id, character_id, race, career, specialty, role FROM nier");
-    if (nierQR)
-    {
-        do
-        {
-            Field* fields = nierQR->Fetch();
-            NierEntity* re = new NierEntity();
-            re->entry = fields[0].Get<uint32>();
-            re->master_id = fields[1].Get<uint32>();
-            re->account_name = fields[2].Get<std::string>();
-            re->account_id = fields[3].Get<uint32>();
-            re->character_id = fields[4].Get<uint32>();
-            re->target_race = fields[5].Get<uint32>();
-            re->target_class = fields[6].Get<uint32>();
-            re->target_specialty = fields[7].Get<uint32>();
-            nierEntityMap[re->master_id].insert(re);
-        } while (nierQR->NextRow());
-    }
-    nameIndex = 0;
+    groupRoleNameMap.clear();
+    groupRoleNameMap[GroupRole::GroupRole_Tank] = "tank";
+    groupRoleNameMap[GroupRole::GroupRole_Healer] = "healer";
+    groupRoleNameMap[GroupRole::GroupRole_DPS] = "dps";
+
     QueryResult nierNameQR = WorldDatabase.Query("SELECT name FROM nier_names order by rand()");
     if (nierNameQR)
     {
@@ -182,7 +159,12 @@ void NierManager::InitializeManager()
         } while (nierNameQR->NextRow());
     }
 
-    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "nier initialized");
+    if (sNierConfig->Reset == 1)
+    {
+        DeleteNiers();
+    }
+
+    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "nier system initialized");
 }
 
 NierManager* NierManager::instance()
@@ -191,75 +173,9 @@ NierManager* NierManager::instance()
     return &instance;
 }
 
-void NierManager::UpdateNierManager(uint32 pmDiff)
-{
-    if (sNierConfig->Enable == 0)
-    {
-        return;
-    }
-
-    if (checkDelay >= 0)
-    {
-        checkDelay -= pmDiff;
-    }
-    if (checkDelay < 0)
-    {
-        checkDelay = sNierConfig->ManagerCheckDelay;
-        std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
-        for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
-        {
-            if (WorldSession* eachWS = wsIT->second)
-            {
-                if (!eachWS->isNier)
-                {
-                    if (Player* eachPlayer = eachWS->GetPlayer())
-                    {
-                        LoginNierPartners(eachPlayer->GetGUID().GetCounter());
-                    }
-                }
-            }
-        }
-    }
-}
-
-void NierManager::UpdateNierEntities(uint32 pmDiff)
-{
-    for (std::unordered_map<uint32, std::unordered_set<NierEntity*>>::iterator nierGroupIT = nierEntityMap.begin(); nierGroupIT != nierEntityMap.end(); nierGroupIT++)
-    {
-        for (std::unordered_set<NierEntity*>::iterator reIT = nierGroupIT->second.begin(); reIT != nierGroupIT->second.end(); reIT++)
-        {
-            (*reIT)->Update(pmDiff);
-        }
-    }
-}
-
 void NierManager::LogoutNiers(bool pmInstant)
 {
-    for (std::unordered_map<uint32, std::unordered_set<NierEntity*>>::iterator nierGroupIT = nierEntityMap.begin(); nierGroupIT != nierEntityMap.end(); nierGroupIT++)
-    {
-        for (std::unordered_set<NierEntity*>::iterator reIT = nierGroupIT->second.begin(); reIT != nierGroupIT->second.end(); reIT++)
-        {
-            if (NierEntity* eachNier = *reIT)
-            {
-                if (pmInstant)
-                {
-                    ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, eachNier->character_id);
-                    if (Player* eachPlayer = ObjectAccessor::FindPlayer(playerGuid))
-                    {
-                        std::ostringstream logStream;
-                        logStream << "Logout nier : " << eachPlayer->GetName();
-                        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, logStream.str().c_str());
-                        eachPlayer->GetSession()->LogoutPlayer(true);
-                    }
-                }
-                else
-                {
-                    eachNier->entityState = NierEntityState::NierEntityState_DoLogoff;
-                    eachNier->checkDelay = 10;
-                }
-            }
-        }
-    }
+    sWorld->KickAll();
 }
 
 void NierManager::DeleteNiers()
@@ -294,194 +210,6 @@ void NierManager::DeleteNiers()
                 AccountMgr::DeleteAccount(eachAccountId);
             }
         } while (nierAccountQR->NextRow());
-    }
-}
-
-bool NierManager::LoginNierPartners(uint32 pmMasterId)
-{
-    ObjectGuid masterGuid = ObjectGuid(HighGuid::Player, pmMasterId);
-    if (Player* master = ObjectAccessor::FindConnectedPlayer(masterGuid))
-    {
-        int tankCount = 1;
-        int healerCount = 0;
-        int dpsCount = 3;
-        std::unordered_map<uint32, uint32> partnerMap;
-        QueryResult nierQR = CharacterDatabase.Query("SELECT master_id, role FROM nier where master_id = {}", pmMasterId);
-        if (nierQR)
-        {
-            do
-            {
-                Field* fields = nierQR->Fetch();
-                uint32 character_id = fields[0].Get<uint32>();
-                uint32 role = fields[1].Get<uint32>();
-                partnerMap[character_id] = role;
-                if (role == GroupRole::GroupRole_Tank)
-                {
-                    tankCount -= 1;
-                }
-                else if (role == GroupRole::GroupRole_Healer)
-                {
-                    healerCount -= 1;
-                }
-                else if (role == GroupRole::GroupRole_DPS)
-                {
-                    dpsCount -= 1;
-                }
-            } while (nierQR->NextRow());
-        }
-        while (tankCount > 0)
-        {
-            uint32 career = Classes::CLASS_WARRIOR;
-            uint32 specialty = 2;
-
-            career = Classes::CLASS_PRIEST;
-            specialty = 0;
-
-            uint32 role = GroupRole::GroupRole_Tank;
-            uint32 race = urand(0, 4);
-            uint32 masterRace = master->getRace();
-            if (masterRace == Races::RACE_HUMAN || masterRace == Races::RACE_DWARF || masterRace == Races::RACE_NIGHTELF || masterRace == Races::RACE_DRAENEI || masterRace == Races::RACE_GNOME)
-            {
-                uint32 raceIndex = urand(0, allianceRaces[career].size() - 1);
-                race = allianceRaces[career][raceIndex];
-            }
-            else
-            {
-                uint32 raceIndex = urand(0, hordeRaces[career].size() - 1);
-                race = hordeRaces[career][raceIndex];
-            }
-            // debug
-            if (race == 0)
-            {
-                bool breakPoint = true;
-            }
-            CreateNier(pmMasterId, race, career, specialty, role);
-            tankCount -= 1;
-        }
-        while (healerCount > 0)
-        {
-            uint32 career = Classes::CLASS_PRIEST;
-            uint32 specialty = 1;
-            uint32 role = GroupRole::GroupRole_Healer;
-            uint32 race = urand(0, 4);
-            uint32 masterRace = master->getRace();
-            if (masterRace == Races::RACE_HUMAN || masterRace == Races::RACE_DWARF || masterRace == Races::RACE_NIGHTELF || masterRace == Races::RACE_DRAENEI || masterRace == Races::RACE_GNOME)
-            {
-                uint32 raceIndex = urand(0, allianceRaces[career].size() - 1);
-                race = allianceRaces[career][raceIndex];
-            }
-            else
-            {
-                uint32 raceIndex = urand(0, hordeRaces[career].size() - 1);
-                race = hordeRaces[career][raceIndex];
-            }
-            // debug
-            if (race == 0)
-            {
-                bool breakPoint = true;
-            }
-            CreateNier(pmMasterId, race, career, specialty, role);
-            healerCount -= 1;
-        }
-        while (dpsCount > 0)
-        {
-            uint32 career = Classes::CLASS_PRIEST;
-            uint32 specialty = 2;
-            uint32 role = GroupRole::GroupRole_DPS;
-            uint32 race = urand(0, 4);
-            uint32 masterRace = master->getRace();
-            if (masterRace == Races::RACE_HUMAN || masterRace == Races::RACE_DWARF || masterRace == Races::RACE_NIGHTELF || masterRace == Races::RACE_DRAENEI || masterRace == Races::RACE_GNOME)
-            {
-                uint32 raceIndex = urand(0, allianceRaces[career].size() - 1);
-                race = allianceRaces[career][raceIndex];
-            }
-            else
-            {
-                uint32 raceIndex = urand(0, hordeRaces[career].size() - 1);
-                race = hordeRaces[career][raceIndex];
-            }
-            // debug
-            if (race == 0)
-            {
-                bool breakPoint = true;
-            }
-            CreateNier(pmMasterId, race, career, specialty, role);
-            dpsCount -= 1;
-        }
-
-        // nier todo login partners
-        if (nierEntityMap.find(pmMasterId) != nierEntityMap.end())
-        {
-            for (std::unordered_set<NierEntity*>::iterator reIT = nierEntityMap[pmMasterId].begin(); reIT != nierEntityMap[pmMasterId].end(); reIT++)
-            {
-                if (NierEntity* re = *reIT)
-                {
-                    if (re->entityState == NierEntityState::NierEntityState_OffLine)
-                    {
-                        re->entityState = NierEntityState::NierEntityState_Enter;
-                        re->checkDelay = urand(1000, 10000);
-                    }
-                }
-            }
-        }
-    }
-
-    return true;
-}
-
-void NierManager::CreateNier(uint32 pmMasterId, uint32 pmRace, uint32 pmCareer, uint32 pmSpecialty, uint32 pmGroupRole)
-{
-    uint32 currentNierCount = 0;
-    QueryResult nierQR = CharacterDatabase.Query("SELECT count(*) FROM nier");
-    if (nierQR)
-    {
-        Field* fields = nierQR->Fetch();
-        currentNierCount = fields[0].Get<uint32>();
-    }
-    std::ostringstream accountNameStream;
-    accountNameStream << NIER_MARK << currentNierCount;
-    std::string checkAccountName = accountNameStream.str();
-    std::ostringstream querySQLStream;
-    querySQLStream << "SELECT * FROM account where username ='" << checkAccountName << "'";
-    std::string querySQL = querySQLStream.str();
-    QueryResult accountNameQR = LoginDatabase.Query(querySQL.c_str());
-    if (accountNameQR)
-    {
-        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "Account already {} exists.", checkAccountName);
-    }
-    else
-    {
-        uint32 nierEntry = 0;
-        nierQR = CharacterDatabase.Query("SELECT entry FROM nier order by entry desc");
-        if (nierQR)
-        {
-            Field* fields = nierQR->Fetch();
-            nierEntry = fields[0].Get<uint32>();
-        }
-        nierEntry = nierEntry + 1;
-
-        std::ostringstream sqlStream;
-        sqlStream << "INSERT INTO nier (entry, master_id, account_name, account_id, character_id, race, career, specialty, role) VALUES (" << nierEntry << ", " << pmMasterId << ", '" << checkAccountName << "', 0, 0, " << pmRace << ", " << pmCareer << ", " << pmSpecialty << ", " << pmGroupRole << ")";
-        std::string sql = sqlStream.str();
-        CharacterDatabase.DirectExecute(sql.c_str());
-        std::ostringstream replyStream;
-        replyStream << "nier " << checkAccountName << " created";
-        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str());
-
-        NierEntity* ne = new NierEntity();
-        ne->account_id = 0;
-        ne->account_name = checkAccountName;
-        ne->character_id = 0;
-        ne->checkDelay = 1000;
-        ne->entityState = NierEntityState_OffLine;
-        ne->master_id = pmMasterId;
-        ne->entry = nierEntry;
-        ne->offlineDelay = 0;
-        ne->target_class = pmCareer;
-        ne->target_level = 0;
-        ne->target_race = pmRace;
-        ne->target_specialty = pmSpecialty;
-        nierEntityMap[pmMasterId].insert(ne);
     }
 }
 
@@ -538,1052 +266,250 @@ Position NierManager::PredictPosition(Unit* target)
     return pos;
 }
 
-void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, Player* pmTargetPlayer, Group* pmTargetGroup)
+void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Player* pTargetPlayer)
 {
-    if (!pmCommander)
+    if (!pCommander)
     {
         return;
     }
-    std::vector<std::string> commandVector = sMingManager->SplitString(pmContent, " ", true);
+    std::vector<std::string> commandVector = sMingManager->SplitString(pContent, " ", true);
     std::string commandName = commandVector.at(0);
-    if (commandName == "role")
+
+    if (commandName == "nier")
     {
-        if (pmTargetGroup)
+        if (commandVector.size() > 1)
         {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            std::string partnerAction = commandVector.at(1);
+            if (partnerAction == "online")
             {
-                Player* member = groupRef->GetSource();
-                if (member)
+                if (commandVector.size() > 2)
                 {
-                    if (member->GetGUID() != pmCommander->GetGUID())
+                    std::string partnerAction = commandVector.at(2);
+                    if (partnerAction == "partner")
                     {
-                        HandleChatCommand(pmCommander, pmContent, member);
+                        uint32 rawLevel = pCommander->GetLevel();
+                        if (rawLevel < 10)
+                        {
+                            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Level lower than 10", pCommander);
+                            return;
+                        }
+                        if (pCommander->partners.empty())
+                        {
+                            uint32 meId = pCommander->GetGUID().GetCounter();
+                            std::ostringstream nierQueryStream;
+                            nierQueryStream << "SELECT entry, master_id, account_id, character_id, account_name, race, career, specialty, role, nier_type FROM nier where master_id = " << meId << " and nier_type = 0";
+                            while (true)
+                            {
+                                QueryResult nierQR = CharacterDatabase.Query(nierQueryStream.str().c_str());
+                                if (nierQR)
+                                {
+                                    std::ostringstream replyStream;
+                                    replyStream << "Partner loaded : ";
+                                    do
+                                    {
+                                        Nier_Base* nier = nullptr;
+                                        Field* fields = nierQR->Fetch();
+                                        uint32 targetCareer = fields[6].Get<uint32>();
+                                        switch (targetCareer)
+                                        {
+                                        case 1:
+                                        {
+                                            nier = new Nier_Warrior();
+                                            break;
+                                        }
+                                        case 2:
+                                        {
+                                            nier = new Nier_Paladin();
+                                            break;
+                                        }
+                                        case 3:
+                                        {
+                                            nier = new Nier_Hunter();
+                                            break;
+                                        }
+                                        case 4:
+                                        {
+                                            nier = new Nier_Rogue();
+                                            break;
+                                        }
+                                        case 5:
+                                        {
+                                            nier = new Nier_Priest();
+                                            break;
+                                        }
+                                        case 7:
+                                        {
+                                            nier = new Nier_Shaman();
+                                            break;
+                                        }
+                                        case 8:
+                                        {
+                                            nier = new Nier_Mage();
+                                            break;
+                                        }
+                                        case 9:
+                                        {
+                                            nier = new Nier_Warlock();
+                                            break;
+                                        }
+                                        case 11:
+                                        {
+                                            nier = new Nier_Druid();
+                                            break;
+                                        }
+                                        default:
+                                        {
+                                            nier = new Nier_Base();
+                                            break;
+                                        }
+                                        }
+                                        nier->entry = fields[0].Get<uint32>();
+                                        nier->master_id = fields[1].Get<uint32>();
+                                        nier->account_id = fields[2].Get<uint32>();
+                                        nier->character_id = fields[3].Get<uint32>();
+                                        nier->target_race = fields[5].Get<uint32>();
+                                        nier->target_specialty = fields[7].Get<uint32>();
+                                        nier->target_class = targetCareer;
+                                        pCommander->partners.insert(nier);
+                                        replyStream << targetCareer << " ";
+                                    } while (nierQR->NextRow());
+                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str(), pCommander);
+                                    break;
+                                }
+                                else
+                                {
+                                    std::ostringstream replyStream;
+                                    replyStream << "Nier added : ";
+                                    uint32 career = Classes::CLASS_PRIEST;
+                                    AddNier(pCommander, career);
+                                    replyStream << career << " ";
+                                    career = Classes::CLASS_WARLOCK;
+                                    AddNier(pCommander, career);
+                                    replyStream << career << " ";
+                                    career = Classes::CLASS_MAGE;
+                                    AddNier(pCommander, career);
+                                    replyStream << career << " ";
+                                    career = Classes::CLASS_ROGUE;
+                                    AddNier(pCommander, career);
+                                    replyStream << career << " ";
+                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str(), pCommander);
+                                }
+                            }
+                        }
+                        for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
+                        {
+                            if (Nier_Base* nb = *nit)
+                            {
+                                if (nb->entityState == NierState::NierState_OffLine)
+                                {
+                                    nb->entityState = NierState::NierState_Enter;
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-        else
+    }
+    else if (commandName == "role")
+    {
+        if (commandVector.size() > 1)
         {
-            Player* targetPlayer = pmTargetPlayer;
-            if (!targetPlayer)
+            std::string role = commandVector.at(1);
+            if (role == "tank")
             {
-                targetPlayer = pmCommander;
+                pCommander->groupRole = GroupRole::GroupRole_Tank;
             }
-            std::ostringstream replyStream;
-            if (commandVector.size() > 1)
+            else if (role == "healer")
             {
-                std::string newRole = commandVector.at(1);
-                if (newRole == "tank")
+                pCommander->groupRole = GroupRole::GroupRole_Healer;
+            }
+            else if (role == "dps")
+            {
+                pCommander->groupRole = GroupRole::GroupRole_DPS;
+            }
+        }
+        std::ostringstream replyStream;
+        replyStream << "Role is : " << groupRoleNameMap[pCommander->groupRole];
+        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str(), pCommander);
+    }
+    else if (commandName == "equip")
+    {
+        for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
+        {
+            if (Nier_Base* nb = *nit)
+            {
+                if (Player* eachPlayer = nb->me)
                 {
-                    targetPlayer->groupRole = GroupRole::GroupRole_Tank;
+                    if (pTargetPlayer)
+                    {
+                        if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
+                        {
+                            nb->InitializeEquipments(true);
+                            eachPlayer->Whisper("Equipped", Language::LANG_UNIVERSAL, pCommander);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        nb->InitializeEquipments(true);
+                        eachPlayer->Whisper("Equipped", Language::LANG_UNIVERSAL, pCommander);
+                    }
                 }
-                else if (newRole == "healer")
+            }
+        }
+    }
+    else if (commandName == "assemble")
+    {
+        for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
+        {
+            if (Nier_Base* nb = *nit)
+            {
+                if (Player* eachPlayer = nb->me)
                 {
-                    targetPlayer->groupRole = GroupRole::GroupRole_Healer;
+                    if (pTargetPlayer)
+                    {
+                        if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
+                        {
+                            nb->assembleDelay = 60000;
+                            eachPlayer->Whisper("Assemble in 60 seconds", Language::LANG_UNIVERSAL, pCommander);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        nb->assembleDelay = 60000;
+                        eachPlayer->Whisper("Assemble in 60 seconds", Language::LANG_UNIVERSAL, pCommander);
+                    }
                 }
-                else if (newRole == "dps")
-                {
-                    targetPlayer->groupRole = GroupRole::GroupRole_DPS;
-                }
-            }
-            if (targetPlayer->groupRole == GroupRole::GroupRole_Tank)
-            {
-                replyStream << "Role is tank";
-            }
-            else if (targetPlayer->groupRole == GroupRole::GroupRole_Healer)
-            {
-                replyStream << "Role is healer";
-            }
-            else if (targetPlayer->groupRole == GroupRole::GroupRole_DPS)
-            {
-                replyStream << "Role is dps";
-            }
-            if (pmTargetPlayer)
-            {
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-            else
-            {
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
             }
         }
     }
     else if (commandName == "who")
     {
-        if (pmTargetGroup)
+        for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
         {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+            if (Nier_Base* nb = *nit)
             {
-                Player* member = groupRef->GetSource();
-                if (member)
+                if (Player* eachPlayer = nb->me)
                 {
-                    if (member->GetGUID() != pmCommander->GetGUID())
+                    if (pTargetPlayer)
                     {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-        else if (pmTargetPlayer)
-        {
-            std::ostringstream replyStream;
-            replyStream << characterTalentTabNameMap[pmTargetPlayer->getClass()][pmTargetPlayer->nierAction->specialty];
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-        }
-    }
-    else if (commandName == "emote")
-    {
-        if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-        else if (pmTargetPlayer)
-        {
-            Player* targetPlayer = pmTargetPlayer;
-            if (!targetPlayer)
-            {
-                targetPlayer = pmCommander;
-            }
-            if (commandVector.size() > 1)
-            {
-                std::string emoteContents = commandVector.at(1);
-                int emoteNumber = atoi(emoteContents.c_str());
-                targetPlayer->HandleEmoteCommand(emoteNumber);
-            }
-        }
-        else
-        {
-            if (commandVector.size() > 1)
-            {
-                std::string emoteContents = commandVector.at(1);
-                int emoteNumber = atoi(emoteContents.c_str());
-                pmCommander->HandleEmoteCommand(emoteNumber);
-            }
-        }
-    }
-    else if (commandName == "join")
-    {
-        if (ObjectGuid selectionGUID = pmCommander->GetGuidValue(UNIT_FIELD_TARGET))
-        {
-            if (Player* targetPlayer = ObjectAccessor::FindPlayer(selectionGUID))
-            {
-                if (targetPlayer->IsInSameGroupWith(pmCommander))
-                {
-                    pmCommander->TeleportTo(targetPlayer->GetWorldLocation());
-                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "joined", pmCommander);
-                }
-            }
-        }
-    }
-    else if (commandName == "hover")
-    {
-        if (Unit* targetUnit = pmCommander->GetSelectedUnit())
-        {
-            if (targetUnit->m_movementInfo.HasMovementFlag(MOVEMENTFLAG_ASCENDING))
-            {
-                targetUnit->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ASCENDING);
-            }
-            else
-            {
-                targetUnit->m_movementInfo.AddMovementFlag(MOVEMENTFLAG_ASCENDING);
-            }
-        }
-    }
-    else if (commandName == "turn")
-    {
-        if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-        else if (pmTargetPlayer)
-        {
-            Player* targetPlayer = pmTargetPlayer;
-            if (!targetPlayer)
-            {
-                targetPlayer = pmCommander;
-            }
-            if (commandVector.size() > 1)
-            {
-                std::string emoteContents = commandVector.at(1);
-                int emoteNumber = atoi(emoteContents.c_str());
-                targetPlayer->HandleEmoteCommand(emoteNumber);
-            }
-        }
-        else
-        {
-            if (commandVector.size() > 1)
-            {
-                std::string turnContents = commandVector.at(1);
-                float turnAngle = M_PI / 8;
-                if (turnContents == "left")
-                {
-                    turnAngle = M_PI / 8;
-                }
-                else
-                {
-                    turnAngle = -M_PI / 8;
-                }
-                float destX = 0.0f, destY = 0.0f, destZ = 0.0f;
-                pmCommander->GetNearPoint(nullptr, destX, destY, destZ, 0.0f, 0.05f, pmCommander->GetOrientation() + turnAngle + M_PI);
-                float angle = pmCommander->GetOrientation() + turnAngle;
-                Movement::MoveSplineInit init(pmCommander);
-                init.MoveTo(destX, destY, destZ, false);
-                init.SetFacing(angle);
-                init.SetOrientationInversed();
-                init.Launch();
-            }
-        }
-    }
-    else if (commandName == "arrangement")
-    {
-        std::ostringstream replyStream;
-        if (pmTargetGroup)
-        {
-            if (pmTargetGroup->GetLeaderGUID() == pmCommander->GetGUID())
-            {
-                ObjectGuid ogTank = ObjectGuid();
-                ObjectGuid ogHealer = ObjectGuid();
-                int rti = 0;
-                for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                {
-                    if (Player* member = groupRef->GetSource())
-                    {
-                        if (member->GetGUID() == pmCommander->GetGUID())
+                        if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
                         {
-                            continue;
+                            std::ostringstream replyStream;
+                            replyStream << "Role is : " << groupRoleNameMap[eachPlayer->groupRole];
+                            replyStream << "Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
+                            eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
+                            break;
                         }
-                        uint32 mapId = member->GetMapId();
-                        if (mapId == StrategyIndex::StrategyIndex_The_Underbog)
-                        {
-                            member->activeStrategyIndex = StrategyIndex::StrategyIndex_The_Underbog;
-                        }
-                        else if (mapId == 269)
-                        {
-                            member->activeStrategyIndex = StrategyIndex::StrategyIndex_The_Black_Morass;
-                        }
-                        else if (mapId == 585)
-                        {
-                            member->activeStrategyIndex = 585;
-                        }
-                        else if (mapId == 601)
-                        {
-                            member->activeStrategyIndex = 601;
-                        }
-                        if (NierStrategy_Base* ns = member->nierStrategyMap[member->activeStrategyIndex])
-                        {
-                            ns->Reset();
-                            member->groupRole = GroupRole::GroupRole_DPS;
-                            switch (member->getClass())
-                            {
-                            case Classes::CLASS_WARRIOR:
-                            {
-                                member->groupRole = GroupRole::GroupRole_Tank;
-                                ogTank = member->GetGUID();
-                                break;
-                            }
-                            case Classes::CLASS_HUNTER:
-                            {
-                                break;
-                            }
-                            case Classes::CLASS_MAGE:
-                            {
-                                ns->rti = rti;
-                                rti++;
-                                break;
-                            }
-                            case Classes::CLASS_DRUID:
-                            {
-                                ns->rti = rti;
-                                rti++;
-                                break;
-                            }
-                            case Classes::CLASS_ROGUE:
-                            {
-                                ns->forceBack = true;
-                                break;
-                            }
-                            case Classes::CLASS_PRIEST:
-                            {
-                                if (member->nierAction->specialty == 0)
-                                {
-                                    member->groupRole = GroupRole::GroupRole_Tank;
-                                    ogTank = member->GetGUID();
-                                }
-                                else if (member->nierAction->specialty == 1)
-                                {
-                                    member->groupRole = GroupRole::GroupRole_Healer;
-                                    ogHealer = member->GetGUID();
-                                }
-                                if (member->nierAction->specialty == 2)
-                                {
-                                    member->groupRole = GroupRole::GroupRole_DPS;
-                                }
-                                break;
-                            }
-                            default:
-                            {
-                                break;
-                            }
-                            }
-                        }
-                        member->nierAction->Prepare();
-                    }
-                }
-                for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                {
-                    if (Player* member = groupRef->GetSource())
-                    {
-                        if (member->GetGUID() == pmCommander->GetGUID())
-                        {
-                            continue;
-                        }
-                        if (NierStrategy_Base* ns = member->nierStrategyMap[member->activeStrategyIndex])
-                        {
-                            ns->ogTank = ogTank;
-                            ns->ogHealer = ogHealer;
-                            ns->Report();
-                        }
-                    }
-                }
-                replyStream << "Arranged";
-            }
-            else
-            {
-                replyStream << "You are not leader";
-            }
-        }
-        else
-        {
-            replyStream << "Not in a group";
-        }
-        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-    }
-    else if (commandName == "instance")
-    {
-        std::ostringstream replyStream;
-        if (pmTargetPlayer)
-        {
-            if (pmTargetPlayer->GetSession()->isNier)
-            {
-                for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
-                {
-                    BoundInstancesMap const& m_boundInstances = sInstanceSaveMgr->PlayerGetBoundInstances(pmTargetPlayer->GetGUID(), Difficulty(i));
-                    for (BoundInstancesMap::const_iterator itr = m_boundInstances.begin(); itr != m_boundInstances.end(); itr++)
-                    {
-                        InstanceSave const* save = itr->second.save;
-                        uint32 resetTime = itr->second.extended ? save->GetExtendedResetTime() : save->GetResetTime();
-                        uint32 ttr = (resetTime >= GameTime::GetGameTime().count() ? resetTime - GameTime::GetGameTime().count() : 0);
-                        sInstanceSaveMgr->PlayerUnbindInstance(pmTargetPlayer->GetGUID(), itr->first, Difficulty(i), true, pmTargetPlayer);
-                        itr = m_boundInstances.begin();
-                    }
-                }
-                replyStream << "Instance unbond";
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member, pmTargetGroup);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "updateentry")
-    {
-        if (Unit* target = pmCommander->GetSelectedUnit())
-        {
-            if (Creature* targetC = (Creature*)target)
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string checkEntry = commandVector.at(1);
-                    uint32 entry = atoi(checkEntry.c_str());
-                    targetC->UpdateEntry(entry);
-                }
-            }
-        }
-    }
-    else if (commandName == "vimgol")
-    {
-        if (pmTargetGroup)
-        {
-            std::list<Creature*> visualList;
-            pmCommander->GetCreatureListWithEntryInGrid(visualList, 23040, VISIBILITY_DISTANCE_NORMAL);
-            std::unordered_set<ObjectGuid> ogGoingSet;
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                if (Player* member = groupRef->GetSource())
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        for (auto& eachVisual : visualList)
-                        {
-                            if (ogGoingSet.find(eachVisual->GetGUID()) == ogGoingSet.end())
-                            {
-                                if (NierStrategy_Base* ns = member->nierStrategyMap[member->activeStrategyIndex])
-                                {
-                                    ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Hold;
-                                    ns->restLimit = 0;
-                                    ns->actionType = ActionType::ActionType_Move;
-                                    ns->actionLimit = 30000;
-                                    member->nierAction->nm->Point(eachVisual->GetPosition(), ns->actionLimit);
-                                    //std::ostringstream replyStream;
-                                    //replyStream << "Goting to visual : " << eachVisual->GetGUID().GetCounter();
-                                    //member->Say(replyStream.str(), Language::LANG_UNIVERSAL);
-                                    ogGoingSet.insert(eachVisual->GetGUID());
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            HandleChatCommand(pmCommander, pmContent, pmCommander, pmTargetGroup);
-        }
-    }
-    else if (commandName == "distance")
-    {
-        if (pmTargetPlayer)
-        {
-            if (Unit* distanceTarget = pmCommander->GetSelectedUnit())
-            {
-                float distance = pmTargetPlayer->GetDistance(distanceTarget);
-                std::ostringstream replyStream0;
-                replyStream0 << "base : " << distance;
-                pmTargetPlayer->Say(replyStream0.str(), Language::LANG_UNIVERSAL);
-            }
-            else
-            {
-                std::ostringstream replyStream;
-                replyStream << "No target";
-                pmTargetPlayer->Say(replyStream.str(), Language::LANG_UNIVERSAL);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member, pmTargetGroup);
-                    }
-                }
-            }
-        }
-        else
-        {
-            HandleChatCommand(pmCommander, pmContent, pmCommander, pmTargetGroup);
-        }
-    }
-    else if (commandName == "apexis")
-    {
-        std::ostringstream replyStream;
-        if (pmTargetPlayer)
-        {
-            if (commandVector.size() > 1)
-            {
-                std::string color = commandVector.at(1);
-                uint32 entry = 0;
-                if (color == "red")
-                {
-                    entry = 185794;
-                }
-                else if (color == "yellow")
-                {
-                    entry = 185792;
-                }
-                else if (color == "blue")
-                {
-                    entry = 185795;
-                }
-                else if (color == "green")
-                {
-                    entry = 185793;
-                }
-                if (entry > 0)
-                {
-                    if (GameObject* pGo = pmTargetPlayer->FindNearestGameObject(entry, INTERACTION_DISTANCE))
-                    {
-                        pGo->Use(pmTargetPlayer);
-                        replyStream << "Use GO : " << pGo->GetGUID().GetCounter();
-                    }
-                }
-                else
-                {
-                    replyStream << "No color";
-                }
-            }
-            else
-            {
-                replyStream << "No color";
-            }
-            pmTargetPlayer->Say(replyStream.str(), Language::LANG_UNIVERSAL);
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member, pmTargetGroup);
-                    }
-                }
-            }
-        }
-        else
-        {
-            HandleChatCommand(pmCommander, pmContent, pmCommander);
-        }
-    }
-    else if (commandName == "display")
-    {
-        if (Unit* target = pmCommander->GetSelectedUnit())
-        {
-            if (commandVector.size() > 1)
-            {
-                std::string idStr = commandVector.at(1);
-                uint32 displayId = atoi(idStr.c_str());
-                target->SetDisplayId(displayId);
-            }
-        }
-    }
-    else if (commandName == "ndisplay")
-    {
-        if (Unit* target = pmCommander->GetSelectedUnit())
-        {
-            if (commandVector.size() > 1)
-            {
-                std::string idStr = commandVector.at(1);
-                uint32 displayId = atoi(idStr.c_str());
-                target->SetNativeDisplayId(displayId);
-            }
-        }
-    }
-    else if (commandName == "vip")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string nameStr = commandVector.at(1);
-                    CreatureTemplateContainer const* ctc = sObjectMgr->GetCreatureTemplates();
-                    for (CreatureTemplateContainer::const_iterator itr = ctc->begin(); itr != ctc->end(); ++itr)
-                    {
-                        if (itr->second.Name == nameStr)
-                        {
-                            ns->vipEntry = itr->second.Entry;
-                        }
-                    }
-                }
-                std::ostringstream replyStream;
-                replyStream << "vip - " << ns->vipEntry;
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "nearpoint")
-    {
-        std::ostringstream replyStream;
-        if (pmTargetPlayer)
-        {
-            if (Unit* distanceTarget = pmCommander->GetSelectedUnit())
-            {
-                float distance = 10.0f;
-                if (commandVector.size() > 1)
-                {
-                    std::string checkStr = commandVector.at(1);
-                    distance = atof(checkStr.c_str());
-                }
-                pmTargetPlayer->nierAction->nm->Chase(distanceTarget, distance, 0.0f, false, false);
-                replyStream << "chasing : " << distanceTarget->GetName();
-                pmTargetPlayer->Say(replyStream.str(), Language::LANG_UNIVERSAL);
-            }
-            else
-            {
-                replyStream << "No target";
-            }
-            pmTargetPlayer->Say(replyStream.str(), Language::LANG_UNIVERSAL);
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member, pmTargetGroup);
-                    }
-                }
-            }
-        }
-        else
-        {
-            HandleChatCommand(pmCommander, pmContent, pmCommander);
-        }
-    }
-    else if (commandName == "assemble")
-    {
-        std::ostringstream replyStream;
-        if (pmTargetPlayer)
-        {
-            if (pmTargetPlayer->isNier)
-            {
-                if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-                {
-                    if (!pmTargetPlayer->IsAlive())
-                    {
-                        ns->assembleDelay = 120000;
-                        replyStream << "Corpserun 120 seconds";
                     }
                     else
                     {
-                        ns->assembleDelay = 60000;
-                        replyStream << "Assemble in 60 seconds";
-                    }
-                    pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member, pmTargetGroup);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "leader")
-    {
-        if (pmTargetGroup)
-        {
-            if (pmTargetGroup->GetLeaderGUID() != pmCommander->GetGUID())
-            {
-                bool change = true;
-                if (Player* leader = ObjectAccessor::FindPlayer(pmTargetGroup->GetLeaderGUID()))
-                {
-                    if (WorldSession* leaderSession = leader->GetSession())
-                    {
-                        if (!leaderSession->isNier)
-                        {
-                            change = false;
-                        }
-                    }
-                }
-                if (change)
-                {
-                    pmTargetGroup->ChangeLeader(pmCommander->GetGUID());
-                }
-                else
-                {
-                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "Leader is valid", pmCommander);
-                }
-            }
-            else
-            {
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are the leader", pmCommander);
-            }
-        }
-        else
-        {
-            sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, "You are not in a group", pmCommander);
-        }
-    }
-    else if (commandName == "debug")
-    {
-        if (commandVector.size() > 1)
-        {
-            std::string debugType = commandVector.at(1);
-            if (debugType == "jingzhe1")
-            {
-                //pmCommander->StoreNewItemInBestSlots(6948, 1);
-            }
-        }
-    }
-    else if (commandName == "nier")
-    {
-        if (commandVector.size() > 1)
-        {
-            std::string nierAction = commandVector.at(1);
-            if (nierAction == "offline")
-            {
-                std::ostringstream replyStream;
-                replyStream << "All niers are going offline";
-                LogoutNiers();
-                sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-            }
-            else if (nierAction == "relocate")
-            {
-                std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
-                for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
-                {
-                    if (WorldSession* eachWS = wsIT->second)
-                    {
-                        if (eachWS->isNier)
-                        {
-                            if (Player* eachNier = eachWS->GetPlayer())
-                            {
-                                if (eachNier->IsInWorld())
-                                {
-                                    eachNier->TeleportTo(eachNier->m_homebindMapId, eachNier->m_homebindX, eachNier->m_homebindY, eachNier->m_homebindZ, 0);
-
-                                    std::ostringstream replyTitleStream;
-                                    replyTitleStream << "Teleport nier to homebind : " << eachNier->GetName();
-                                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyTitleStream.str().c_str(), pmCommander);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "engage")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                if (ns->basicStrategyType == BasicStrategyType::BasicStrategyType_Freeze || ns->basicStrategyType == BasicStrategyType::BasicStrategyType_Glue)
-                {
-                    ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Normal;
-                }
-                if (Unit* target = pmCommander->GetSelectedUnit())
-                {
-                    if (ns->Engage(target))
-                    {
-                        int engageLimit = DEFAULT_ACTION_LIMIT_DELAY;
-                        if (commandVector.size() > 1)
-                        {
-                            std::string checkStr = commandVector.at(1);
-                            engageLimit = atoi(checkStr.c_str());
-                        }
-                        ns->actionLimit = engageLimit;
-                        ns->ogActionTarget = target->GetGUID();
-                        ns->actionType = ActionType::ActionType_Engage;
                         std::ostringstream replyStream;
-                        replyStream << "Try to engage " << target->GetName();
-                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                    }
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "tank")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                if (Unit* target = pmCommander->GetSelectedUnit())
-                {
-                    if (ns->basicStrategyType == BasicStrategyType::BasicStrategyType_Freeze || ns->basicStrategyType == BasicStrategyType::BasicStrategyType_Glue)
-                    {
-                        ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Normal;
-                    }
-                    if (pmTargetPlayer->groupRole == GroupRole::GroupRole_Tank)
-                    {
-                        if (ns->DoTank(target))
-                        {
-                            if (Group* tankGroup = pmTargetPlayer->GetGroup())
-                            {
-                                tankGroup->SetTargetIcon(7, pmTargetPlayer->GetGUID(), target->GetGUID());
-                                for (GroupReference* groupRef = tankGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                                {
-                                    if (Player* member = groupRef->GetSource())
-                                    {
-                                        if (member->GetGUID() != pmCommander->GetGUID())
-                                        {
-                                            if (member->GetSession()->isNier)
-                                            {
-                                                if (member->nierAction->ReadyTank(pmTargetPlayer))
-                                                {
-                                                    if (NierStrategy_Base* nsAction = member->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-                                                    {
-                                                        nsAction->ogActionTarget = pmTargetPlayer->GetGUID();
-                                                        nsAction->actionType = ActionType::ActionType_ReadyTank;
-                                                        nsAction->actionLimit = 2000;
-                                                    }
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            int engageLimit = DEFAULT_ACTION_LIMIT_DELAY;
-                            if (commandVector.size() > 1)
-                            {
-                                std::string checkStr = commandVector.at(1);
-                                engageLimit = atoi(checkStr.c_str());
-                            }
-                            ns->actionLimit = engageLimit;
-                            ns->ogActionTarget = target->GetGUID();
-                            ns->actionType = ActionType::ActionType_Engage;
-                            std::ostringstream replyStream;
-                            replyStream << "Try to engage " << target->GetName();
-                            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                        }
-                    }
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "hold")
-    {
-        if (pmTargetPlayer)
-        {
-            bool doAction = true;
-            if (commandVector.size() > 1)
-            {
-                std::string role = commandVector.at(1);
-                if (role == "tank")
-                {
-                    if (pmTargetPlayer->groupRole != GroupRole::GroupRole_Tank)
-                    {
-                        doAction = false;
-                    }
-                }
-                else if (role == "healer")
-                {
-                    if (pmTargetPlayer->groupRole != GroupRole::GroupRole_Healer)
-                    {
-                        doAction = false;
-                    }
-                }
-                else if (role == "dps")
-                {
-                    if (pmTargetPlayer->groupRole != GroupRole::GroupRole_DPS)
-                    {
-                        doAction = false;
-                    }
-                }
-                else if (role == "melee")
-                {
-                    uint32 myClass = pmTargetPlayer->getClass();
-                    if (myClass != Classes::CLASS_WARRIOR && myClass != Classes::CLASS_ROGUE && myClass != Classes::CLASS_PALADIN)
-                    {
-                        doAction = false;
-                    }
-                }
-            }
-            if (doAction)
-            {
-                if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-                {
-                    ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Hold;
-                    pmTargetPlayer->StopMoving();
-                    pmTargetPlayer->GetMotionMaster()->Clear();
-                    std::ostringstream replyStream;
-                    replyStream << "Holding";
-                    pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "dev0")
-    {
-        if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        member->SetSelection(ObjectGuid::Empty);
-                        member->SetTarget(ObjectGuid::Empty);
-                        member->CombatStop(true);
-                        member->StopMoving();
-                        member->GetMotionMaster()->Clear();
-                        member->AttackStop();
-                        member->InterruptNonMeleeSpells(true);
-                        member->ResurrectPlayer(1.0f);
-                        member->TeleportTo(pmCommander->GetMapId(), pmCommander->GetPositionX(), pmCommander->GetPositionY(), pmCommander->GetPositionZ(), pmCommander->GetOrientation());
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "caution")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                if (commandVector.size() > 1)
-                {
-                    std::string cautionTypeStr = commandVector.at(1);
-                    if (commandVector.size() > 2)
-                    {
-                        std::ostringstream nameStream;
-                        nameStream << commandVector.at(2);
-                        for (int nameIndex = 3; nameIndex < commandVector.size(); nameIndex++)
-                        {
-                            nameStream << " " << commandVector.at(nameIndex);
-                        }
-                        std::string spellNameStr = nameStream.str();
-                        if (cautionTypeStr == "add")
-                        {
-                            std::ostringstream queryStream;
-                            queryStream << "SELECT Id FROM spell_template where SpellName = '" << spellNameStr << "'";
-                            QueryResult spellQR = WorldDatabase.Query(queryStream.str().c_str());
-                            if (spellQR)
-                            {
-                                do
-                                {
-                                    Field* fields = spellQR->Fetch();
-                                    uint32 eachId = fields[0].Get<uint32>();
-                                    if (ns->cautionSpellMap.find(spellNameStr) == ns->cautionSpellMap.end())
-                                    {
-                                        ns->cautionSpellMap[spellNameStr].insert(eachId);
-                                    }
-                                    else
-                                    {
-                                        std::unordered_set<uint32> eachIDSet = ns->cautionSpellMap.find(spellNameStr)->second;
-                                        if (eachIDSet.find(eachId) == eachIDSet.end())
-                                        {
-                                            ns->cautionSpellMap[spellNameStr].insert(eachId);
-                                        }
-                                    }
-                                } while (spellQR->NextRow());
-                            }
-                        }
-                        else if (cautionTypeStr == "remove")
-                        {
-                            ns->cautionSpellMap.erase(spellNameStr);
-                        }
-                    }
-                    else if (cautionTypeStr == "clear")
-                    {
-                        ns->cautionSpellMap.clear();
-                    }
-                }
-                for (std::unordered_map<std::string, std::unordered_set<uint32>>::iterator nameIT = ns->cautionSpellMap.begin(); nameIT != ns->cautionSpellMap.end(); nameIT++)
-                {
-                    for (std::unordered_set<uint32>::iterator idIT = nameIT->second.begin(); idIT != nameIT->second.end(); idIT++)
-                    {
-                        std::ostringstream detailsStream;
-                        detailsStream << "Caution : " << nameIT->first << " - " << *idIT;
-                        pmTargetPlayer->Whisper(detailsStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                    }
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
+                        replyStream << "Role is : " << groupRoleNameMap[eachPlayer->groupRole];
+                        replyStream << "Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
+                        eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
                     }
                 }
             }
@@ -1591,117 +517,37 @@ void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, 
     }
     else if (commandName == "freeze")
     {
-        if (pmTargetPlayer)
+        for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
         {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
+            if (Nier_Base* nb = *nit)
             {
-                ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Freeze;
-                pmTargetPlayer->nierAction->nm->ResetMovement();
-                pmTargetPlayer->InterruptNonMeleeSpells(true);
-                pmTargetPlayer->AttackStop();
-                pmTargetPlayer->nierAction->PetStop();
-                std::ostringstream replyStream;
-                replyStream << "Freezed";
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
+                if (Player* eachPlayer = nb->me)
                 {
-                    if (member->GetGUID() != pmCommander->GetGUID())
+                    if (pTargetPlayer)
                     {
-                        HandleChatCommand(pmCommander, pmContent, member);
+                        if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
+                        {
+                            nb->freezing = true;
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
+                            eachPlayer->StopMoving();
+                            eachPlayer->GetMotionMaster()->Clear();
+                            eachPlayer->Whisper("Freezed", Language::LANG_UNIVERSAL, pCommander);
+                            break;
+                        }
                     }
-                }
-            }
-        }
-    }
-    else if (commandName == "prepare")
-    {
-        if (pmTargetPlayer)
-        {
-            pmTargetPlayer->nierAction->Prepare();
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
+                    else
                     {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "rest")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                ns->Rest(true);
-                pmTargetPlayer->Whisper("Resting", Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "revive")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                if (Unit* target = pmCommander->GetSelectedUnit())
-                {
-                    if (ns->Revive(target))
-                    {
-                        ns->actionLimit = DEFAULT_ACTION_LIMIT_DELAY;
-                        ns->ogActionTarget = target->GetGUID();
-                        ns->actionType = ActionType::ActionType_Revive;
-                        std::ostringstream replyStream;
-                        replyStream << "Try to do reviving";
-                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                    }
-                }
-                else if (ns->Revive())
-                {
-                    std::ostringstream replyStream;
-                    replyStream << "Try to do reviving";
-                    pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
+                        nb->freezing = true;
+                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
+                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
+                        eachPlayer->StopMoving();
+                        eachPlayer->GetMotionMaster()->Clear();
+                        eachPlayer->Whisper("Freezed", Language::LANG_UNIVERSAL, pCommander);
                     }
                 }
             }
@@ -1709,1339 +555,25 @@ void NierManager::HandleChatCommand(Player* pmCommander, std::string pmContent, 
     }
     else if (commandName == "follow")
     {
-        if (pmTargetPlayer)
+        for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
         {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
+            if (Nier_Base* nb = *nit)
             {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
+                if (Player* eachPlayer = nb->me)
                 {
-                    std::string cmdDistanceStr = commandVector.at(1);
-                    float cmdDistance = atof(cmdDistanceStr.c_str());
-                    if (cmdDistance >= CONTACT_DISTANCE && cmdDistance <= NIER_MAX_DISTANCE)
+                    if (pTargetPlayer)
                     {
-                        ns->followDistance = cmdDistance;
-                        replyStream << "Follow distance - " << ns->followDistance;
-                    }
-                    else
-                    {
-                        replyStream << "Distance is not valid";
-                    }
-                }
-                else
-                {
-                    ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Normal;
-                    ns->restLimit = 0;
-                    ns->actionLimit = 0;
-                    replyStream << "Following - " << ns->followDistance;
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "chase")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
-                {
-                    std::string cmdDistanceStr = commandVector.at(1);
-                    float cmdDistance = atof(cmdDistanceStr.c_str());
-                    if (cmdDistance >= CONTACT_DISTANCE && cmdDistance <= NIER_MAX_DISTANCE)
-                    {
-                        ns->dpsDistance = cmdDistance;
-                    }
-                    else
-                    {
-                        replyStream << "Distance is not valid";
-                    }
-                }
-                replyStream << "Chase distance - " << ns->dpsDistance;
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "gather")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                if (pmTargetPlayer->IsAlive())
-                {
-                    if (pmCommander->GetDistance(pmTargetPlayer) < VISIBILITY_DISTANCE_LARGE)
-                    {
-                        ns->restLimit = 0;
-                        ns->actionType = ActionType::ActionType_Move;
-                        ns->actionLimit = 3 * IN_MILLISECONDS;
-                        pmTargetPlayer->nierAction->nm->Point(pmCommander->GetPosition(), ns->actionLimit);
-                        replyStream << "Moving to you";
-                    }
-                    else
-                    {
-                        replyStream << "I am too far away";
-                    }
-                }
-                else
-                {
-                    replyStream << "I am dead";
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "move")
-    {
-        if (pmTargetPlayer)
-        {
-            std::ostringstream replyStream;
-            if (pmTargetPlayer->IsAlive())
-            {
-                if (commandVector.size() > 1)
-                {
-                    bool doAction = true;
-                    std::string direction = commandVector.at(1);
-                    uint32 directionType = NierMovementDirection::NierMovementDirection_Forward;
-                    if (direction == "forward")
-                    {
-                        directionType = NierMovementDirection::NierMovementDirection_Forward;
-                    }
-                    else if (direction == "back")
-                    {
-                        directionType = NierMovementDirection::NierMovementDirection_Back;
-                    }
-                    else if (direction == "left")
-                    {
-                        directionType = NierMovementDirection::NierMovementDirection_Left;
-                    }
-                    else if (direction == "right")
-                    {
-                        directionType = NierMovementDirection::NierMovementDirection_Right;
-                    }
-                    else
-                    {
-                        doAction = false;
-                        replyStream << "Direction invalid";
-                    }
-                    if (doAction)
-                    {
-                        if (commandVector.size() > 2)
+                        if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
                         {
-                            std::string role = commandVector.at(2);
-                            if (role == "all")
-                            {
-                                doAction = true;
-                            }
-                            else if (role == "tank")
-                            {
-                                if (pmTargetPlayer->groupRole != GroupRole::GroupRole_Tank)
-                                {
-                                    doAction = false;
-                                }
-                            }
-                            else if (role == "healer")
-                            {
-                                if (pmTargetPlayer->groupRole != GroupRole::GroupRole_Healer)
-                                {
-                                    doAction = false;
-                                }
-                            }
-                            else if (role == "dps")
-                            {
-                                if (pmTargetPlayer->groupRole != GroupRole::GroupRole_DPS)
-                                {
-                                    doAction = false;
-                                }
-                            }
-                            else if (role == "melee")
-                            {
-                                uint32 myClass = pmTargetPlayer->getClass();
-                                if (myClass != Classes::CLASS_WARRIOR && myClass != Classes::CLASS_ROGUE && myClass != Classes::CLASS_PALADIN)
-                                {
-                                    doAction = false;
-                                }
-                            }
-                            else
-                            {
-                                doAction = false;
-                                replyStream << "Role invalid";
-                            }
-                        }
-                        else
-                        {
-                            doAction = false;
-                            replyStream << "No role";
-                        }
-                        if (doAction)
-                        {
-                            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-                            {
-                                uint32 distance = 5;
-                                if (commandVector.size() > 3)
-                                {
-                                    std::string distanceStr = commandVector.at(3);
-                                    distance = std::atoi(distanceStr.c_str());
-                                }
-                                uint32 actionLimit = distance / 5;
-                                actionLimit = actionLimit * IN_MILLISECONDS;
-                                if (pmTargetPlayer->nierAction->nm->Direction(pmCommander, directionType, actionLimit, distance))
-                                {
-                                    ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Hold;
-                                    ns->restLimit = 0;
-                                    ns->actionType = ActionType::ActionType_Move;
-                                    ns->actionLimit = actionLimit;
-                                    replyStream << direction;
-                                }
-                                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    replyStream << "No direction";
-                }
-            }
-            else
-            {
-                replyStream << "I am dead";
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "cast")
-    {
-        if (pmTargetPlayer)
-        {
-            std::ostringstream replyStream;
-            if (Unit* targetU = pmCommander->GetSelectedUnit())
-            {
-                if (commandVector.size() > 1)
-                {
-                    uint32 spellId = std::stoi(commandVector.at(1));
-                    if (pmTargetPlayer->HasActiveSpell(spellId))
-                    {
-                        pmTargetPlayer->InterruptNonMeleeSpells(true);
-                        SpellCastResult scr = pmTargetPlayer->CastSpell(targetU, spellId, TriggerCastFlags::TRIGGERED_NONE);
-                        replyStream << "Cast spell : " << scr;
-                    }
-                }
-                else
-                {
-                    replyStream << "Spell name missing";
-                }
-            }
-            else
-            {
-                replyStream << "No target";
-            }
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "unaura")
-    {
-        if (Unit* targetU = pmCommander->GetSelectedUnit())
-        {
-            if (commandVector.size() > 1)
-            {
-                uint32 spellId = std::stoi(commandVector.at(1));
-                targetU->RemoveAurasDueToSpell(spellId);
-            }
-        }
-    }
-    else if (commandName == "aura")
-    {
-        std::ostringstream replyStream;
-        if (Unit* targetU = pmCommander->GetSelectedUnit())
-        {
-            if (commandVector.size() > 1)
-            {
-                uint32 spellId = std::stoi(commandVector.at(1));
-                if (targetU->HasAura(spellId))
-                {
-                    replyStream << "Yes";
-                }
-                else
-                {
-                    replyStream << "No";
-                }
-            }
-            else
-            {
-                replyStream << "No id";
-            }
-        }
-        else
-        {
-            replyStream << "No target";
-        }
-        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-    }
-    else if (commandName == "tcast")
-    {
-        std::ostringstream replyStream;
-        if (Unit* targetU = pmCommander->GetSelectedUnit())
-        {
-            if (commandVector.size() > 1)
-            {
-                uint32 spellId = std::stoi(commandVector.at(1));
-                SpellCastResult scr = targetU->CastSpell(targetU, spellId, TriggerCastFlags::TRIGGERED_NONE);
-                replyStream << "Cast result : " << scr;
-            }
-            else
-            {
-                replyStream << "No spell";
-            }
-        }
-        else
-        {
-            replyStream << "No t";
-        }
-        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-    }
-    else if (commandName == "castt")
-    {
-        std::ostringstream replyStream;
-        if (Unit* targetU = pmCommander->GetSelectedUnit())
-        {
-            if (commandVector.size() > 1)
-            {
-                uint32 spellId = std::stoi(commandVector.at(1));
-                SpellCastResult scr = pmCommander->CastSpell(targetU, spellId, TriggerCastFlags::TRIGGERED_NONE);
-                replyStream << "Cast result : " << scr;
-            }
-            else
-            {
-                replyStream << "No spell";
-            }
-        }
-        else
-        {
-            replyStream << "No t";
-        }
-        sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str().c_str(), pmCommander);
-    }
-    else if (commandName == "delay")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
-                {
-                    int delayMS = std::stoi(commandVector.at(1));
-                    ns->dpsDelay = delayMS;
-                    replyStream << "DPS delay set to : " << delayMS;
-                }
-                else
-                {
-                    replyStream << "DPS delay is : " << ns->dpsDelay;
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "cure")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
-                {
-                    std::string cureCMD = commandVector.at(1);
-                    if (cureCMD == "on")
-                    {
-                        ns->cure = true;
-                    }
-                    else if (cureCMD == "off")
-                    {
-                        ns->cure = false;
-                    }
-                    else
-                    {
-                        replyStream << "Unknown state";
-                    }
-                }
-                if (ns->cure)
-                {
-                    replyStream << "auto cure is on";
-                }
-                else
-                {
-                    replyStream << "auto cure is off";
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "petting")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
-                {
-                    std::string switchCMD = commandVector.at(1);
-                    if (switchCMD == "on")
-                    {
-                        ns->petting = true;
-                    }
-                    else if (switchCMD == "off")
-                    {
-                        ns->petting = false;
-                    }
-                    else if (switchCMD == "reset")
-                    {
-                        if (pmTargetPlayer->getClass() == Classes::CLASS_HUNTER)
-                        {
-                            if (NierAction_Hunter* naHunter = (NierAction_Hunter*)pmTargetPlayer->nierAction)
-                            {
-                                if (naHunter->Petting(ns->petting, true))
-                                {
-                                    replyStream << "Pet abandoned. ";
-                                }
-                                else
-                                {
-                                    replyStream << "reset failed";
-                                }
-                            }
+                            nb->freezing = false;
+                            eachPlayer->Whisper("Following", Language::LANG_UNIVERSAL, pCommander);
+                            break;
                         }
                     }
                     else
                     {
-                        replyStream << "Unknown state";
-                    }
-                }
-                if (ns->petting)
-                {
-                    replyStream << "Petting is on";
-                }
-                else
-                {
-                    replyStream << "Petting is off";
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "aoe")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
-                {
-                    std::string roleCMD = commandVector.at(1);
-                    bool onoff = false;
-                    if (commandVector.size() > 2)
-                    {
-                        std::string switchCMD = commandVector.at(2);
-                        if (switchCMD == "on")
-                        {
-                            onoff = true;
-                        }
-                        if (roleCMD == "tank")
-                        {
-                            if (pmTargetPlayer->groupRole == GroupRole::GroupRole_Tank)
-                            {
-                                ns->aoe = onoff;
-                            }
-                        }
-                        else if (roleCMD == "dps")
-                        {
-                            if (pmTargetPlayer->groupRole == GroupRole::GroupRole_DPS)
-                            {
-                                ns->aoe = onoff;
-                            }
-                        }
-                    }
-                }
-                if (ns->aoe)
-                {
-                    replyStream << "AOE is on";
-                }
-                else
-                {
-                    replyStream << "AOE is off";
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "rti")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                int targetIcon = -1;
-                if (commandVector.size() > 1)
-                {
-                    std::string iconIndex = commandVector.at(1);
-                    targetIcon = atoi(iconIndex.c_str());
-                }
-                if (targetIcon >= 0 && targetIcon < TARGETICONCOUNT)
-                {
-                    ns->rti = targetIcon;
-                }
-                replyStream << "RTI is " << ns->rti;
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "portal")
-    {
-        if (pmTargetPlayer)
-        {
-            if (pmTargetPlayer->getClass() == Classes::CLASS_MAGE)
-            {
-                if (pmTargetPlayer->GetSession()->isNier)
-                {
-                    if (commandVector.size() > 1)
-                    {
-                        std::string city = commandVector.at(1);
-                        if (NierAction_Mage* nam = (NierAction_Mage*)pmTargetPlayer->nierAction)
-                        {
-                            uint32 portalSpell = 0;
-                            if (city == "Dalaran")
-                            {
-                                portalSpell = nam->spell_Portal_Dalaran;
-                            }
-                            else
-                            {
-                                uint32 playerRace = pmTargetPlayer->getRace();
-                                if (playerRace == Races::RACE_DRAENEI || playerRace == Races::RACE_DWARF || playerRace == Races::RACE_GNOME || playerRace == Races::RACE_HUMAN || playerRace == Races::RACE_NIGHTELF)
-                                {
-                                    if (city == "exodar")
-                                    {
-                                        portalSpell = nam->spell_Portal_Exodar;
-                                    }
-                                    else if (city == "stormwind")
-                                    {
-                                        portalSpell = nam->spell_Portal_Stormwind;
-                                    }
-                                    else if (city == "darnassus")
-                                    {
-                                        portalSpell = nam->spell_Portal_Darnassus;
-                                    }
-                                    else if (city == "ironforge")
-                                    {
-                                        portalSpell = nam->spell_Portal_Ironforge;
-                                    }
-                                    else if (city == "shattrath")
-                                    {
-                                        portalSpell = nam->spell_Portal_Shattrath_A;
-                                    }
-                                }
-                                else
-                                {
-                                    if (city == "orgrimmar")
-                                    {
-                                        portalSpell = nam->spell_Portal_Orgrimmar;
-                                    }
-                                    else if (city == "thunderbluff")
-                                    {
-                                        portalSpell = nam->spell_Portal_ThunderBluff;
-                                    }
-                                    else if (city == "silvermoon")
-                                    {
-                                        portalSpell = nam->spell_Portal_Silvermoon;
-                                    }
-                                    else if (city == "undercity")
-                                    {
-                                        portalSpell = nam->spell_Portal_Shattrath_H;
-                                    }
-                                }
-                            }
-                            if (portalSpell > 0)
-                            {
-                                std::ostringstream replyStream;
-                                replyStream << "Portal to " << city;
-                                pmTargetPlayer->Say(replyStream.str(), Language::LANG_UNIVERSAL);
-                                nam->CastSpell(pmTargetPlayer, portalSpell);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "home")
-    {
-        if (pmTargetPlayer)
-        {
-            if (pmTargetPlayer->GetSession()->isNier)
-            {
-                pmTargetPlayer->Whisper("Going home", Language::LANG_UNIVERSAL, pmCommander);
-                pmTargetPlayer->TeleportTo(pmTargetPlayer->m_homebindMapId, pmTargetPlayer->m_homebindX, pmTargetPlayer->m_homebindY, pmTargetPlayer->m_homebindZ, 0);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "instant")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
-                {
-                    std::string instantType = commandVector.at(1);
-                    if (instantType == "on")
-                    {
-                        ns->instantOnly = true;
-                    }
-                    else
-                    {
-                        ns->instantOnly = false;
-                    }
-                }
-                replyStream << "Instant type is : ";
-                if (ns->instantOnly)
-                {
-                    replyStream << "on";
-                }
-                else
-                {
-                    replyStream << "off";
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "glue")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                std::ostringstream replyStream;
-                ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Glue;
-                pmTargetPlayer->nierAction->nm->ResetMovement();
-                replyStream << "bst : " << ns->basicStrategyType;
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "innervate")
-    {
-        if (pmTargetPlayer)
-        {
-            if (pmTargetPlayer->getClass() == Classes::CLASS_DRUID)
-            {
-                if (pmTargetPlayer->GetSession()->isNier)
-                {
-                    if (NierAction_Druid* nad = (NierAction_Druid*)pmTargetPlayer->nierAction)
-                    {
-                        if (nad->spell_Innervate > 0)
-                        {
-                            if (commandVector.size() > 1)
-                            {
-                                std::string roleName = commandVector.at(1);
-                                if (roleName == "self")
-                                {
-                                    //if (nad->spell_MoonkinForm > 0)
-                                    //{
-                                    //    nad->CancelAura(nad->spell_MoonkinForm);
-                                    //}
-                                    if (nad->CastSpell(pmTargetPlayer, nad->spell_Innervate, true, false, true))
-                                    {
-                                        std::ostringstream replyStream;
-                                        replyStream << "Innervate - " << pmTargetPlayer->GetName();
-                                        pmTargetPlayer->Yell(replyStream.str(), Language::LANG_UNIVERSAL);
-                                    }
-                                }
-                                else if (roleName == "healer")
-                                {
-                                    if (Group* targetGroup = pmTargetPlayer->GetGroup())
-                                    {
-                                        for (GroupReference* groupRef = targetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-                                        {
-                                            if (Player* member = groupRef->GetSource())
-                                            {
-                                                if (member->groupRole == GroupRole::GroupRole_Healer)
-                                                {
-                                                    if (member->IsAlive())
-                                                    {
-                                                        if (pmTargetPlayer->GetDistance(member) < NIER_FAR_DISTANCE)
-                                                        {
-                                                            //if (nad->spell_MoonkinForm > 0)
-                                                            //{
-                                                            //    nad->CancelAura(nad->spell_MoonkinForm);
-                                                            //}
-                                                            if (nad->CastSpell(member, nad->spell_Innervate, true, false, true))
-                                                            {
-                                                                std::ostringstream replyStream;
-                                                                replyStream << "Innervate - " << member->GetName();
-                                                                pmTargetPlayer->Yell(replyStream.str(), Language::LANG_UNIVERSAL);
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "assist")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                if (ns->rti >= 0)
-                {
-                    if (Group* targetGroup = pmTargetPlayer->GetGroup())
-                    {
-                        ObjectGuid ogRTI = targetGroup->GetGuidByTargetIcon(ns->rti);
-                        Unit* rtiTarget = nullptr;
-                        if (!ogRTI.IsEmpty())
-                        {
-                            rtiTarget = ObjectAccessor::GetUnit(*pmTargetPlayer, ogRTI);
-                        }
-                        else
-                        {
-                            if (pmTargetPlayer->IsInCombat())
-                            {
-                                bool marked = false;
-                                std::unordered_set<Unit*> checkAttackers = pmTargetPlayer->getAttackers();
-                                for (std::unordered_set<Unit*>::iterator ait = checkAttackers.begin(); ait != checkAttackers.end(); ++ait)
-                                {
-                                    if (Unit* eachAttacker = *ait)
-                                    {
-                                        if (pmTargetPlayer->IsValidAttackTarget(eachAttacker))
-                                        {
-                                            if (targetGroup->GetTargetIconByGuid(eachAttacker->GetGUID()) < 0)
-                                            {
-                                                if (pmTargetPlayer->nierAction->Mark(eachAttacker, ns->rti))
-                                                {
-                                                    marked = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                if (!marked)
-                                {
-                                    std::list<Creature*> creatureList;
-                                    pmTargetPlayer->GetCreatureListWithEntryInGrid(creatureList, 0, VISIBILITY_DISTANCE_NORMAL);
-                                    if (!creatureList.empty())
-                                    {
-                                        for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
-                                        {
-                                            if (Creature* hostileCreature = *itr)
-                                            {
-                                                if (pmTargetPlayer->IsValidAttackTarget(hostileCreature))
-                                                {
-                                                    if (targetGroup->GetTargetIconByGuid(hostileCreature->GetGUID()) < 0)
-                                                    {
-                                                        if (hostileCreature->IsInCombat())
-                                                        {
-                                                            if (pmTargetPlayer->nierAction->Mark(hostileCreature, ns->rti))
-                                                            {
-                                                                marked = true;
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (rtiTarget)
-                        {
-                            pmTargetPlayer->nierAction->Assist(ns->rti);
-                        }
-                    }
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "equip")
-    {
-        if (pmTargetPlayer)
-        {
-            if (pmTargetPlayer->isNier)
-            {
-                std::ostringstream replyStream;
-                if (commandVector.size() > 1)
-                {
-                    uint32 entry = 0;
-                    std::string entryStr = commandVector.at(2);
-                    entry = std::atoi(entryStr.c_str());
-                    if (entry > 0)
-                    {
-                        std::ostringstream queryStream;
-                        queryStream << "SELECT entry FROM item_template where entry = " << entry << "";
-                        QueryResult itemQR = WorldDatabase.Query(queryStream.str().c_str());
-                        if (itemQR)
-                        {
-                            do
-                            {
-                                Field* fields = itemQR->Fetch();
-                                uint32 entry = fields[0].Get<uint32>();
-                                if (const ItemTemplate* proto = sObjectMgr->GetItemTemplate(entry))
-                                {
-                                    if (Item* pItem = Item::CreateItem(entry, 1))
-                                    {
-                                        uint32 equipSlot = 0;
-                                        switch (proto->InventoryType)
-                                        {
-                                        case INVTYPE_HEAD:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_HEAD;
-                                            break;
-                                        }
-                                        case INVTYPE_NECK:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_NECK;
-                                            break;
-                                        }
-                                        case INVTYPE_SHOULDERS:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_SHOULDERS;
-                                            break;
-                                        }
-                                        case INVTYPE_BODY:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_BODY;
-                                            break;
-                                        }
-                                        case INVTYPE_CHEST:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_CHEST;
-                                            break;
-                                        }
-                                        case INVTYPE_ROBE:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_CHEST;
-                                            break;
-                                        }
-                                        case INVTYPE_WAIST:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_WAIST;
-                                            break;
-                                        }
-                                        case INVTYPE_LEGS:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_LEGS;
-                                            break;
-                                        }
-                                        case INVTYPE_FEET:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_FEET;
-                                            break;
-                                        }
-                                        case INVTYPE_WRISTS:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_WRISTS;
-                                            break;
-                                        }
-                                        case INVTYPE_HANDS:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_HANDS;
-                                            break;
-                                        }
-                                        case INVTYPE_FINGER:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_FINGER1;
-                                            //viable_slots[1] = EQUIPMENT_SLOT_FINGER2;
-                                            break;
-                                        }
-                                        case INVTYPE_TRINKET:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_TRINKET1;
-                                            //viable_slots[1] = EQUIPMENT_SLOT_TRINKET2;
-                                            break;
-                                        }
-                                        case INVTYPE_CLOAK:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_BACK;
-                                            break;
-                                        }
-                                        case INVTYPE_WEAPON:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_MAINHAND;
-                                            //if (CanDualWield())
-                                            //{										
-                                            //	viable_slots[1] = EQUIPMENT_SLOT_OFFHAND;
-                                            //}
-                                            break;
-                                        }
-                                        case INVTYPE_SHIELD:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_OFFHAND;
-                                            break;
-                                        }
-                                        case INVTYPE_RANGED:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            break;
-                                        }
-                                        case INVTYPE_2HWEAPON:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_MAINHAND;
-                                            //if (CanDualWield() && CanTitanGrip())
-                                            //{										
-                                            //	viable_slots[1] = EQUIPMENT_SLOT_OFFHAND;
-                                            //}
-                                            break;
-                                        }
-                                        case INVTYPE_TABARD:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_TABARD;
-                                            break;
-                                        }
-                                        case INVTYPE_WEAPONMAINHAND:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_MAINHAND;
-                                            break;
-                                        }
-                                        case INVTYPE_WEAPONOFFHAND:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_OFFHAND;
-                                            break;
-                                        }
-                                        case INVTYPE_HOLDABLE:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_OFFHAND;
-                                            break;
-                                        }
-                                        case INVTYPE_THROWN:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            break;
-                                        }
-                                        case INVTYPE_RANGEDRIGHT:
-                                        {
-                                            equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            break;
-                                        }
-                                        case INVTYPE_BAG:
-                                        {
-                                            equipSlot = INVENTORY_SLOT_BAG_START + 0;
-                                            //viable_slots[1] = INVENTORY_SLOT_BAG_START + 1;
-                                            //viable_slots[2] = INVENTORY_SLOT_BAG_START + 2;
-                                            //viable_slots[3] = INVENTORY_SLOT_BAG_START + 3;
-                                            break;
-                                        }
-                                        case INVTYPE_RELIC:
-                                        {
-                                            //pClass = getClass();
-                                            //if (pClass)
-                                            //{
-                                            //	switch (proto->SubClass)
-                                            //	{
-                                            //	case ITEM_SUBCLASS_ARMOR_LIBRAM:											
-                                            //		if (pClass == CLASS_PALADIN)
-                                            //		{
-                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            //		}
-                                            //		break;
-                                            //	case ITEM_SUBCLASS_ARMOR_IDOL:											
-                                            //		if (pClass == CLASS_DRUID)
-                                            //		{
-                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            //		}
-                                            //		break;
-                                            //	case ITEM_SUBCLASS_ARMOR_TOTEM:											
-                                            //		if (pClass == CLASS_SHAMAN)
-                                            //		{
-                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            //		}
-                                            //		break;
-                                            //	case ITEM_SUBCLASS_ARMOR_MISC:											
-                                            //		if (pClass == CLASS_WARLOCK)
-                                            //		{
-                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            //		}
-                                            //		break;
-                                            //	case ITEM_SUBCLASS_ARMOR_SIGIL:											
-                                            //		if (pClass == CLASS_DEATH_KNIGHT)
-                                            //		{
-                                            //			equipSlot = EQUIPMENT_SLOT_RANGED;
-                                            //		}
-                                            //		break;
-                                            //	default:											
-                                            //		break;
-                                            //	}
-                                            //}
-                                            break;
-                                        }
-                                        default:
-                                        {
-                                            break;
-                                        }
-                                        }
-                                        if (Item* currentEquip = pmTargetPlayer->GetItemByPos(INVENTORY_SLOT_BAG_0, equipSlot))
-                                        {
-                                            if (const ItemTemplate* checkIT = currentEquip->GetTemplate())
-                                            {
-                                                pmTargetPlayer->DestroyItem(INVENTORY_SLOT_BAG_0, equipSlot, true);
-                                            }
-                                        }
-                                        uint16 dest = 0;
-                                        if (pmTargetPlayer->CanEquipItem(equipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
-                                        {
-                                            pmTargetPlayer->EquipItem(dest, pItem, true);
-                                            replyStream << "Equiped " << pItem->GetTemplate()->Name1;
-                                        }
-                                        else
-                                        {
-                                            replyStream << "Can not equip " << pItem->GetTemplate()->Name1;
-                                        }
-                                    }
-                                }
-                                break;
-                            } while (itemQR->NextRow());
-                        }
-                        else
-                        {
-                            replyStream << "Item not found : " << entry;
-                        }
-                    }
-                    else
-                    {
-                        replyStream << "Item entry not found : " << entry;
-                    }
-                }
-                else
-                {
-                    pmTargetPlayer->nierAction->InitializeEquipments(true);
-                }
-                pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-        else
-        {
-            //HandleChatCommand(pmCommander, pmContent, pmCommander);
-        }
-    }
-    else if (commandName == "rush")
-    {
-        if (pmTargetPlayer)
-        {
-            if (NierStrategy_Base* ns = pmTargetPlayer->nierStrategyMap[pmTargetPlayer->activeStrategyIndex])
-            {
-                if (ns->basicStrategyType == BasicStrategyType::BasicStrategyType_Freeze || ns->basicStrategyType == BasicStrategyType::BasicStrategyType_Glue)
-                {
-                    ns->basicStrategyType = BasicStrategyType::BasicStrategyType_Normal;
-                }
-                if (Unit* target = pmCommander->GetSelectedUnit())
-                {
-                    if (ns->Engage(target))
-                    {
-                        int engageLimit = DEFAULT_ACTION_LIMIT_DELAY;
-                        if (commandVector.size() > 1)
-                        {
-                            std::string checkStr = commandVector.at(1);
-                            engageLimit = atoi(checkStr.c_str());
-                        }
-                        ns->rushing = true;
-                        ns->actionLimit = engageLimit;
-                        ns->ogActionTarget = target->GetGUID();
-                        ns->actionType = ActionType::ActionType_Engage;
-                        std::ostringstream replyStream;
-                        replyStream << "Rush " << target->GetName();
-                        pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-                    }
-                }
-            }
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
-                    }
-                }
-            }
-        }
-    }
-    else if (commandName == "talent")
-    {
-        if (pmTargetPlayer)
-        {
-            std::ostringstream replyStream;
-            pmTargetPlayer->nierAction->ResetTalent();
-            replyStream << "Talents reset";
-            pmTargetPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pmCommander);
-        }
-        else if (pmTargetGroup)
-        {
-            for (GroupReference* groupRef = pmTargetGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
-            {
-                Player* member = groupRef->GetSource();
-                if (member)
-                {
-                    if (member->GetGUID() != pmCommander->GetGUID())
-                    {
-                        HandleChatCommand(pmCommander, pmContent, member);
+                        nb->freezing = false;
+                        eachPlayer->Whisper("Following", Language::LANG_UNIVERSAL, pCommander);
                     }
                 }
             }
@@ -3066,19 +598,6 @@ void NierManager::HandlePacket(const WorldSession* pmSession, WorldPacket pmPack
                 myCharacterIdSet.insert(character_id);
             }
         }
-        for (std::unordered_map<uint32, std::unordered_set<NierEntity*>>::iterator nierGroupIT = nierEntityMap.begin(); nierGroupIT != nierEntityMap.end(); nierGroupIT++)
-        {
-            for (std::unordered_set<NierEntity*>::iterator reIT = nierGroupIT->second.begin(); reIT != nierGroupIT->second.end(); reIT++)
-            {
-                if (NierEntity* re = *reIT)
-                {
-                    if (myCharacterIdSet.find(re->character_id) != myCharacterIdSet.end())
-                    {
-                        re->entityState = NierEntityState::NierEntityState_DoLogin;
-                    }
-                }
-            }
-        }
         break;
     }
     case SMSG_SPELL_FAILURE:
@@ -3098,10 +617,6 @@ void NierManager::HandlePacket(const WorldSession* pmSession, WorldPacket pmPack
                 break;
             }
             else if (!receiver->IsInWorld())
-            {
-                break;
-            }
-            else if (!receiver->nierAction)
             {
                 break;
             }
@@ -3138,18 +653,25 @@ void NierManager::HandlePacket(const WorldSession* pmSession, WorldPacket pmPack
                 WorldPacket wpAccept(CMSG_GROUP_ACCEPT, 4);
                 wpAccept << uint32(0);
                 receiver->GetSession()->HandleGroupAcceptOpcode(wpAccept);
-                std::ostringstream replyStream_Talent;
-                receiver->nierAction->Reset();
-                replyStream_Talent << sNierManager->characterTalentTabNameMap[receiver->getClass()][receiver->nierAction->specialty];
-                if (Player* inviter = ObjectAccessor::FindConnectedPlayer(grp->GetLeaderGUID()))
+
+                ObjectGuid masterGuid = ObjectGuid(HighGuid::Player, receiver->masterId);
+                Player* master = ObjectAccessor::FindConnectedPlayer(masterGuid);
+
+                for (std::unordered_set<Nier_Base*>::iterator nit = master->partners.begin(); nit != master->partners.end(); nit++)
                 {
-                    receiver->Whisper(replyStream_Talent.str(), Language::LANG_UNIVERSAL, inviter);
-                }
-                if (receiver->getClass() == Classes::CLASS_ROGUE)
-                {
-                    if (NierAction_Rogue* nar = (NierAction_Rogue*)receiver->nierAction)
+                    if (Nier_Base* nb = *nit)
                     {
-                        nar->CancelAura(nar->spell_Stealth);
+                        if (Player* eachPlayer = nb->me)
+                        {
+                            if (receiver->GetGUID() == eachPlayer->GetGUID())
+                            {
+                                std::ostringstream replyStream;
+                                replyStream << "Role is : " << groupRoleNameMap[receiver->groupRole];
+                                replyStream << "Specialty is : " << characterTalentTabNameMap[receiver->getClass()][nb->target_specialty];
+                                receiver->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, master);
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -3203,16 +725,10 @@ void NierManager::HandlePacket(const WorldSession* pmSession, WorldPacket pmPack
             {
                 break;
             }
-            else if (!receiver->nierAction)
-            {
-                break;
-            }
             if (receiver->isResurrectRequested())
             {
                 receiver->ResurectUsingRequestData();
                 receiver->ClearInCombat();
-                receiver->nierAction->ClearTarget();
-                receiver->nierAction->nm->ResetMovement();
             }
         }
         break;
@@ -3259,4 +775,81 @@ void NierManager::HandlePacket(const WorldSession* pmSession, WorldPacket pmPack
         break;
     }
     }
+}
+
+void NierManager::RandomTeleport(Player* me, Player* target)
+{
+    int myLevel = me->getLevel();
+    std::unordered_map<uint32, ObjectGuid> samePlayersMap;
+    std::unordered_map<uint32, WorldSession*> allSessions = sWorld->GetAllSessions();
+    for (std::unordered_map<uint32, WorldSession*>::iterator wsIT = allSessions.begin(); wsIT != allSessions.end(); wsIT++)
+    {
+        if (WorldSession* eachWS = wsIT->second)
+        {
+            if (!eachWS->isNier)
+            {
+                if (Player* eachPlayer = eachWS->GetPlayer())
+                {
+                    if (Map* map = eachPlayer->GetMap())
+                    {
+                        if (!map->Instanceable())
+                        {
+                            int eachLevel = eachPlayer->getLevel();
+                            if (myLevel > eachLevel - 5 && myLevel < eachLevel + 5)
+                            {
+                                //if (me->IsHostileTo(eachPlayer))
+                                //{
+                                //    samePlayersMap[samePlayersMap.size()] = eachPlayer->GetGUID();
+                                //}
+                                samePlayersMap[samePlayersMap.size()] = eachPlayer->GetGUID();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    uint32 targetPlayerIndex = urand(0, samePlayersMap.size());
+    if (Player* targetPlayer = ObjectAccessor::FindPlayer(samePlayersMap[targetPlayerIndex]))
+    {
+        float nearX = 0.0f;
+        float nearY = 0.0f;
+        float nearZ = 0.0f;
+        float nearDistance = frand(200.0f, 400.0f);
+        float nearAngle = frand(0.0f, M_PI * 2);
+        targetPlayer->GetNearPoint(targetPlayer, nearX, nearY, nearZ, 0.0f, nearDistance, nearAngle);
+        me->ClearInCombat();
+        me->TeleportTo(me->GetMapId(), nearX, nearY, nearZ, 0);
+    }
+}
+
+void NierManager::AddNier(Player* pMaster, uint32 pCareer)
+{
+    uint32 meTeamId = pMaster->GetTeamId();
+    uint32 race = 0;
+    if (meTeamId == TeamId::TEAM_ALLIANCE)
+    {
+        race = sNierManager->allianceRaces[pCareer].size();
+        race = urand(1, race);
+        if (race >= sNierManager->allianceRaces.size())
+        {
+            race = sNierManager->allianceRaces.size() - 1;
+        }
+        race = sNierManager->allianceRaces[pCareer][race];
+    }
+    else
+    {
+        race = sNierManager->hordeRaces[pCareer].size();
+        race = urand(1, race);
+        if (race >= sNierManager->hordeRaces.size())
+        {
+            race = sNierManager->hordeRaces.size() - 1;
+        }
+        race = sNierManager->hordeRaces[pCareer][race];
+    }
+
+    std::ostringstream nierInsertStream;
+    nierInsertStream << "INSERT INTO `nier` (`master_id`, `account_id`, `character_id`, `account_name`, `race`, `career`, `specialty`, `role`, `nier_type`) VALUES (" << pMaster->GetGUID().GetCounter() << ", 0, 0, '', " << race << ", " << pCareer << ", 1, 1, 0)";
+    CharacterDatabase.DirectExecute(nierInsertStream.str().c_str());
+    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "nier added : {}, {}", race, pCareer);
 }

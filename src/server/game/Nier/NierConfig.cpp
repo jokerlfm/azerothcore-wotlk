@@ -444,14 +444,6 @@ bool NierConfig::StartNier()
 
     Enable = GetIntDefault("Enable", 0);
     Reset = GetIntDefault("Reset", 0);
-    ReviveDelay = GetIntDefault("ReviveDelay", 600000);
-    DPSDelay = GetIntDefault("DPSDelay", 1000);
-    ManagerCheckDelay = GetIntDefault("ManagerCheckDelay", 60000);
-    PartnerCount = GetIntDefault("PartnerCount", 4);
-    RandomTeleportDelay_Min = GetIntDefault("RandomTeleportDelay_Min", 600000);
-    RandomTeleportDelay_Max = GetIntDefault("RandomTeleportDelay_Max", 1200000);
-    AssembleDelay = GetIntDefault("AssembleDelay", 60000);
-    CorpseRunDelay = GetIntDefault("CorpseRunDelay", 120000);
 
     if (Enable == 0)
     {

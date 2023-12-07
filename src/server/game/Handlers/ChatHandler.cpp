@@ -41,6 +41,9 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+// lfm nier
+#include "NierManager.h"
+
 inline bool isNasty(uint8 c)
 {
     if (c == '\t')
@@ -451,7 +454,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 // lfm nier 
                 if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr);
                 }
             }
             break;
@@ -539,7 +542,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 // lfm nier 
                 if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr);
                 }
             }
             break;
@@ -602,7 +605,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 // lfm nier 
                 if (!GetPlayer()->GetSession()->isNier)
                 {
-                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr, group);
+                    sNierManager->HandleChatCommand(GetPlayer(), msg, nullptr);
                 }
             }
             break;

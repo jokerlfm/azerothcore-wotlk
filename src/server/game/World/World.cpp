@@ -100,6 +100,7 @@
 #include "MingManager.h"
 
 // lfm nier
+#include "NierConfig.h"
 #include "NierManager.h"
 
 namespace
@@ -2505,10 +2506,6 @@ void World::Update(uint32 diff)
 
     // lfm ming
     sMingManager->UpdateMingManager(diff);
-
-    // lfm nier
-    sNierManager->UpdateNierManager(diff);
-    sNierManager->UpdateNierEntities(diff);
 }
 
 void World::ForceGameEventUpdate()

@@ -51,6 +51,9 @@
 #include "WorldSocket.h"
 #include <zlib.h>
 
+// lfm nier
+#include "NierManager.h"
+
 namespace
 {
     std::string const DefaultPlayerName = "<none>";
@@ -302,20 +305,17 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
         ProcessQueryCallbacks();
         if (_player)
         {
-            if (_player->nierStrategyMap.size() > 0)
+            if (_player->IsBeingTeleportedNear())
             {
-                if (_player->IsBeingTeleportedNear())
-                {
-                    WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
-                    pkt << _player->GetPackGUID();
-                    pkt << uint32(0); // flags
-                    pkt << uint32(0); // time
-                    HandleMoveTeleportAck(pkt);
-                }
-                else if (_player->IsBeingTeleportedFar())
-                {
-                    HandleMoveWorldportAck();
-                }
+                WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
+                pkt << _player->GetPackGUID();
+                pkt << uint32(0); // flags
+                pkt << uint32(0); // time
+                HandleMoveTeleportAck(pkt);
+            }
+            else if (_player->IsBeingTeleportedFar())
+            {
+                HandleMoveWorldportAck();
             }
         }
 

@@ -43,6 +43,8 @@ public:
     bool NearHerb(uint32 pmMapId, Position pmPos, float pmDistance);
     bool AddHerb(uint32 pmGuid, uint32 pmMapId, Position pmPos, float pmDistance);
     bool IsVein(uint32 pmEntry);
+    bool NearVein(uint32 pmMapId, Position pmPos, float pmDistance);
+    bool AddVein(uint32 pmGuid, uint32 pmMapId, Position pmPos, float pmDistance);
     void UpdateMingManager(uint32 pmDiff);
     void ReplaceVendor(Unit* pmVendor);
     bool IsDKSpellsException(uint32 pmSpellId);

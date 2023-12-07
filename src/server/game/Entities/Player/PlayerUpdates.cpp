@@ -44,6 +44,10 @@
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
 #include "GridNotifiersImpl.h"
 
+// lfm nier
+#include "NierManager.h"
+#include "NierConfig.h"
+
 // Zone Interval should be 1 second
 constexpr auto ZONE_UPDATE_INTERVAL = 1000;
 
@@ -244,7 +248,7 @@ void Player::Update(uint32 p_time)
 
                 float bubble = 0.125f * sWorld->getRate(RATE_REST_INGAME);
                 float extraPerSec =
-                    ((float) GetUInt32Value(PLAYER_NEXT_LEVEL_XP) / 72000.0f) *
+                    ((float)GetUInt32Value(PLAYER_NEXT_LEVEL_XP) / 72000.0f) *
                     bubble;
 
                 // speed collect rest bonus (section/in hour)
@@ -371,7 +375,7 @@ void Player::Update(uint32 p_time)
     if (!_instanceResetTimes.empty())
     {
         for (InstanceTimeMap::iterator itr = _instanceResetTimes.begin();
-             itr != _instanceResetTimes.end();)
+            itr != _instanceResetTimes.end();)
         {
             if (itr->second < now)
                 _instanceResetTimes.erase(itr++);
@@ -432,13 +436,28 @@ void Player::Update(uint32 p_time)
     }
 
     // lfm nier
-    if (m_session->isNier)
+    if (!m_session->isNier)
     {
-        if (nierStrategyMap.size() > 0)
+        if (sNierConfig->Enable == 1)
         {
-            if (nierStrategyMap[activeStrategyIndex]->initialized)
+            if (!partners.empty())
             {
-                nierStrategyMap[activeStrategyIndex]->Update(p_time);
+                for (std::unordered_set<Nier_Base*>::iterator nit = partners.begin(); nit != partners.end(); nit++)
+                {
+                    if (Nier_Base* nb = *nit)
+                    {
+                        nb->Update(p_time);
+                    }
+                }
+            }
+
+            if (strategy)
+            {
+                strategy->Update(p_time, this, partners);
+            }
+            else
+            {
+                strategy = new NierStrategy_Base();
             }
         }
     }

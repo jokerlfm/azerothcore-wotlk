@@ -154,7 +154,7 @@ void AddKalimdorScripts()
     AddSC_boss_ouro();
     AddSC_npc_anubisath_sentinel();
     AddSC_temple_of_ahnqiraj();
-    AddSC_instance_temple_of_ahnqiraj();
+    AddSC_instance_temple_of_ahnqiraj();    
     AddSC_instance_wailing_caverns();       //Wailing caverns
     AddSC_zulfarrak();
     AddSC_instance_zulfarrak();             //Zul'Farrak instance script

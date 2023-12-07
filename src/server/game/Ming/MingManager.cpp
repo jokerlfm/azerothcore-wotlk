@@ -440,6 +440,41 @@ bool MingManager::IsVein(uint32 pmEntry)
     return false;
 }
 
+bool MingManager::NearVein(uint32 pmMapId, Position pmPos, float pmDistance)
+{
+    for (std::unordered_set<SpawnedObject*>::iterator soIT = spawnedVeinSet.begin(); soIT != spawnedVeinSet.end(); soIT++)
+    {
+        if (SpawnedObject* eachSO = *soIT)
+        {
+            if (eachSO->mapId == pmMapId)
+            {
+                float distance = eachSO->pos.GetExactDist(pmPos);
+                if (distance < pmDistance)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+bool MingManager::AddVein(uint32 pmGuid, uint32 pmMapId, Position pmPos, float pmDistance)
+{
+    if (!NearVein(pmMapId, pmPos, pmDistance))
+    {
+        SpawnedObject* so = new SpawnedObject();
+        so->guid = pmGuid;
+        so->mapId = pmMapId;
+        so->pos = pmPos;
+        spawnedVeinSet.insert(so);
+        return true;
+    }
+
+    return false;
+}
+
 void MingManager::UpdateMingManager(uint32 pmDiff)
 {
     if (sMingConfig->Enable == 0)
