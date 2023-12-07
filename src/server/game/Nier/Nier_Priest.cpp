@@ -1,4 +1,5 @@
 #include "Nier_Priest.h"
+#include "NierManager.h"
 
 #include "NierConfig.h"
 #include "Player.h"
@@ -477,23 +478,28 @@ bool Nier_Priest::DPS(Unit* pTarget, Unit* pTank, bool pRushing)
         float targetDistance = me->GetDistance(pTarget);
         if (targetDistance < dpsDistance)
         {
-            if (spell_Shoot > 0)
+            if (target_specialty == 1)
             {
-                if (Spell* shooting = me->GetCurrentSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL))
+                if (spell_Shoot > 0)
                 {
-                    return true;
-                }
-                else
-                {
-                    if (CastSpell(pTarget, spell_Shoot))
+                    if (Spell* shooting = me->GetCurrentSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL))
                     {
                         return true;
+                    }
+                    else
+                    {
+                        if (CastSpell(pTarget, spell_Shoot))
+                        {
+                            return true;
+                        }
                     }
                 }
             }
         }
         return true;
     }
+
+    return false;
 }
 
 bool Nier_Priest::Cure()
@@ -668,6 +674,10 @@ bool Nier_Priest::Buff()
 
 bool Nier_Priest::Revive()
 {
+    if (helpDelay > 0)
+    {
+        return false;
+    }
     if (spell_Resurrection > 0)
     {
         if (Group* group = me->GetGroup())

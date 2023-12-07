@@ -1,6 +1,7 @@
 #include "NierManager.h"
 
 #include "NierConfig.h"
+#include "Nier_Base.h"
 #include "MingManager.h"
 #include "GameTime.h"
 #include "Item.h"
@@ -11,6 +12,7 @@
 #include "AccountMgr.h"
 #include "MoveSplineInit.h"
 #include "GridNotifiers.h"
+#include "Pet.h"
 
 #include <boost/chrono/duration.hpp>
 
@@ -499,7 +501,7 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                         {
                             std::ostringstream replyStream;
                             replyStream << "Role is : " << groupRoleNameMap[eachPlayer->groupRole];
-                            replyStream << "Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
+                            replyStream << " Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
                             eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
                             break;
                         }
@@ -508,7 +510,7 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                     {
                         std::ostringstream replyStream;
                         replyStream << "Role is : " << groupRoleNameMap[eachPlayer->groupRole];
-                        replyStream << "Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
+                        replyStream << " Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
                         eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
                     }
                 }
@@ -532,6 +534,22 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                             eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
                             eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
                             eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
+                            eachPlayer->AttackStop();
+                            if (Pet* myPet = eachPlayer->GetPet())
+                            {
+                                myPet->AttackStop();
+                                if (CharmInfo* pci = myPet->GetCharmInfo())
+                                {
+                                    if (pci->IsCommandAttack())
+                                    {
+                                        pci->SetIsCommandAttack(false);
+                                    }
+                                    if (!pci->IsCommandFollow())
+                                    {
+                                        pci->SetIsCommandFollow(true);
+                                    }
+                                }
+                            }
                             eachPlayer->StopMoving();
                             eachPlayer->GetMotionMaster()->Clear();
                             eachPlayer->Whisper("Freezed", Language::LANG_UNIVERSAL, pCommander);
@@ -667,7 +685,7 @@ void NierManager::HandlePacket(const WorldSession* pmSession, WorldPacket pmPack
                             {
                                 std::ostringstream replyStream;
                                 replyStream << "Role is : " << groupRoleNameMap[receiver->groupRole];
-                                replyStream << "Specialty is : " << characterTalentTabNameMap[receiver->getClass()][nb->target_specialty];
+                                replyStream << " Specialty is : " << characterTalentTabNameMap[receiver->getClass()][nb->target_specialty];
                                 receiver->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, master);
                                 break;
                             }

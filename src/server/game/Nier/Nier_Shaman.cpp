@@ -1,4 +1,5 @@
 #include "Nier_Shaman.h"
+#include "NierManager.h"
 
 Nier_Shaman::Nier_Shaman() :Nier_Base()
 {

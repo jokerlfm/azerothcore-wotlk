@@ -1,4 +1,5 @@
 #include "Nier_Druid.h"
+#include "NierManager.h"
 
 Nier_Druid::Nier_Druid() :Nier_Base()
 {

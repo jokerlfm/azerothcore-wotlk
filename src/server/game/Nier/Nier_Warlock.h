@@ -7,6 +7,7 @@ class Nier_Warlock :public Nier_Base
 {
 public:
     Nier_Warlock();
+    void Prepare();
     void InitializeCharacter();
     bool DPS(Unit* pTarget, Unit* pTank, bool pRushing);
     bool Buff();

@@ -1140,7 +1140,6 @@ private:
     // EnumData helpers
     bool IsLegitCharacterForAccount(ObjectGuid guid)
     {
-        // lfm nier is always legit
         if (isNier)
         {
             return true;

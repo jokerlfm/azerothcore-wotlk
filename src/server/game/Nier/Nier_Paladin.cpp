@@ -1,4 +1,5 @@
 #include "Nier_Paladin.h"
+#include "NierManager.h"
 
 Nier_Paladin::Nier_Paladin() :Nier_Base()
 {

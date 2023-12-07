@@ -1,4 +1,5 @@
 #include "Nier_Hunter.h"
+#include "NierManager.h"
 
 Nier_Hunter::Nier_Hunter() :Nier_Base()
 {

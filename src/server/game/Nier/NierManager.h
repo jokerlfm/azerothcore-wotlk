@@ -5,6 +5,12 @@
 #include <iostream>
 #include <sstream>
 
+enum GroupRole :uint32
+{
+    GroupRole_DPS = 0,
+    GroupRole_Tank = 1,
+    GroupRole_Healer = 2,
+};
 
 enum ShapeshiftSpell :uint32
 {

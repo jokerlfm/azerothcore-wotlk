@@ -45,6 +45,8 @@ public:
 	virtual bool Cure();
 	virtual bool Revive();
 
+    virtual bool Wander();
+
     bool Follow(Unit* pTarget);
 
     void LearnTalent(uint32 pmTalentId, uint32 pmMaxRank = 5);
@@ -81,6 +83,9 @@ public:
     int prepareDelay;
     int assembleDelay;
     int reviveDelay;
+    int wanderDelay;
+    int restDelay;
+    int helpDelay;
 
     float dpsDistance;
     float followDistance;

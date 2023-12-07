@@ -1084,13 +1084,13 @@ public:
     // lfm nier
     bool isNier;
     uint32 masterId;
+    uint32 groupRole;
+
     std::unordered_set<Nier_Base*> partners;
     std::unordered_set<Nier_Base*> rivals;
     std::unordered_set<Nier_Base*> comrades;
     std::unordered_set<Nier_Base*> enemies;
-    NierStrategy_Base* strategy;
-    // 0 dps, 1 tank, 2 healer
-    uint32 groupRole;
+    NierStrategy_Base* strategy;    
 
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 

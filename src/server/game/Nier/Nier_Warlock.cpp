@@ -1,8 +1,10 @@
 #include "Nier_Warlock.h"
+#include "NierManager.h"
 
 #include "Group.h"
 #include "Player.h"
 #include "Pet.h"
+#include "CreatureAI.h"
 
 Nier_Warlock::Nier_Warlock() :Nier_Base()
 {
@@ -13,6 +15,27 @@ Nier_Warlock::Nier_Warlock() :Nier_Base()
 
     followDistance = 15.0f;
     dpsDistance = 15.0f;
+}
+
+void Nier_Warlock::Prepare()
+{
+    if (Pet* myPet = me->GetPet())
+    {
+        for (PetSpellMap::iterator itr = myPet->m_spells.begin(); itr != myPet->m_spells.end(); ++itr)
+        {
+            if (const SpellInfo* si = sSpellMgr->GetSpellInfo(itr->first))
+            {
+                myPet->ToggleAutocast(si, true);
+            }
+        }
+        if (CharmInfo* ci = myPet->GetCharmInfo())
+        {
+            if (ci->GetPlayerReactState() != ReactStates::REACT_DEFENSIVE)
+            {
+                ci->SetPlayerReactState(ReactStates::REACT_DEFENSIVE);
+            }
+        }
+    }
 }
 
 void Nier_Warlock::InitializeCharacter()
@@ -116,14 +139,26 @@ bool Nier_Warlock::DPS(Unit* pTarget, Unit* pTank, bool pRushing)
         float targetDistance = me->GetDistance(pTarget);
         if (targetDistance < dpsDistance)
         {
-            //if (Pet* myPet = me->GetPet())
-            //{
-            //    if (CharmInfo* ci = myPet->GetCharmInfo())
-            //    {
-            //        ci->SetIsCommandAttack(true);
-            //        ci->SetPlayerReactState(ReactStates::REACT_DEFENSIVE);
-            //    }
-            //}
+            if (Pet* myPet = me->GetPet())
+            {
+                if (myPet->IsAlive())
+                {
+                    if (!myPet->GetVictim())
+                    {
+                        if (CreatureAI* cai = myPet->AI())
+                        {
+                            cai->AttackStart(pTarget);
+                        }
+                        if (CharmInfo* ci = myPet->GetCharmInfo())
+                        {
+                            if (!ci->IsCommandAttack())
+                            {
+                                ci->SetIsCommandAttack(true);
+                            }
+                        }
+                    }
+                }
+            }
             if (spell_Corruption > 0)
             {
                 if (CastSpell(pTarget, spell_Corruption, true, true))
@@ -189,13 +224,6 @@ bool Nier_Warlock::Buff()
     {
         if (Pet* myPet = me->GetPet())
         {
-            if (CharmInfo* ci = myPet->GetCharmInfo())
-            {
-                if (ci->GetPlayerReactState() != ReactStates::REACT_DEFENSIVE)
-                {
-                    ci->SetPlayerReactState(ReactStates::REACT_DEFENSIVE);
-                }
-            }
             return false;
         }
         else
@@ -205,7 +233,6 @@ bool Nier_Warlock::Buff()
                 return true;
             }
         }
-
     }
 
     return false;

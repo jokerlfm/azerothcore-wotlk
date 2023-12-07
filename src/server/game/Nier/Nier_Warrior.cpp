@@ -1,4 +1,5 @@
 #include "Nier_Warrior.h"
+#include "NierManager.h"
 
 Nier_Warrior::Nier_Warrior() :Nier_Base()
 {

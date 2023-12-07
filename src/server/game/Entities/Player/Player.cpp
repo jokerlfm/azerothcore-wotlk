@@ -2547,6 +2547,7 @@ void Player::GiveLevel(uint8 level)
 
     sScriptMgr->OnPlayerLevelChanged(this, oldLevel);
 
+    // lfm nier 
     if (!isNier)
     {
         if (level >= 10)

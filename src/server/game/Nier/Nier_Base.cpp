@@ -30,6 +30,9 @@ Nier_Base::Nier_Base()
     prepareDelay = 5 * IN_MILLISECONDS;
     assembleDelay = 0;
     reviveDelay = 0;
+    wanderDelay = 0;
+    restDelay = 0;
+    helpDelay = 0;
 
     dpsDistance = DEFAULT_COMBAT_REACH;
     followDistance = DEFAULT_COMBAT_REACH;
@@ -485,6 +488,18 @@ void Nier_Base::Update(uint32 pDiff)
 
 void Nier_Base::Update_Online(uint32 pDiff)
 {
+    if (wanderDelay > 0)
+    {
+        wanderDelay -= pDiff;
+    }
+    if (restDelay > 0)
+    {
+        restDelay -= pDiff;
+    }
+    if (helpDelay > 0)
+    {
+        helpDelay -= pDiff;
+    }
     if (prepareDelay > 0)
     {
         prepareDelay -= pDiff;
@@ -492,7 +507,7 @@ void Nier_Base::Update_Online(uint32 pDiff)
         {
             Prepare();
             return;
-            prepareDelay = urand(600000, 120000);
+            prepareDelay = urand(60000, 12000);
         }
     }
     if (assembleDelay > 0)
@@ -1211,6 +1226,23 @@ bool Nier_Base::Follow(Unit* pTarget)
     return false;
 }
 
+bool Nier_Base::Wander()
+{
+    if (wanderDelay > 0)
+    {
+        return false;
+    }
+    else
+    {
+        float distance = frand(5.0f, 30.0f);
+        float angle = frand(0.0f, M_PI * 2.0f);
+        destination = me->GetNearPosition(distance, angle);
+        me->GetMotionMaster()->MovePoint(0, destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ(), true, true, MovementSlot::MOTION_SLOT_ACTIVE, angle);
+        wanderDelay = urand(10000, 30000);
+    }
+    return true;
+}
+
 bool Nier_Base::UseItem(Item* pmItem, Unit* pmTarget)
 {
     if (!me)
@@ -1452,7 +1484,7 @@ bool Nier_Base::Rest()
             {
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
-                return true;
+                restDelay = 20000;
             }
         }
     }
@@ -1522,9 +1554,14 @@ bool Nier_Base::Rest()
             {
                 me->StopMoving();
                 me->GetMotionMaster()->Clear();
-                return true;
+                restDelay = 20000;
             }
         }
+    }
+
+    if (restDelay > 0)
+    {
+        return true;
     }
 
     return false;

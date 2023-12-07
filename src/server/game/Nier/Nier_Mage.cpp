@@ -1,4 +1,5 @@
 #include "Nier_Mage.h"
+#include "NierManager.h"
 
 #include "Group.h"
 #include "Player.h"

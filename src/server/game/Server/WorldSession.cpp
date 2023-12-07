@@ -52,6 +52,7 @@
 #include <zlib.h>
 
 // lfm nier
+#include "NierConfig.h"
 #include "NierManager.h"
 
 namespace
@@ -218,7 +219,7 @@ void WorldSession::SendPacket(WorldPacket const* packet)
 {
     // lfm nier    
     if (isNier)
-    {
+    {        
         WorldPacket eachCopy(*packet);
         sNierManager->HandlePacket(this, eachCopy);
         return;
