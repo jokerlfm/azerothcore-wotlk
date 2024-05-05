@@ -345,7 +345,7 @@ bool Nier_Priest::Tank(Unit* pTarget)
 }
 
 bool Nier_Priest::Heal(Unit* pmTarget)
-{
+{    
     if (me->IsNonMeleeSpellCast(false, false, true))
     {
         return true;
@@ -688,14 +688,17 @@ bool Nier_Priest::Revive()
                 {
                     if (member->IsAlive())
                     {
+                        helpDelay = 4000;
                         continue;
                     }
                     if (me->GetDistance(member) > SPELL_SEARCHER_COMPENSATION)
                     {
+                        helpDelay = 4000;
                         continue;
                     }
                     if (CastSpell(member, spell_Resurrection))
                     {
+                        helpDelay = 12000;
                         return true;
                     }
                 }

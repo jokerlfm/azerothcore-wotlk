@@ -86,6 +86,7 @@ public:
     int wanderDelay;
     int restDelay;
     int helpDelay;
+    int actionDelay;
 
     float dpsDistance;
     float followDistance;

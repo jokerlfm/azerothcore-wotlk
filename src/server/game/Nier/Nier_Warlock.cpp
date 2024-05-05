@@ -25,7 +25,15 @@ void Nier_Warlock::Prepare()
         {
             if (const SpellInfo* si = sSpellMgr->GetSpellInfo(itr->first))
             {
-                myPet->ToggleAutocast(si, true);
+                // phase shift exception
+                if (itr->first == 4511)
+                {
+                    myPet->ToggleAutocast(si, false);                    
+                }
+                else
+                {
+                    myPet->ToggleAutocast(si, true);
+                }
             }
         }
         if (CharmInfo* ci = myPet->GetCharmInfo())

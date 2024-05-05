@@ -2558,6 +2558,7 @@ void Player::GiveLevel(uint8 level)
                 {
                     if (nb->entityState == NierState::NierState_Online)
                     {
+                        nb->updateDelay = urand(500, 3000);
                         nb->entityState = NierState::NierState_LevelUp;
                     }
                 }

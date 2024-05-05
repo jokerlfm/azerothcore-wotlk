@@ -59,6 +59,8 @@ void Nier_Rogue::InitializeCharacter()
     spell_Stealth = 1784;
     spell_SinisterStrike = 1752;
     spell_Eviscerate = 2098;
+    // dual wield 
+    me->learnSpell(674, false);
     me->learnSpell(1180, false);
     me->learnSpell(15590, false);
     me->learnSpell(2567, false);

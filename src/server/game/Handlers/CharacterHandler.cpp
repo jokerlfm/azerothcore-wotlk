@@ -59,6 +59,9 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+// lfm nier
+#include "NierManager.h"
+
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
 private:
@@ -1115,6 +1118,21 @@ void WorldSession::HandlePlayerLoginFromDB(LoginQueryHolder const& holder)
     {
         pCurrChar->RemoveAtLoginFlag(AT_LOGIN_FIRST);
         sScriptMgr->OnFirstLogin(pCurrChar);
+    }
+
+    // lfm nier
+    uint32 meClass = pCurrChar->getClass();
+    if (meClass == Classes::CLASS_WARRIOR)
+    {
+        pCurrChar->groupRole = GroupRole::GroupRole_Tank;
+    }
+    else if (meClass == Classes::CLASS_PRIEST)
+    {
+        pCurrChar->groupRole = GroupRole::GroupRole_Healer;
+    }
+    else
+    {
+        pCurrChar->groupRole = GroupRole::GroupRole_DPS;
     }
 
     METRIC_EVENT("player_events", "Login", pCurrChar->GetName());

@@ -394,6 +394,12 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                                     career = Classes::CLASS_ROGUE;
                                     AddNier(pCommander, career);
                                     replyStream << career << " ";
+                                    career = Classes::CLASS_ROGUE;
+                                    AddNier(pCommander, career);
+                                    replyStream << career << " ";
+                                    career = Classes::CLASS_ROGUE;
+                                    AddNier(pCommander, career);
+                                    replyStream << career << " ";
                                     sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, replyStream.str(), pCommander);
                                 }
                             }
@@ -447,15 +453,18 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                     {
                         if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
                         {
-                            nb->InitializeEquipments(true);
-                            eachPlayer->Whisper("Equipped", Language::LANG_UNIVERSAL, pCommander);
+                            nb->updateDelay = urand(500, 3000);
+                            nb->entityState = NierState::NierState_Upgrade;                         
                             break;
                         }
                     }
                     else
                     {
-                        nb->InitializeEquipments(true);
-                        eachPlayer->Whisper("Equipped", Language::LANG_UNIVERSAL, pCommander);
+                        if (eachPlayer->IsInSameGroupWith(pCommander))
+                        {
+                            nb->updateDelay = urand(500, 3000);
+                            nb->entityState = NierState::NierState_Upgrade;
+                        }
                     }
                 }
             }
@@ -480,8 +489,11 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                     }
                     else
                     {
-                        nb->assembleDelay = 60000;
-                        eachPlayer->Whisper("Assemble in 60 seconds", Language::LANG_UNIVERSAL, pCommander);
+                        if (eachPlayer->IsInSameGroupWith(pCommander))
+                        {
+                            nb->assembleDelay = 60000;
+                            eachPlayer->Whisper("Assemble in 60 seconds", Language::LANG_UNIVERSAL, pCommander);
+                        }
                     }
                 }
             }
@@ -508,10 +520,13 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                     }
                     else
                     {
-                        std::ostringstream replyStream;
-                        replyStream << "Role is : " << groupRoleNameMap[eachPlayer->groupRole];
-                        replyStream << " Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
-                        eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
+                        if (eachPlayer->IsInSameGroupWith(pCommander))
+                        {
+                            std::ostringstream replyStream;
+                            replyStream << "Role is : " << groupRoleNameMap[eachPlayer->groupRole];
+                            replyStream << " Specialty is : " << characterTalentTabNameMap[eachPlayer->getClass()][nb->target_specialty];
+                            eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
+                        }
                     }
                 }
             }
@@ -558,20 +573,130 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                     }
                     else
                     {
-                        nb->freezing = true;
-                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
-                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
-                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
-                        eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
-                        eachPlayer->StopMoving();
-                        eachPlayer->GetMotionMaster()->Clear();
-                        eachPlayer->Whisper("Freezed", Language::LANG_UNIVERSAL, pCommander);
+                        if (eachPlayer->IsInSameGroupWith(pCommander))
+                        {
+                            nb->freezing = true;
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_AUTOREPEAT_SPELL);
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_CHANNELED_SPELL);
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_GENERIC_SPELL);
+                            eachPlayer->InterruptSpell(CurrentSpellTypes::CURRENT_MELEE_SPELL);
+                            eachPlayer->AttackStop();
+                            if (Pet* myPet = eachPlayer->GetPet())
+                            {
+                                myPet->AttackStop();
+                                if (CharmInfo* pci = myPet->GetCharmInfo())
+                                {
+                                    if (pci->IsCommandAttack())
+                                    {
+                                        pci->SetIsCommandAttack(false);
+                                    }
+                                    if (!pci->IsCommandFollow())
+                                    {
+                                        pci->SetIsCommandFollow(true);
+                                    }
+                                }
+                            }
+                            eachPlayer->StopMoving();
+                            eachPlayer->GetMotionMaster()->Clear();
+                            eachPlayer->Whisper("Freezed", Language::LANG_UNIVERSAL, pCommander);
+                        }
                     }
                 }
             }
         }
     }
     else if (commandName == "follow")
+    {
+        float followDistance = 0.0f;
+        if (commandVector.size() > 1)
+        {
+            followDistance = atof(commandVector.at(1).c_str());
+        }
+        for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
+        {
+            if (Nier_Base* nb = *nit)
+            {
+                if (Player* eachPlayer = nb->me)
+                {
+                    if (pTargetPlayer)
+                    {
+                        if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
+                        {
+                            std::ostringstream replyStream;
+                            replyStream << "Following";
+                            if (followDistance > CONTACT_DISTANCE)
+                            {
+                                nb->followDistance = followDistance;
+                                replyStream << " : " << nb->followDistance;
+                            }
+                            nb->freezing = false;
+                            eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (eachPlayer->IsInSameGroupWith(pCommander))
+                        {
+                            std::ostringstream replyStream;
+                            replyStream << "Following";
+                            if (followDistance > CONTACT_DISTANCE)
+                            {
+                                nb->followDistance = followDistance;
+                                replyStream << " : " << nb->followDistance;
+                            }
+                            nb->freezing = false;
+                            eachPlayer->Whisper(replyStream.str(), Language::LANG_UNIVERSAL, pCommander);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "formation")
+    {
+        if (commandVector.size() > 1)
+        {
+            std::string formation = commandVector.at(1);
+            for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
+            {
+                if (Nier_Base* nb = *nit)
+                {
+                    if (Player* eachPlayer = nb->me)
+                    {
+                        if (pTargetPlayer)
+                        {
+                            if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
+                            {
+                                if (formation == "point")
+                                {
+                                    eachPlayer->GetMotionMaster()->Clear();
+                                    nb->destination = pCommander->GetPosition();
+                                    nb->actionDelay = 2000;
+                                    eachPlayer->GetMotionMaster()->MovePoint(0, nb->destination.GetPositionX(), nb->destination.GetPositionY(), nb->destination.GetPositionZ(), true, true, MovementSlot::MOTION_SLOT_ACTIVE, pCommander->GetOrientation());
+                                }
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            if (eachPlayer->IsInSameGroupWith(pCommander))
+                            {
+                                if (formation == "point")
+                                {
+                                    eachPlayer->GetMotionMaster()->Clear();
+                                    nb->destination = pCommander->GetPosition();
+                                    nb->actionDelay = 2000;
+                                    eachPlayer->GetMotionMaster()->MovePoint(0, nb->destination.GetPositionX(), nb->destination.GetPositionY(), nb->destination.GetPositionZ(), true, true, MovementSlot::MOTION_SLOT_ACTIVE, pCommander->GetOrientation());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else if (commandName == "prepare")
     {
         for (std::unordered_set<Nier_Base*>::iterator nit = pCommander->partners.begin(); nit != pCommander->partners.end(); nit++)
         {
@@ -583,15 +708,18 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pContent, Pl
                     {
                         if (pTargetPlayer->GetGUID() == eachPlayer->GetGUID())
                         {
-                            nb->freezing = false;
-                            eachPlayer->Whisper("Following", Language::LANG_UNIVERSAL, pCommander);
+                            nb->Prepare();
+                            eachPlayer->Whisper("Prepared", Language::LANG_UNIVERSAL, pCommander);
                             break;
                         }
                     }
                     else
                     {
-                        nb->freezing = false;
-                        eachPlayer->Whisper("Following", Language::LANG_UNIVERSAL, pCommander);
+                        if (eachPlayer->IsInSameGroupWith(pCommander))
+                        {
+                            nb->Prepare();
+                            eachPlayer->Whisper("Prepared", Language::LANG_UNIVERSAL, pCommander);
+                        }
                     }
                 }
             }
@@ -849,9 +977,9 @@ void NierManager::AddNier(Player* pMaster, uint32 pCareer)
     {
         race = sNierManager->allianceRaces[pCareer].size();
         race = urand(1, race);
-        if (race >= sNierManager->allianceRaces.size())
+        if (race >= sNierManager->allianceRaces[pCareer].size())
         {
-            race = sNierManager->allianceRaces.size() - 1;
+            race = sNierManager->allianceRaces[pCareer].size() - 1;
         }
         race = sNierManager->allianceRaces[pCareer][race];
     }
@@ -859,9 +987,9 @@ void NierManager::AddNier(Player* pMaster, uint32 pCareer)
     {
         race = sNierManager->hordeRaces[pCareer].size();
         race = urand(1, race);
-        if (race >= sNierManager->hordeRaces.size())
+        if (race >= sNierManager->hordeRaces[pCareer].size())
         {
-            race = sNierManager->hordeRaces.size() - 1;
+            race = sNierManager->hordeRaces[pCareer].size() - 1;
         }
         race = sNierManager->hordeRaces[pCareer][race];
     }

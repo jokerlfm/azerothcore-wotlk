@@ -107,10 +107,10 @@ void NierStrategy_Base::Update(uint32 pDiff, Player* pMaster, std::unordered_set
                                     }
                                 }
                             }
-                            if (eachNier->DPS(skull, tank, rushing))
-                            {
-                                continue;
-                            }
+                            //if (eachNier->DPS(skull, tank, rushing))
+                            //{
+                            //    continue;
+                            //}
                         }
                         else if (eachNierPlayer->groupRole == GroupRole::GroupRole_DPS)
                         {

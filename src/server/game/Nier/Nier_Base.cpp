@@ -33,6 +33,7 @@ Nier_Base::Nier_Base()
     wanderDelay = 0;
     restDelay = 0;
     helpDelay = 0;
+    actionDelay = 0;
 
     dpsDistance = DEFAULT_COMBAT_REACH;
     followDistance = DEFAULT_COMBAT_REACH;
@@ -45,7 +46,7 @@ void Nier_Base::Prepare()
     if (me)
     {
         me->SetPvP(true);
-        me->DurabilityRepairAll(false, 0, false);
+        me->DurabilityRepairAll(false, 0, false);        
         if (!me->GetGroup())
         {
             if (me->GetMap()->Instanceable())
@@ -499,6 +500,11 @@ void Nier_Base::Update_Online(uint32 pDiff)
     if (helpDelay > 0)
     {
         helpDelay -= pDiff;
+    }
+    if (actionDelay > 0)
+    {
+        actionDelay -= pDiff;
+        return;
     }
     if (prepareDelay > 0)
     {
@@ -1040,7 +1046,7 @@ bool Nier_Base::EuipRandom(uint32 pmEquipSlot, uint32 pmInventoryType, uint32 pm
     {
         return false;
     }
-    int minLevel = pmMaxLevel - 10;
+    int minLevel = pmMaxLevel - 5;
     if (minLevel < 1)
     {
         minLevel = 1;
@@ -1058,12 +1064,14 @@ bool Nier_Base::EuipRandom(uint32 pmEquipSlot, uint32 pmInventoryType, uint32 pm
             if (Item* pItem = Item::CreateItem(itemEntry, 1))
             {
                 uint16 dest = 0;
+                me->CombatStop(true);
+                me->getHostileRefMgr().deleteReferences();
                 if (me->CanEquipItem(pmEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
                 {
                     me->EquipItem(dest, pItem, true);
                     std::ostringstream msgStream;
                     msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
-                    sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
+                    //sWorld->SendServerMessage(ServerMessageType::SERVER_MSG_STRING, msgStream.str().c_str());
                     sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, msgStream.str().c_str());
                     return true;
                 }
@@ -1108,6 +1116,10 @@ bool Nier_Base::DPS(Unit* pTarget, Unit* pTank, bool pRushing)
         // melee 
         exactDistance = me->GetCombatReach() + pTarget->GetObjectSize();
         float minDistance = exactDistance / 3.0f;
+        if (minDistance < CONTACT_DISTANCE)
+        {
+            minDistance = CONTACT_DISTANCE;
+        }
         if (targetDistance > exactDistance || targetDistance < minDistance)
         {
             float destDistance = pTarget->GetExactDist(destination);
@@ -1120,10 +1132,22 @@ bool Nier_Base::DPS(Unit* pTarget, Unit* pTank, bool pRushing)
             }
             else
             {
-                float angle = pTarget->GetAngle(me->GetPositionX(), me->GetPositionY());
-                angle = frand(angle - 0.2f, angle + 0.2f);
-                destination = pTarget->GetNearPosition(exactDistance, angle);
-                me->GetMotionMaster()->MovePoint(0, destination);
+                if (pTarget->isMoving())
+                {
+                    Position tDest = sNierManager->PredictPosition(pTarget);
+                    float dist = me->GetExactDist(tDest);
+                    dist = dist = exactDistance;
+                    float angle = me->GetAngle(tDest.GetPositionX(), tDest.GetPositionY());
+                    destination = me->GetNearPosition(dist, angle);
+                    me->GetMotionMaster()->MovePoint(0, destination);
+                }
+                else
+                {
+                    float angle = pTarget->GetAngle(me->GetPositionX(), me->GetPositionY());
+                    angle = frand(angle - 0.2f, angle + 0.2f);
+                    destination = pTarget->GetNearPosition(exactDistance, angle);
+                    me->GetMotionMaster()->MovePoint(0, destination);
+                }
             }
         }
         else
@@ -1131,7 +1155,7 @@ bool Nier_Base::DPS(Unit* pTarget, Unit* pTank, bool pRushing)
             if (me->isMoving())
             {
                 me->StopMoving();
-                me->GetMotionMaster()->Clear();
+                //me->GetMotionMaster()->Clear();
             }
             else if (!me->isInFront(pTarget))
             {
@@ -1141,40 +1165,67 @@ bool Nier_Base::DPS(Unit* pTarget, Unit* pTank, bool pRushing)
     }
     else
     {
-        // ranged 
+        // ranged
+        bool adjust = false;
         exactDistance = dpsDistance + pTarget->GetObjectSize();
-        float minDistance = exactDistance / 3.0f;
-        if (targetDistance > exactDistance || targetDistance < minDistance)
+        if (targetDistance > exactDistance)
         {
-            float destDistance = pTarget->GetExactDist(destination);
-            if (destDistance > minDistance && destDistance < exactDistance)
+            if (pTarget->IsWithinLOS(destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ()))
             {
-                if (!me->isMoving())
+                float destDistance = pTarget->GetExactDist(destination);
+                if (destDistance < exactDistance)
                 {
-                    me->GetMotionMaster()->MovePoint(0, destination.m_positionX, destination.m_positionY, destination.m_positionZ, true, true, MovementSlot::MOTION_SLOT_ACTIVE, me->GetAbsoluteAngle(pTarget));
+                    if (!me->isMoving())
+                    {
+                        me->GetMotionMaster()->MovePoint(0, destination.m_positionX, destination.m_positionY, destination.m_positionZ, true, true, MovementSlot::MOTION_SLOT_ACTIVE, me->GetAbsoluteAngle(pTarget));
+                    }
+                }
+                else
+                {
+                    adjust = true;
                 }
             }
             else
             {
-                targetDistance = exactDistance - DEFAULT_COMBAT_REACH;
-                float angle = pTarget->GetAbsoluteAngle(me->GetPositionX(), me->GetPositionY());
-                angle = frand(angle - 0.2f, angle + 0.2f);
-                angle = angle - pTarget->GetOrientation();
-                destination = pTarget->GetNearPosition(targetDistance, angle);
-                me->GetMotionMaster()->MovePoint(0, destination.m_positionX, destination.m_positionY, destination.m_positionZ, true, true, MovementSlot::MOTION_SLOT_ACTIVE, me->GetAbsoluteAngle(pTarget));
+                adjust = true;
             }
         }
         else
         {
-            if (me->isMoving())
+            if (pTarget->IsWithinLOS(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ()))
             {
-                me->StopMoving();
-                me->GetMotionMaster()->Clear();
+                if (me->isMoving())
+                {
+                    me->StopMoving();
+                    //me->GetMotionMaster()->Clear();
+                }
+                else if (!me->isInFront(pTarget))
+                {
+                    me->SetFacingToObject(pTarget);
+                }
             }
-            else if (!me->isInFront(pTarget))
+            else
             {
-                me->SetFacingToObject(pTarget);
+                adjust = true;
             }
+        }
+
+        if (adjust)
+        {
+            targetDistance = exactDistance - DEFAULT_COMBAT_REACH;
+            float angle = pTarget->GetAbsoluteAngle(me->GetPositionX(), me->GetPositionY());
+            angle = frand(angle - 0.2f, angle + 0.2f);
+            angle = angle - pTarget->GetOrientation();
+            while (targetDistance > DEFAULT_COMBAT_REACH)
+            {
+                destination = pTarget->GetNearPosition(targetDistance, angle);
+                if (pTarget->IsWithinLOS(destination.GetPositionX(), destination.GetPositionY(), destination.GetPositionZ()))
+                {
+                    break;
+                }
+                targetDistance -= 1.0f;
+            }
+            me->GetMotionMaster()->MovePoint(0, destination.m_positionX, destination.m_positionY, destination.m_positionZ, true, true, MovementSlot::MOTION_SLOT_ACTIVE, me->GetAbsoluteAngle(pTarget));
         }
     }
 
@@ -1587,6 +1638,21 @@ void Nier_Base::ClearTarget()
         me->SetTarget(ObjectGuid::Empty);
         me->AttackStop();
         me->InterruptNonMeleeSpells(true);
+        if (Pet* myPet = me->GetPet())
+        {
+            myPet->AttackStop();
+            if (CharmInfo* pci = myPet->GetCharmInfo())
+            {
+                if (pci->IsCommandAttack())
+                {
+                    pci->SetIsCommandAttack(false);
+                }
+                if (!pci->IsCommandFollow())
+                {
+                    pci->SetIsCommandFollow(true);
+                }
+            }
+        }
     }
 }
 
