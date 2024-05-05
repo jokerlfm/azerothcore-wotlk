@@ -427,13 +427,13 @@ void Player::Update(uint32 p_time)
         RemoveFromNotify(NOTIFY_VISIBILITY_CHANGED);
     }
 
-    sLog->outMessage("nier", LogLevel::LOG_LEVEL_INFO, "to fishing");
     // lfm auto fish
     if (fishingDelay > 0)
     {
         fishingDelay -= p_time;
         if (fishingDelay <= 0)
         {
+            sLog->outMessage("nier", LogLevel::LOG_LEVEL_DEBUG, "to fishing");
             CastSpell(this, 7620, true);
             fishingDelay = 0;
         }
