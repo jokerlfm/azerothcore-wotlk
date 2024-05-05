@@ -15,10 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
- // lfm instance_wailing_caverns to instance_wailing_caverns_lfm
-//#include "InstanceScript.h"
+#include "CreatureScript.h"
+#include "InstanceMapScript.h"
+#include "InstanceScript.h"
+
 //#include "ScriptMgr.h"
-//#include "wailing_caverns.h"
 //
 //class instance_wailing_caverns : public InstanceMapScript
 //{
