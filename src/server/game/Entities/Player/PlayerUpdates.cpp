@@ -439,30 +439,11 @@ void Player::Update(uint32 p_time)
         }
     }
 
-    // lfm nier
-    if (!m_session->isNier)
+    if (isNier)
     {
-        if (sNierConfig->Enable == 1)
+        if (nierStrategyMap.find(activeStrategyIndex) != nierStrategyMap.end())
         {
-            if (!partners.empty())
-            {
-                for (std::unordered_set<Nier_Base*>::iterator nit = partners.begin(); nit != partners.end(); nit++)
-                {
-                    if (Nier_Base* nb = *nit)
-                    {
-                        nb->Update(p_time);
-                    }
-                }
-            }
-
-            if (strategy)
-            {
-                strategy->Update(p_time, this, partners);
-            }
-            else
-            {
-                strategy = new NierStrategy_Base();
-            }
+            nierStrategyMap[activeStrategyIndex]->Update(p_time);
         }
     }
 }

@@ -414,14 +414,12 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     fishingDelay = 0;
 
     // lfm nier
-    masterId = 0;
     groupRole = 0;
     isNier = false;
-    partners.clear();
-    rivals.clear();
-    comrades.clear();
-    enemies.clear();    
-    strategy = nullptr;
+    nierStrategyMap.clear();
+    activeStrategyIndex = 0;
+    nierAction = nullptr;
+
     sScriptMgr->OnConstructPlayer(this);
 }
 
@@ -2559,25 +2557,6 @@ void Player::GiveLevel(uint8 level)
     SendQuestGiverStatusMultiple();
 
     sScriptMgr->OnPlayerLevelChanged(this, oldLevel);
-
-    // lfm nier 
-    if (!isNier)
-    {
-        if (level >= 10)
-        {
-            for (std::unordered_set<Nier_Base*>::iterator nit = this->partners.begin(); nit != this->partners.end(); nit++)
-            {
-                if (Nier_Base* nb = *nit)
-                {
-                    if (nb->entityState == NierState::NierState_Online)
-                    {
-                        nb->updateDelay = urand(500, 3000);
-                        nb->entityState = NierState::NierState_LevelUp;
-                    }
-                }
-            }
-        }
-    }
 }
 
 bool Player::IsMaxLevel() const
@@ -3234,7 +3213,8 @@ bool Player::_addSpell(uint32 spellId, uint8 addSpecMask, bool temporary, bool l
 
     uint16 maxskill = GetMaxSkillValueForLevel();
     SpellLearnSkillNode const* spellLearnSkill = sSpellMgr->GetSpellLearnSkill(spellId);
-    SkillLineAbilityMapBounds skill_bounds = sSpellMgr->GetSkillLineAbilityMapBounds(spellId);
+    SkillLineAbilityMapBounds skill_bounds = sSpellMgr->GetSkillLineAbilityMapBounds(spellId);    
+
     // xinef: set appropriate skill value
     if (spellLearnSkill)
     {
@@ -3260,7 +3240,7 @@ bool Player::_addSpell(uint32 spellId, uint8 addSpecMask, bool temporary, bool l
                 continue;
             }
 
-           /// @todo confirm if rogues start wth lockpicking skill at level 1 but only recieve the spell to use it at level 16
+            /// @todo confirm if rogues start wth lockpicking skill at level 1 but only recieve the spell to use it at level 16
             // Added for runeforging, it is confirmed via sniff that this happens when death knights learn the spell, not on character creation.
             if ((_spell_idx->second->AcquireMethod == SKILL_LINE_ABILITY_LEARNED_ON_SKILL_LEARN && !HasSkill(pSkill->id)) || ((pSkill->id == SKILL_LOCKPICKING || pSkill->id == SKILL_RUNEFORGING) && _spell_idx->second->TrivialSkillLineRankHigh == 0))
             {
@@ -5212,9 +5192,7 @@ float Player::OCTRegenHPPerSpirit()
     if (baseSpirit > 50)
         baseSpirit = 50;
     float moreSpirit = spirit - baseSpirit;
-    // lfm regen should not multiple 2 
-    //float regen = (baseSpirit * baseRatio->ratio + moreSpirit * moreRatio->ratio) * 2;
-    float regen = (baseSpirit * baseRatio->ratio + moreSpirit * moreRatio->ratio);
+    float regen = (baseSpirit * baseRatio->ratio + moreSpirit * moreRatio->ratio) * 2;
     return regen;
 }
 
@@ -12023,6 +12001,19 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
                 {
                     continue;
                 }
+            }
+
+            // lfm skill spells modification
+            uint32 eachSpellId = pAbility->Spell;
+            // draenei             
+            if (eachSpellId == 28875 || eachSpellId == 28880 || eachSpellId == 59542 || eachSpellId == 59543 || eachSpellId == 59544 || eachSpellId == 59545 || eachSpellId == 59547 || eachSpellId == 59548)
+            {
+                continue;
+            }
+            // dwarf 
+            if (eachSpellId == 59224 || eachSpellId == 20595)
+            {
+                continue;
             }
 
             // lfm default spell skill exceptions

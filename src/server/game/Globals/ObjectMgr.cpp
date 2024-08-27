@@ -56,6 +56,9 @@
  // lfm ming
 #include "MingManager.h"
 
+// lfm nier
+#include "NierManager.h"
+
 ScriptMapMap sSpellScripts;
 ScriptMapMap sEventScripts;
 ScriptMapMap sWaypointScripts;
@@ -617,6 +620,9 @@ void ObjectMgr::LoadCreatureTemplates()
     LoadCreatureTemplateResistances();
     LoadCreatureTemplateSpells();
 
+    // lfm tamable beasts 
+    sNierManager->tamableBeastMap.clear();
+
     // Checking needs to be done after loading because of the difficulty self referencing
     for (CreatureTemplateContainer::iterator itr = _creatureTemplateStore.begin(); itr != _creatureTemplateStore.end(); ++itr)
     {
@@ -972,6 +978,12 @@ void ObjectMgr::CheckCreatureTemplate(CreatureTemplate const* cInfo)
 {
     if (!cInfo)
         return;
+
+    // lfm tabmable beasts 
+    if (cInfo->IsTameable(false))
+    {
+        sNierManager->tamableBeastMap[sNierManager->tamableBeastMap.size()] = cInfo->Entry;
+    }
 
     bool ok = true;                                     // bool to allow continue outside this loop
     for (uint32 diff = 0; diff < MAX_DIFFICULTY - 1 && ok; ++diff)
@@ -1810,8 +1822,11 @@ void ObjectMgr::LoadCreatureModelInfo()
         modelInfo.modelid_other_gender = fields[4].Get<uint32>();
 
         // lfm combat size smaller
-        //modelInfo.bounding_radius = 0.5f;
-        modelInfo.combat_reach = modelInfo.bounding_radius + CONTACT_DISTANCE;
+        //float ajustReach = modelInfo.bounding_radius + DEFAULT_COMBAT_REACH;
+        //if (modelInfo.combat_reach > ajustReach)
+        //{
+        //    modelInfo.combat_reach = ajustReach;
+        //}
 
         // Checks
 
@@ -2246,6 +2261,28 @@ void ObjectMgr::LoadCreatures()
         data.dynamicflags       = fields[22].Get<uint32>();
         data.ScriptId           = GetScriptId(fields[23].Get<std::string>());
 
+        // lfm respawn time
+        if (cInfo)
+        {
+            if (cInfo->rank == CreatureEliteType::CREATURE_ELITE_NORMAL)
+            {
+                if (data.spawntimesecs > 60 && data.spawntimesecs < 1200)
+                {
+                    data.spawntimesecs = 1200;
+                }
+            }
+        }
+
+        // lfm random flying
+        if (sMingManager->flyingCreatureEntrySet.find(cInfo->Entry) != sMingManager->flyingCreatureEntrySet.end())
+        {
+            if (data.movementType == 0)
+            {
+                data.movementType = 1;
+                data.wander_distance = VISIBILITY_DISTANCE_TINY;
+            }
+        }
+
         if (!data.ScriptId)
             data.ScriptId = cInfo->ScriptID;
 
@@ -2563,7 +2600,7 @@ void ObjectMgr::LoadGameobjects()
             continue;
         }
 
-        // lfm ming vein
+        // lfm ming vein and herb 
         if (sMingConfig->Enable)
         {
             if (sMingManager->IsVein(entry))
@@ -2573,6 +2610,18 @@ void ObjectMgr::LoadGameobjects()
                 float eachY = fields[4].Get<float>();
                 float eachZ = fields[5].Get<float>();
                 if (!sMingManager->AddVein(guid, eachMapId, Position(eachX, eachY, eachZ), 200.0f))
+                {
+                    continue;
+                }
+            }
+
+            if (sMingManager->IsHerb(entry))
+            {
+                uint32 eachMapId = fields[2].Get<uint32>();
+                float eachX = fields[3].Get<float>();
+                float eachY = fields[4].Get<float>();
+                float eachZ = fields[5].Get<float>();
+                if (!sMingManager->AddHerb(guid, eachMapId, Position(eachX, eachY, eachZ), 200.0f))
                 {
                     continue;
                 }
@@ -4338,6 +4387,13 @@ void ObjectMgr::LoadPlayerInfo()
                 }
                 continue;
             }
+
+            // lfm xp above 20 will be 1.5 times
+            if (current_level >= 20)
+            {
+                current_xp = current_xp * 3 / 2;
+            }
+
             //PlayerXPperLevel
             _playerXPperLevel[current_level] = current_xp;
             ++count;

@@ -211,8 +211,11 @@ void MingManager::InitializeManager()
     flyingCreatureEntrySet.insert(5347);
     flyingCreatureEntrySet.insert(5305);
     flyingCreatureEntrySet.insert(5306);
+    flyingCreatureEntrySet.insert(5928);
     flyingCreatureEntrySet.insert(4012);
     flyingCreatureEntrySet.insert(4013);
+    flyingCreatureEntrySet.insert(4014);
+    flyingCreatureEntrySet.insert(4015);
     flyingCreatureEntrySet.insert(6141);
     flyingCreatureEntrySet.insert(10807);
     flyingCreatureEntrySet.insert(3869);
@@ -346,6 +349,7 @@ void MingManager::InitializeManager()
     flyingCreatureEntrySet.insert(6378);
     flyingCreatureEntrySet.insert(6379);
     flyingCreatureEntrySet.insert(6380);
+    flyingCreatureEntrySet.insert(18699);
 
     checkDelay = 10000;
 

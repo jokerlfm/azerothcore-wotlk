@@ -1,24 +1,19 @@
-#ifndef NIER_ROGUE_H
-#define NIER_ROGUE_H
+#ifndef NIER_ACTION_ROGUE_H
+#define NIER_ACTION_ROGUE_H
 
-#include "Nier_Base.h"
+#include "NierAction_Base.h"
 
-class Nier_Rogue :public Nier_Base
+class NierAction_Rogue :public NierAction_Base
 {
-public:
-    Nier_Rogue();
-
+public:    
+    NierAction_Rogue(Player* pmMe);
+    void InitializeCharacter(uint32 pmTargetLevel, uint32 pmSpecialtyTabIndex);
+    void ResetTalent();
+    bool InitializeEquipments(bool pmReset);
     void Prepare();
-    void Update(uint32 pDiff);
-    void Update_Online(uint32 pDiff);
-    void InitializeCharacter();
-
-    bool Tank(Unit* pTarget);
-    bool Heal(Unit* pTarget);
-    bool DPS(Unit* pTarget, Unit* pTank, bool pRushing);
-    bool Buff();
-    bool Cure();
-    bool Revive();
+    bool DPS(Unit* pmTarget, bool pmRushing, float pmDistanceMax, float pmDistanceMin, bool pmHolding, bool pmInstantOnly, bool pmChasing, bool pmForceBack);
+    bool Buff(Unit* pmTarget);
+    uint32 Caution();
 
 public:
     uint32 spell_Dismantle;

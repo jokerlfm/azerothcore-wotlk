@@ -45,21 +45,9 @@
 #include <string>
 #include <vector>
 
-// lfm nier
-#include "Nier_Base.h"
-#include "Nier_Warrior.h"
-#include "Nier_Paladin.h"
-#include "Nier_Hunter.h"
-#include "Nier_Rogue.h"
-#include "Nier_Priest.h"
-#include "Nier_Shaman.h"
-#include "Nier_Mage.h"
-#include "Nier_Warlock.h"
-#include "Nier_Druid.h"
+// lfm nier 
+#include "NierAction_Base.h"
 #include "NierStrategy_Base.h"
-
-class Nier_Base;
-class NierStrategy_Base;
 
 struct CreatureTemplate;
 struct Mail;
@@ -1091,14 +1079,10 @@ public:
 
     // lfm nier
     bool isNier;
-    uint32 masterId;
     uint32 groupRole;
-
-    std::unordered_set<Nier_Base*> partners;
-    std::unordered_set<Nier_Base*> rivals;
-    std::unordered_set<Nier_Base*> comrades;
-    std::unordered_set<Nier_Base*> enemies;
-    NierStrategy_Base* strategy;    
+    uint32 activeStrategyIndex;
+    std::unordered_map<uint32, NierStrategy_Base*> nierStrategyMap;
+    NierAction_Base* nierAction;
 
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 

@@ -516,6 +516,13 @@ public:
         void sGossipHello(Player* player) override
         {
             DoCast(player, SPELL_MARK_OF_THE_WILD_RANK_2, true);
+
+            // lfm debug
+            //ClearGossipMenuFor(player);
+            //AddGossipItemFor(player, GOSSIP_OPTION_LET_EVENT_BEGIN, 0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            //SendGossipMenuFor(player, NPC_TEXT_FANGLORDS_ARE_DEAD, me->GetGUID());
+            //return;
+
             if ((instance->GetData(TYPE_LORD_COBRAHN) == DONE) && (instance->GetData(TYPE_LORD_PYTHAS) == DONE) &&
                 (instance->GetData(TYPE_LADY_ANACONDRA) == DONE) && (instance->GetData(TYPE_LORD_SERPENTIS) == DONE))
             {

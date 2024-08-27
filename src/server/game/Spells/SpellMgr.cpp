@@ -2274,6 +2274,12 @@ void SpellMgr::LoadSpellLinked()
         int32 effect = fields[1].Get<int32>();
         int32 type = fields[2].Get<uint8>();
 
+        // lfm extra threat modify will be ignored
+        if (effect == 57339 || effect == 57340 || effect == -57339 || effect == -57340)
+        {
+            continue;
+        }
+
         SpellInfo const* spellInfo = GetSpellInfo(std::abs(trigger));
         if (!spellInfo)
         {

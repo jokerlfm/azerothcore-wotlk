@@ -2195,7 +2195,7 @@ void World::SetInitialWorldSettings()
     METRIC_EVENT("events", "World initialized", "World Initialized In " + std::to_string(startupDuration / 60000) + " Minutes " + std::to_string((startupDuration % 60000) / 1000) + " Seconds");
 
     // lfm nier
-    if (sNierConfig->StartNier())
+    if (sNierConfig->Initialize())
     {
         sNierManager->InitializeManager();
     }
@@ -2505,6 +2505,10 @@ void World::Update(uint32 diff)
 
     // lfm ming
     sMingManager->UpdateMingManager(diff);
+
+    // lfm nier
+    sNierManager->UpdateNierManager(diff);
+    sNierManager->UpdateNierEntities(diff);
 }
 
 void World::ForceGameEventUpdate()

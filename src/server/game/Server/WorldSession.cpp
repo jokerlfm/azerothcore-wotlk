@@ -334,7 +334,10 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)
     if (sWorld->getBoolConfig(CONFIG_CLOSE_IDLE_CONNECTIONS) && IsConnectionIdle() && m_Socket)
-        m_Socket->CloseSocket();
+    {
+        // lfm do not close client for debugging 
+        //m_Socket->CloseSocket();
+    }
 
     if (updater.ProcessUnsafe())
         UpdateTimeOutTime(diff);

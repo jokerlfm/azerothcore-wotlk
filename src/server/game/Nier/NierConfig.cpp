@@ -58,16 +58,16 @@ namespace
         std::unordered_map<std::string /*name*/, std::string /*value*/> fileConfigs;
 
         auto IsDuplicateOption = [&](std::string const& confOption)
-        {
-            auto const& itr = fileConfigs.find(confOption);
-            if (itr != fileConfigs.end())
             {
-                PrintError(file, "> Config::LoadFile: Dublicate key name '{}' in config file '{}'", confOption, file);
-                return true;
-            }
+                auto const& itr = fileConfigs.find(confOption);
+                if (itr != fileConfigs.end())
+                {
+                    PrintError(file, "> Config::LoadFile: Dublicate key name '{}' in config file '{}'", confOption, file);
+                    return true;
+                }
 
-            return false;
-        };
+                return false;
+            };
 
         while (in.good())
         {
@@ -430,7 +430,7 @@ float NierConfig::GetFloatDefault(std::string const& name, float def, bool showL
     return GetOption<float>(name, def, showLogs);
 }
 
-bool NierConfig::StartNier()
+bool NierConfig::Initialize()
 {
     std::string configFile = GetConfigPath() + std::string(NIER_CONFIG_FILE_NAME);
     std::vector<std::string> args;
@@ -444,13 +444,38 @@ bool NierConfig::StartNier()
 
     Enable = GetIntDefault("Enable", 0);
     Reset = GetIntDefault("Reset", 0);
+    ReviveDelay = GetIntDefault("ReviveDelay", 600000);
+    ManagerCheckDelay = GetIntDefault("ManagerCheckDelay", 60000);
+    RelocateDelay = GetIntDefault("RelocateDelay", 600000);
+    AssembleDelay = GetIntDefault("AssembleDelay", 60000);
+
+    NierCount_Alliance_Warrior = GetIntDefault("NierCount_Alliance_Warrior", 0);
+    NierCount_Alliance_Paladin = GetIntDefault("NierCount_Alliance_Paladin", 0);
+    NierCount_Alliance_Hunter = GetIntDefault("NierCount_Alliance_Hunter", 0);
+    NierCount_Alliance_Rogue = GetIntDefault("NierCount_Alliance_Rogue", 0);
+    NierCount_Alliance_Priest = GetIntDefault("NierCount_Alliance_Priest", 0);
+    NierCount_Alliance_DeathKnight = GetIntDefault("NierCount_Alliance_DeathKnight", 0);
+    NierCount_Alliance_Shaman = GetIntDefault("NierCount_Alliance_Shaman", 0);
+    NierCount_Alliance_Mage = GetIntDefault("NierCount_Alliance_Mage", 0);
+    NierCount_Alliance_Warlock = GetIntDefault("NierCount_Alliance_Warlock", 0);
+    NierCount_Alliance_Druid = GetIntDefault("NierCount_Alliance_Druid", 0);
+    NierCount_Horde_Warrior = GetIntDefault("NierCount_Horde_Warrior", 0);
+    NierCount_Horde_Paladin = GetIntDefault("NierCount_Horde_Paladin", 0);
+    NierCount_Horde_Hunter = GetIntDefault("NierCount_Horde_Hunter", 0);
+    NierCount_Horde_Rogue = GetIntDefault("NierCount_Horde_Rogue", 0);
+    NierCount_Horde_Priest = GetIntDefault("NierCount_Horde_Priest", 0);
+    NierCount_Horde_DeathKnight = GetIntDefault("NierCount_Horde_DeathKnight", 0);
+    NierCount_Horde_Shaman = GetIntDefault("NierCount_Horde_Shaman", 0);
+    NierCount_Horde_Mage = GetIntDefault("NierCount_Horde_Mage", 0);
+    NierCount_Horde_Warlock = GetIntDefault("NierCount_Horde_Warlock", 0);
+    NierCount_Horde_Druid = GetIntDefault("NierCount_Horde_Druid", 0);
 
     if (Enable == 0)
     {
-        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "nier is disabled.");
+        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "nier is disabled.");
         return false;
     }
-    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_DEBUG, "nier started.");
+    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "nier started.");
     return true;
 }
 

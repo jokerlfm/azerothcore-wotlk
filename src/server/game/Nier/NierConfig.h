@@ -7,16 +7,20 @@
 # define NIER_MARK "NIER"
 #endif
 
+#ifndef NIER_NEAR_DISTANCE
+# define NIER_NEAR_DISTANCE 12.0f
+#endif
+
 #ifndef NIER_NORMAL_DISTANCE
-# define NIER_NORMAL_DISTANCE 12.0f
+# define NIER_NORMAL_DISTANCE 20.0f
 #endif
 
 #ifndef NIER_FAR_DISTANCE
-# define NIER_FAR_DISTANCE 28.0f
+# define NIER_FAR_DISTANCE 25.0f
 #endif
 
 #ifndef NIER_MAX_DISTANCE
-# define NIER_MAX_DISTANCE 38.0f
+# define NIER_MAX_DISTANCE 35.0f
 #endif
 
 #include "Define.h"
@@ -30,6 +34,31 @@ class NierConfig
     {
         Enable = 0;
         Reset = 0;
+        ReviveDelay = 0;
+        ManagerCheckDelay = 0;
+        RelocateDelay = 0;
+        AssembleDelay = 0;
+
+        NierCount_Alliance_Warrior = 0;
+        NierCount_Alliance_Paladin = 0;
+        NierCount_Alliance_Hunter = 0;
+        NierCount_Alliance_Rogue = 0;
+        NierCount_Alliance_Priest = 0;
+        NierCount_Alliance_DeathKnight = 0;
+        NierCount_Alliance_Shaman = 0;
+        NierCount_Alliance_Mage = 0;
+        NierCount_Alliance_Warlock = 0;
+        NierCount_Alliance_Druid = 0;
+        NierCount_Horde_Warrior = 0;
+        NierCount_Horde_Paladin = 0;
+        NierCount_Horde_Hunter = 0;
+        NierCount_Horde_Rogue = 0;
+        NierCount_Horde_Priest = 0;
+        NierCount_Horde_DeathKnight = 0;
+        NierCount_Horde_Shaman = 0;
+        NierCount_Horde_Mage = 0;
+        NierCount_Horde_Warlock = 0;
+        NierCount_Horde_Druid = 0;
     }
     NierConfig(NierConfig const&) = delete;
     NierConfig& operator=(NierConfig const&) = delete;
@@ -45,9 +74,34 @@ public:
     bool Reload();
 
 public:
-    bool StartNier();
+    bool Initialize();
     uint32 Enable;
-    uint32 Reset;
+    uint32 Reset;    
+    uint32 ReviveDelay;
+    uint32 ManagerCheckDelay;
+    uint32 RelocateDelay;
+    uint32 AssembleDelay;
+
+    uint32 NierCount_Alliance_Warrior;
+    uint32 NierCount_Alliance_Paladin;
+    uint32 NierCount_Alliance_Hunter;
+    uint32 NierCount_Alliance_Rogue;
+    uint32 NierCount_Alliance_Priest;
+    uint32 NierCount_Alliance_DeathKnight;
+    uint32 NierCount_Alliance_Shaman;
+    uint32 NierCount_Alliance_Mage;
+    uint32 NierCount_Alliance_Warlock;
+    uint32 NierCount_Alliance_Druid;
+    uint32 NierCount_Horde_Warrior;
+    uint32 NierCount_Horde_Paladin;
+    uint32 NierCount_Horde_Hunter;
+    uint32 NierCount_Horde_Rogue;
+    uint32 NierCount_Horde_Priest;
+    uint32 NierCount_Horde_DeathKnight;
+    uint32 NierCount_Horde_Shaman;
+    uint32 NierCount_Horde_Mage;
+    uint32 NierCount_Horde_Warlock;
+    uint32 NierCount_Horde_Druid;
 
     std::string const GetFilename();
     std::string const GetConfigPath();

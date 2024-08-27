@@ -902,6 +902,19 @@ void Creature::Update(uint32 diff)
                 m_transportCheckTimer -= diff;
         }
 
+        // lfm creature hover
+        if (CanFly())
+        {
+            if (!HasUnitMovementFlag(MovementFlags::MOVEMENTFLAG_HOVER))
+            {
+                m_movementInfo.AddMovementFlag(MovementFlags::MOVEMENTFLAG_HOVER);
+            }
+            if (!HasUnitMovementFlag(MovementFlags::MOVEMENTFLAG_MASK_MOVING_FLY))
+            {
+                m_movementInfo.AddMovementFlag(MovementFlags::MOVEMENTFLAG_MASK_MOVING_FLY);
+            }
+        }
+
         sScriptMgr->OnCreatureUpdate(this, diff);
     }
 }
