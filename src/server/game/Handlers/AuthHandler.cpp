@@ -31,6 +31,9 @@ void WorldSession::SendAuthResponse(uint8 code, bool shortForm, uint32 queuePos)
     if (exp >= MAX_EXPANSIONS)
         exp = MAX_EXPANSIONS - 1;
 
+    // lfm exp will always be 2 
+    exp = 2;
+
     packet << uint8(exp);
 
     if (!shortForm)

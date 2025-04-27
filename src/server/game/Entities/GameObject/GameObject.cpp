@@ -609,6 +609,14 @@ void GameObject::Update(uint32 diff)
             }
         case GO_READY:
             {
+                // lfm auto fish
+                if (GetGoType() == GAMEOBJECT_TYPE_FISHINGNODE)
+                {
+                    Unit* caster = GetOwner();
+                    Use(caster);
+                    break;
+                }
+
                 if (m_respawnTime > 0)                          // timer on
                 {
                     time_t now = GameTime::GetGameTime().count();
@@ -1743,6 +1751,12 @@ void GameObject::Use(Unit* user)
                             if (!zone_skill)
                                 LOG_ERROR("sql.sql", "Fishable areaId {} are not properly defined in `skill_fishing_base_level`.", subzone);
 
+                            // lfm zone fishing skill will be higher 
+                            if (zone_skill < 0)
+                            {
+                                zone_skill = 0;
+                            }
+
                             int32 skill = player->GetSkillValue(SKILL_FISHING);
 
                             int32 chance;
@@ -1754,6 +1768,24 @@ void GameObject::Use(Unit* user)
                             }
                             else
                                 chance = 100;
+
+                            // lfm fish chance 
+                            if (skill < zone_skill)
+                            {
+                                chance = 5;
+                            }
+                            else
+                            {
+                                chance = skill + 10 - zone_skill;
+                            }
+                            if (chance < 5)
+                            {
+                                chance = 5;
+                            }
+                            else if (chance > 30)
+                            {
+                                chance = 30;
+                            }
 
                             int32 roll = irand(1, 100);
 
@@ -1797,6 +1829,23 @@ void GameObject::Use(Unit* user)
                             break;
                         }
                 }
+
+                // lfm auto fish
+                player->fishingDelay = urand(500, 1000);
+                uint32 maxSlot = loot.GetMaxSlotInLootFor(player);
+                for (uint32 slotIndex = 0; slotIndex <= maxSlot; slotIndex++)
+                {
+                    if (LootItem* lootItem = loot.LootItemInSlot(slotIndex, player))
+                    {
+                        if (!lootItem->is_looted)
+                        {
+                            InventoryResult ir;
+                            player->StoreLootItem(slotIndex, &loot, ir);
+                        }
+                    }
+                }
+                player->SendLootRelease(player->GetGUID());
+
                 player->FinishSpell(CURRENT_CHANNELED_SPELL, true);
                 return;
             }
@@ -1958,6 +2007,22 @@ void GameObject::Use(Unit* user)
 
                 player->SendLoot(GetGUID(), LOOT_FISHINGHOLE);
                 player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_FISH_IN_GAMEOBJECT, GetGOInfo()->entry);
+
+                // lfm auto fish
+                uint32 maxSlot = loot.GetMaxSlotInLootFor(player);
+                for (uint32 slotIndex = 0; slotIndex <= maxSlot; slotIndex++)
+                {
+                    if (LootItem* lootItem = loot.LootItemInSlot(slotIndex, player))
+                    {
+                        if (!lootItem->is_looted)
+                        {
+                            InventoryResult ir;
+                            player->StoreLootItem(slotIndex, &loot, ir);
+                        }
+                    }
+                }
+                player->SendLootRelease(player->GetGUID());
+
                 return;
             }
 

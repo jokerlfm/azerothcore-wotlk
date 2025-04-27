@@ -699,6 +699,9 @@ void ObjectMgr::LoadCreatureTemplate(Field* fields, bool triggerHook)
     creatureTemplate.flags_extra           = fields[65].Get<uint32>();
     creatureTemplate.ScriptID              = GetScriptId(fields[66].Get<std::string>());
 
+    // lfm npc force gossip
+    creatureTemplate.type_flags |= CreatureTypeFlags::CREATURE_TYPE_FLAG_FORCE_GOSSIP;
+
     // useful if the creature template load is being triggered from outside this class
     if (triggerHook)
     {
@@ -2233,6 +2236,20 @@ void ObjectMgr::LoadCreatures()
                 data.equipmentId = 0;
             }
         }
+
+        // lfm equipments all creature 
+        if (data.equipmentId == 0)
+        {
+            data.equipmentId = -1;
+            if (!GetEquipmentInfo(data.id1, data.equipmentId))
+            {
+                if (!GetEquipmentInfo(data.id2, data.equipmentId))
+                {
+                    GetEquipmentInfo(data.id3, data.equipmentId);
+                }
+            }
+        }
+
         if (cInfo->HasFlagsExtra(CREATURE_FLAG_EXTRA_INSTANCE_BIND) || (data.id2 && cInfo2->HasFlagsExtra(CREATURE_FLAG_EXTRA_INSTANCE_BIND)) || (data.id3 && cInfo3->HasFlagsExtra(CREATURE_FLAG_EXTRA_INSTANCE_BIND)))
         {
             if (!mapEntry->IsDungeon())
@@ -9855,6 +9872,13 @@ void ObjectMgr::LoadCreatureClassLevelStats()
             }
 
             stats.BaseDamage[i] = fields[9 + i].Get<float>();
+
+            // lfm min damage base set to 0.5
+            if (stats.BaseDamage[i] < 0.5f)
+            {
+                stats.BaseDamage[i] = 0.5f;
+            }
+
             if (stats.BaseDamage[i] < 0.0f)
             {
                 LOG_ERROR("sql.sql", "Creature base stats for class {}, level {} has invalid negative base damage[{}] - set to 0.0", Class, Level, i);

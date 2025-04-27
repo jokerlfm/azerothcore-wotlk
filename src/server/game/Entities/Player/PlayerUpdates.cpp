@@ -424,6 +424,18 @@ void Player::Update(uint32 p_time)
         m_delayed_unit_relocation_timer = 0;
         RemoveFromNotify(NOTIFY_VISIBILITY_CHANGED);
     }
+
+    // lfm auto fish
+    if (fishingDelay > 0)
+    {
+        fishingDelay -= p_time;
+        if (fishingDelay <= 0)
+        {
+            sLog->outMessage("nier", LogLevel::LOG_LEVEL_DEBUG, "to fishing");
+            CastSpell(this, 7620, true);
+            fishingDelay = 0;
+        }
+    }
 }
 
 void Player::UpdateMirrorTimers()
@@ -894,13 +906,8 @@ bool Player::UpdateFishingSkill()
         return false;
     }
 
-    /* Whenever the player clicks on the fishing gameobject the
-     * core will decide based on a probability if the skill raises or not.
-     */
-    return UpdateSkillPro(
-        SKILL_FISHING,
-        static_cast<int32>(getProbabilityOfLevelUp(SkillValue)) * 10,
-        sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
+    // lfm fishing skill increase rate will always be 20%
+    return UpdateSkillPro(SKILL_FISHING, 200, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
 }
 
 // levels sync. with spell requirement for skill levels to learn

@@ -410,6 +410,10 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     m_isInstantFlightOn = true;
 
     _wasOutdoor = true;
+
+    // lfm auto fish
+    fishingDelay = 0;
+
     sScriptMgr->OnConstructPlayer(this);
 }
 
@@ -1368,25 +1372,28 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     }
 
     // client without expansion support
-    if (GetSession()->Expansion() < mEntry->Expansion())
-    {
-        LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
+    // lfm map without expansion check 
+    //if (GetSession()->Expansion() < mEntry->Expansion())
+    //{
+    //    LOG_DEBUG("maps", "Player {} using client without required expansion tried teleport to non accessible map {}", GetName(), mapid);
 
-        if (GetTransport())
-        {
-            m_transport->RemovePassenger(this);
-            m_transport = nullptr;
-            m_movementInfo.transport.Reset();
-            m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
-            RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
-        }
+    //    if (GetTransport())
+    //    {
+    //        m_transport->RemovePassenger(this);
+    //        m_transport = nullptr;
+    //        m_movementInfo.transport.Reset();
+    //        m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+    //        RepopAtGraveyard();                             // teleport to near graveyard if on transport, looks blizz like :)
+    //    }
 
-        SendTransferAborted(mapid, TRANSFER_ABORT_INSUF_EXPAN_LVL, mEntry->Expansion());
+    //    SendTransferAborted(mapid, TRANSFER_ABORT_INSUF_EXPAN_LVL, mEntry->Expansion());
 
-        return false;                                       // normal client can't teleport to this map...
-    }
-    else
-        LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
+    //    return false;                                       // normal client can't teleport to this map...
+    //}
+    //else
+    //{
+    //    LOG_DEBUG("maps", "Player {} is being teleported to map {}", GetName(), mapid);
+    //}
 
     // xinef: do this here in case teleport failed in above checks
     if (!(options & TELE_TO_NOT_LEAVE_TAXI) && IsInFlight())
@@ -5262,6 +5269,12 @@ float Player::OCTRegenHPPerSpirit()
         baseSpirit = 50;
     float moreSpirit = spirit - baseSpirit;
     float regen = (baseSpirit * baseRatio->ratio + moreSpirit * moreRatio->ratio) * 2;
+
+    // lfm hp regen 
+    float spiritRegen = GetStat(STAT_SPIRIT);
+    spiritRegen = spiritRegen * 2 / 5;
+    regen = spiritRegen;
+
     return regen;
 }
 
@@ -12104,6 +12117,19 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
                 {
                     continue;
                 }
+            }
+
+            // lfm skill spells modification
+            uint32 eachSpellId = pAbility->Spell;
+            // draenei             
+            if (eachSpellId == 28875 || eachSpellId == 28880 || eachSpellId == 59542 || eachSpellId == 59543 || eachSpellId == 59544 || eachSpellId == 59545 || eachSpellId == 59547 || eachSpellId == 59548)
+            {
+                continue;
+            }
+            // dwarf 
+            if (eachSpellId == 59224 || eachSpellId == 20595)
+            { 
+                continue;
             }
 
             if (!IsInWorld())

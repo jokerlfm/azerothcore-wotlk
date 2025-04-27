@@ -512,6 +512,36 @@ bool Creature::InitEntry(uint32 Entry, const CreatureData* data)
         LoadEquipment(data->equipmentId);
     }
 
+    // lfm item in both hands will enable creature dual
+    if (uint32 mainId = GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+    {
+        if (mainId > 0)
+        {
+            if (uint32 offId = GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1))
+            {
+                if (offId > 0)
+                {
+                    if (mainId == offId)
+                    {
+                        SetCanDualWield(true);
+                        const_cast<CreatureTemplate*>(cinfo)->flags_extra = cinfo->flags_extra | CreatureFlagsExtra::CREATURE_FLAG_EXTRA_USE_OFFHAND_ATTACK;
+                    }
+                    else
+                    {
+                        if (ItemTemplate const* it = sObjectMgr->GetItemTemplate(offId))
+                        {
+                            if (it->Class == ITEM_CLASS_WEAPON)
+                            {
+                                SetCanDualWield(true);
+                                const_cast<CreatureTemplate*>(cinfo)->flags_extra = cinfo->flags_extra | CreatureFlagsExtra::CREATURE_FLAG_EXTRA_USE_OFFHAND_ATTACK;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     SetName(normalInfo->Name);                              // at normal entry always
 
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
@@ -2495,9 +2525,18 @@ void Creature::CallForHelp(float radius, Unit* target /*= nullptr*/)
 
 bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /*= true*/) const
 {
-    // is it true?
-    if (!HasReactState(REACT_AGGRESSIVE))
+    // lfm stun creature will not assist
+    if (HasUnitState(UNIT_STATE_STUNNED))
+    {
         return false;
+    }
+
+    // lfm neutral units will do assist
+    // is it true?
+    //if (!HasReactState(REACT_AGGRESSIVE))
+    //{
+    //    return false;
+    //}
 
     // we don't need help from zombies :)
     if (!IsAlive())

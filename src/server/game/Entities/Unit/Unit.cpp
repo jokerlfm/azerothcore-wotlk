@@ -3280,6 +3280,16 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit* victim, SpellInfo const* spellInfo
         }
     }
 
+    // lfm dodge parry not from behind
+    if (canDodge)
+    {
+        if (!victim->isInFront(this))
+        {
+            canDodge = false;
+            canParry = false;
+        }
+    }
+
     if (canDodge)
     {
         // Roll dodge

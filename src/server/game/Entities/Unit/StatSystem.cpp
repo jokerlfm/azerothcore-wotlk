@@ -938,6 +938,10 @@ void Player::UpdateManaRegen()
     // Apply PCT bonus from SPELL_AURA_MOD_POWER_REGEN_PERCENT aura on spirit base regen
     power_regen *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_MANA);
 
+    // lfm regen 
+    float spiritRegen = GetStat(STAT_SPIRIT);
+    power_regen = spiritRegen * 2 / 5;
+
     // Mana regen from SPELL_AURA_MOD_POWER_REGEN aura
     float power_regen_mp5 = (GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) + m_baseManaRegen) / 5.0f;
 
@@ -1303,8 +1307,12 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
 
     if (GetEntry() == NPC_IMP)                                     // imp's attack power
         val = GetStat(STAT_STRENGTH) - 10.0f;
-    else if (IsPetGhoul())                                         // DK's ghoul attack power
-        val = 589 /*xinef: base ap!*/ + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY);
+    else if (IsPetGhoul())
+    {
+        // DK's ghoul attack power
+        // lfm ghoul base power 
+        //val = 589 /*xinef: base ap!*/ + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY);
+    }
     else
         val = 2 * GetStat(STAT_STRENGTH) - 20.0f;
 

@@ -5237,11 +5237,12 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     // client without expansion support
     if (mapEntry)
     {
-        if (GetSession()->Expansion() < mapEntry->Expansion())
-        {
-            LOG_DEBUG("entities.player.loading", "Player {} using client without required expansion tried login at non accessible map {}", GetName(), mapId);
-            RelocateToHomebind();
-        }
+        // lfm no expansion check for map 
+        //if (GetSession()->Expansion() < mapEntry->Expansion())
+        //{
+        //    LOG_DEBUG("entities.player.loading", "Player {} using client without required expansion tried login at non accessible map {}", GetName(), mapId);
+        //    RelocateToHomebind();
+        //}
 
         // check whether player was unbound or is bound to another instance
         if (instanceId)
@@ -7009,15 +7010,16 @@ bool Player::_LoadHomeBind(PreparedQueryResult result)
         MapEntry const* bindMapEntry = sMapStore.LookupEntry(m_homebindMapId);
 
         // accept saved data only for valid position (and non instanceable), and accessable
-        if (MapMgr::IsValidMapCoord(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ) &&
-            !bindMapEntry->Instanceable() && GetSession()->Expansion() >= bindMapEntry->Expansion())
-            ok = true;
-        else
-        {
-            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_PLAYER_HOMEBIND);
-            stmt->SetData(0, GetGUID().GetCounter());
-            CharacterDatabase.Execute(stmt);
-        }
+        // lfm no expansion check for map 
+        //if (MapMgr::IsValidMapCoord(m_homebindMapId, m_homebindX, m_homebindY, m_homebindZ) &&
+        //    !bindMapEntry->Instanceable() && GetSession()->Expansion() >= bindMapEntry->Expansion())
+        //    ok = true;
+        //else
+        //{
+        //    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_PLAYER_HOMEBIND);
+        //    stmt->SetData(0, GetGUID().GetCounter());
+        //    CharacterDatabase.Execute(stmt);
+        //}
     }
 
     if (!ok)
