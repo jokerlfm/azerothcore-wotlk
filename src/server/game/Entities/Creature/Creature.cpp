@@ -1021,14 +1021,15 @@ void Creature::Regenerate(Powers power)
                 {
                     if (GetEntry() == NPC_IMP || GetEntry() == NPC_WATER_ELEMENTAL_TEMP || GetEntry() == NPC_WATER_ELEMENTAL_PERM)
                     {
-                        addvalue = uint32((GetStat(STAT_SPIRIT) / (IsUnderLastManaUseEffect() ? 8.0f : 5.0f) + 17.0f));
+                        // lfm create regen 
+                        float spiritRegen = GetStat(STAT_SPIRIT);
+                        addvalue = spiritRegen * 2 / 5;
                     }
                     else if (!IsUnderLastManaUseEffect())
                     {
-                        float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
-                        float Spirit = GetStat(STAT_SPIRIT);
-
-                        addvalue = uint32((Spirit / 5.0f + 17.0f) * ManaIncreaseRate);
+                        // lfm create regen 
+                        float spiritRegen = GetStat(STAT_SPIRIT);
+                        addvalue = spiritRegen * 2 / 5;
                     }
                 }
                 else

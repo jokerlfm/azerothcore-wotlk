@@ -9873,10 +9873,10 @@ void ObjectMgr::LoadCreatureClassLevelStats()
 
             stats.BaseDamage[i] = fields[9 + i].Get<float>();
 
-            // lfm min damage base set to 0.5
-            if (stats.BaseDamage[i] < 0.5f)
+            // lfm min damage base set to 1.0
+            if (stats.BaseDamage[i] < 1.0f)
             {
-                stats.BaseDamage[i] = 0.5f;
+                stats.BaseDamage[i] = 1.0f;
             }
 
             if (stats.BaseDamage[i] < 0.0f)

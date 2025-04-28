@@ -938,9 +938,9 @@ void Player::UpdateManaRegen()
     // Apply PCT bonus from SPELL_AURA_MOD_POWER_REGEN_PERCENT aura on spirit base regen
     power_regen *= GetTotalAuraMultiplierByMiscValue(SPELL_AURA_MOD_POWER_REGEN_PERCENT, POWER_MANA);
 
-    // lfm regen 
+    // lfm mana regen - count by every second 
     float spiritRegen = GetStat(STAT_SPIRIT);
-    power_regen = spiritRegen * 2 / 5;
+    power_regen = spiritRegen / 5;
 
     // Mana regen from SPELL_AURA_MOD_POWER_REGEN aura
     float power_regen_mp5 = (GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_POWER_REGEN, POWER_MANA) + m_baseManaRegen) / 5.0f;
