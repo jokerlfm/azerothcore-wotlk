@@ -1015,27 +1015,18 @@ void Creature::Regenerate(Powers power)
                 break;
             }
         case POWER_MANA:
+        {
+            // lfm create regen 
+            float spiritRegen = GetStat(STAT_SPIRIT);
+            addvalue = spiritRegen * 2 / 5;
+
+            // Combat and any controlled creature
+            if (IsInCombat() || GetCharmerOrOwnerGUID())
             {
-                // Combat and any controlled creature
-                if (IsInCombat() || GetCharmerOrOwnerGUID())
-                {
-                    if (GetEntry() == NPC_IMP || GetEntry() == NPC_WATER_ELEMENTAL_TEMP || GetEntry() == NPC_WATER_ELEMENTAL_PERM)
-                    {
-                        // lfm create regen 
-                        float spiritRegen = GetStat(STAT_SPIRIT);
-                        addvalue = spiritRegen * 2 / 5;
-                    }
-                    else if (!IsUnderLastManaUseEffect())
-                    {
-                        // lfm create regen 
-                        float spiritRegen = GetStat(STAT_SPIRIT);
-                        addvalue = spiritRegen * 2 / 5;
-                    }
-                }
-                else
-                    addvalue = maxValue / 3;
-                break;
+                addvalue = addvalue / 3;
             }
+            break;
+        }
         default:
             return;
     }
@@ -1067,7 +1058,9 @@ void Creature::RegenerateHealth()
     // Not only pet, but any controlled creature
     // Xinef: fix polymorph rapid regen
     if (!GetCharmerOrOwnerGUID() || IsPolymorphed())
+    {
         addvalue = maxValue / 3;
+    }
     else //if (GetCharmerOrOwnerGUID())
     {
         float HealthIncreaseRate = sWorld->getRate(RATE_HEALTH);
@@ -1077,6 +1070,9 @@ void Creature::RegenerateHealth()
             addvalue = uint32(Spirit * 0.25 * HealthIncreaseRate);
         else
             addvalue = uint32(Spirit * 0.80 * HealthIncreaseRate);
+
+        // lfm creature regen 
+        addvalue = Spirit * 2 / 5;
     }
 
     // Apply modifiers (if any).
