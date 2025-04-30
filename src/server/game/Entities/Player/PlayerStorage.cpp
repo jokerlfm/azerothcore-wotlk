@@ -7020,6 +7020,7 @@ bool Player::_LoadHomeBind(PreparedQueryResult result)
         //    stmt->SetData(0, GetGUID().GetCounter());
         //    CharacterDatabase.Execute(stmt);
         //}
+        ok = true;
     }
 
     if (!ok)
