@@ -1782,22 +1782,27 @@ void GameObject::Use(Unit* user)
                             {
                                 chance = 5;
                             }
-                            else if (chance > 30)
+                            else if (chance > 40)
                             {
-                                chance = 30;
+                                chance = 40;
                             }
 
                             int32 roll = irand(1, 100);
 
                             LOG_DEBUG("entities.gameobject", "Fishing check (skill: {} zone min skill: {} chance {} roll: {}", skill, zone_skill, chance, roll);
 
-                            if (sScriptMgr->OnPlayerUpdateFishingSkill(player, skill, zone_skill, chance, roll))
-                            {
-                                player->UpdateFishingSkill();
-                            }
                             // but you will likely cause junk in areas that require a high fishing skill (not yet implemented)
                             if (chance >= roll)
                             {
+                                // lfm fishing skill will not increase in lower pools
+                                int pureFishingSkill = player->GetPureSkillValue(SKILL_FISHING);
+                                int maxZoneSkill = zone_skill + 50;
+                                if (pureFishingSkill < maxZoneSkill)
+                                {
+                                    player->UpdateFishingSkill();
+                                    sScriptMgr->OnPlayerUpdateFishingSkill(player, skill, zone_skill, chance, roll);
+                                }
+
                                 //TODO: I do not understand this hack. Need some explanation.
                                 // prevent removing GO at spell cancel
                                 RemoveFromOwner();

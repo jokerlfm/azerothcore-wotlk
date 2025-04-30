@@ -1019,9 +1019,7 @@ void Creature::Regenerate(Powers power)
             // lfm create regen 
             float spiritRegen = GetStat(STAT_SPIRIT);
             addvalue = spiritRegen * 2 / 5;
-
-            // Combat and any controlled creature
-            if (IsInCombat() || GetCharmerOrOwnerGUID())
+            if (IsInCombat())
             {
                 addvalue = addvalue / 3;
             }
