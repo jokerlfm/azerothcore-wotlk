@@ -414,6 +414,10 @@ Player::Player(WorldSession* session): Unit(true), m_mover(this)
     // lfm auto fish
     fishingDelay = 0;
 
+    // lfm nier
+    nierGroupRole = 0;
+    nier = nullptr;
+
     sScriptMgr->OnConstructPlayer(this);
 }
 
@@ -12135,6 +12139,11 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
             // dwarf 
             if (eachSpellId == 59224 || eachSpellId == 20595)
             { 
+                continue;
+            }
+            // gnome 
+            if (eachSpellId == 20591 || eachSpellId == 20593)
+            {
                 continue;
             }
 

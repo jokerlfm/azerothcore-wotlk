@@ -2533,6 +2533,12 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
     //    return false;
     //}
 
+    // skip non hostile to caster enemy creatures
+    //if (!IsHostileTo(enemy))
+    //{
+    //    return false;
+    //}
+
     // we don't need help from zombies :)
     if (!IsAlive())
         return false;
@@ -2577,10 +2583,6 @@ bool Creature::CanAssistTo(Unit const* u, Unit const* enemy, bool checkfaction /
         if (!IsFriendlyTo(u))
             return false;
     }
-
-    // skip non hostile to caster enemy creatures
-    if (!IsHostileTo(enemy))
-        return false;
 
     // Check if can see the enemy
     if (!CanSeeOrDetect(enemy))

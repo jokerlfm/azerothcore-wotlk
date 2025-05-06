@@ -41,6 +41,9 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+ // lfm nier
+#include "NierManager.h"
+
 inline bool isNasty(uint8 c)
 {
     if (c == '\t')
@@ -371,6 +374,13 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                     sender->TextEmote(msg);
                 else if (type == CHAT_MSG_YELL)
                     sender->Yell(msg, Language(lang));
+
+                // lfm nier 
+                if (sender->GetSession()->nier_id == 0)
+                {
+                    sNierManager->HandleChatCommand(sender, msg, sender);
+                }
+
             }
             break;
         case CHAT_MSG_WHISPER:
@@ -416,6 +426,12 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                     sender->AddWhisperWhiteList(receiver->GetGUID());
 
                 GetPlayer()->Whisper(msg, Language(lang), receiver);
+
+                // lfm nier 
+                if (sender->GetSession()->nier_id == 0)
+                {
+                    sNierManager->HandleChatCommand(sender, msg, receiver);
+                }
             }
             break;
         case CHAT_MSG_PARTY:
@@ -443,6 +459,22 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
+
+                // lfm nier 
+                if (sender->GetSession()->nier_id == 0)
+                {
+                    for (GroupReference* groupRef = group->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                    {
+                        Player* member = groupRef->GetSource();
+                        if (member)
+                        {
+                            if (member->GetGUID() != sender->GetGUID())
+                            {
+                                sNierManager->HandleChatCommand(sender, msg, member);
+                            }
+                        }
+                    }
+                }
             }
             break;
         case CHAT_MSG_GUILD:
@@ -525,6 +557,22 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID_LEADER, Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false);
+
+                // lfm nier 
+                if (sender->GetSession()->nier_id == 0)
+                {
+                    for (GroupReference* groupRef = group->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
+                    {
+                        Player* member = groupRef->GetSource();
+                        if (member)
+                        {
+                            if (member->GetGUID() != sender->GetGUID())
+                            {
+                                sNierManager->HandleChatCommand(sender, msg, member);
+                            }
+                        }
+                    }
+                }
             }
             break;
         case CHAT_MSG_RAID_WARNING:

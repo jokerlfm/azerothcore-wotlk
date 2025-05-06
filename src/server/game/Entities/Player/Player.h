@@ -44,6 +44,10 @@
 #include <string>
 #include <vector>
 
+// lfm nier
+#include "Nier_Base.h"
+class Nier_Base;
+
 struct CreatureTemplate;
 struct Mail;
 struct TrainerSpell;
@@ -1089,6 +1093,10 @@ public:
 
     // lfm auto fish
     int fishingDelay;
+
+    // lfm nier
+    uint32 nierGroupRole;
+    Nier_Base* nier;
 
     void CleanupsBeforeDelete(bool finalCleanup = true) override;
 

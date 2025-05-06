@@ -914,7 +914,16 @@ class spell_warl_life_tap : public SpellScript
         if (Unit* target = GetHitUnit())
         {
             int32 spellEffect = GetEffectValue();
+
+            // lfm life tap cost 
+            float spiCost = caster->GetStat(STAT_SPIRIT);
+            spiCost = spiCost * 1.5f;
+            spellEffect = spellEffect + spiCost;
+
             int32 mana = int32(spellEffect + (caster->SpellBaseDamageBonusDone(SPELL_SCHOOL_MASK_SHADOW) * 0.5f));
+
+            // lfm life tap mana gain 
+            mana = mana / 2;
 
             // Shouldn't Appear in Combat Log
             target->ModifyHealth(-spellEffect);

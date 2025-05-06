@@ -100,6 +100,10 @@
 #include <boost/asio/ip/address.hpp>
 #include <cmath>
 
+// lfm nier
+#include "NierConfig.h"
+#include "NierManager.h"
+
 std::atomic_long World::_stopEvent = false;
 uint8 World::_exitCode = SHUTDOWN_EXIT_CODE;
 uint32 World::m_worldLoopCounter = 0;
@@ -2001,6 +2005,13 @@ void World::SetInitialWorldSettings()
         LOG_INFO("server.loading", "AzerothCore Dry Run Completed, Terminating.");
         exit(0);
     }
+
+    // lfm nier
+    if (sNierConfig->Initialize())
+    {
+        sNierManager->InitializeManager();
+    }
+
 }
 
 void World::DetectDBCLang()
@@ -2292,6 +2303,9 @@ void World::Update(uint32 diff)
         sMetric->Update();
         METRIC_VALUE("update_time_diff", diff);
     }
+
+    // lfm nier 
+    sNierManager->Update(diff);
 }
 
 void World::ForceGameEventUpdate()

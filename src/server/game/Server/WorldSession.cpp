@@ -55,6 +55,10 @@
 #include "WorldState.h"
 #include <zlib.h>
 
+// lfm nier
+#include "NierConfig.h"
+#include "NierManager.h"
+
 namespace
 {
     std::string const DefaultPlayerName = "<none>";
@@ -151,6 +155,9 @@ WorldSession::WorldSession(uint32 id, std::string&& name, std::shared_ptr<WorldS
         ResetTimeOutTime(false);
         LoginDatabase.Execute("UPDATE account SET online = 1 WHERE id = {};", GetAccountId()); // One-time query
     }
+
+    // lfm nier
+    nier_id = 0;
 }
 
 /// WorldSession destructor
@@ -225,6 +232,14 @@ ObjectGuid::LowType WorldSession::GetGuidLow() const
 /// Send a packet to the client
 void WorldSession::SendPacket(WorldPacket const* packet)
 {
+    // lfm nier    
+    if (nier_id > 0)
+    {
+        WorldPacket eachCopy(*packet);
+        sNierManager->HandlePacket(this, eachCopy);
+        return;
+    }
+
     if (!m_Socket)
         return;
 
@@ -300,6 +315,35 @@ void WorldSession::LogUnprocessedTail(WorldPacket* packet)
 /// Update the WorldSession (triggered by World update)
 bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 {
+    // lfm nier    
+    if (nier_id > 0)
+    {
+        ProcessQueryCallbacks();
+        if (_player)
+        {
+            if (_player->IsBeingTeleportedNear())
+            {
+                WorldPacket pkt(MSG_MOVE_TELEPORT_ACK, 20);
+                pkt << _player->GetPackGUID();
+                pkt << uint32(0); // flags
+                pkt << uint32(0); // time
+                HandleMoveTeleportAck(pkt);
+            }
+            else if (_player->IsBeingTeleportedFar())
+            {
+                HandleMoveWorldportAck();
+            }
+        }
+
+        if (updater.ProcessUnsafe())
+        {
+            UpdateTimeOutTime(diff);
+        }
+        HandleTeleportTimeout(updater.ProcessUnsafe());
+
+        return true;
+    }
+
     ///- Before we process anything:
     /// If necessary, kick the player because the client didn't send anything for too long
     /// (or they've been idling in character select)

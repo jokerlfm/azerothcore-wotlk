@@ -906,8 +906,8 @@ bool Player::UpdateFishingSkill()
         return false;
     }
 
-    // lfm fishing skill increase rate will always be 50%
-    return UpdateSkillPro(SKILL_FISHING, 500, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
+    // lfm fishing skill increase rate will always be 100%
+    return UpdateSkillPro(SKILL_FISHING, 1000, sWorld->getIntConfig(CONFIG_SKILL_GAIN_GATHERING));
 }
 
 // levels sync. with spell requirement for skill levels to learn
