@@ -80,16 +80,6 @@ bool Nier_Mage::Heal(Unit* pTarget)
     return false;
 }
 
-bool Nier_Mage::Follow(Unit* pTarget)
-{
-    if (!Nier_Base::Follow(pTarget))
-    {
-        return false;
-    }
-
-    return true;
-}
-
 bool Nier_Mage::Cure(Unit* pTarget)
 {
     if (!Nier_Base::Cure(pTarget))
@@ -481,5 +471,137 @@ bool Nier_Mage::ResetTalentsAndSpells()
 
 void Nier_Mage::EquipRandomItem(uint32 pEquipSlot)
 {
+    uint32 itemClass = 0;
+    uint32 itemSubclass = 0;
+    uint32 inventoryType = 0;
+    if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HEAD)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 1;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_SHOULDERS)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 3;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_WRISTS)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 9;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_WAIST)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 6;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FEET)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 8;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_HANDS)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 10;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_CHEST)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 5;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_LEGS)
+    {
+        itemClass = 4;
+        itemSubclass = 1;
+        inventoryType = 7;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_BACK)
+    {
+        inventoryType = 16;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_NECK)
+    {
+        inventoryType = 2;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER1)
+    {
+        inventoryType = 11;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER2)
+    {
+        inventoryType = 11;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_MAINHAND)
+    {
+        itemClass = 2;
+        itemSubclass = 10;
+        inventoryType = InventoryType::INVTYPE_2HWEAPON;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_OFFHAND)
+    {
+        inventoryType = 0;
+    }
+    else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_RANGED)
+    {
+        itemClass = 2;
+        itemSubclass = 19;
+        inventoryType = InventoryType::INVTYPE_RANGEDRIGHT;
+    }
+    else
+    {
+        return;
+    }
+    if (inventoryType == 0)
+    {
+        return;
+    }
+    int maxReqLevel = me->GetLevel();
+    int minReqLevel = maxReqLevel - 10;
+    if (minReqLevel < 0)
+    {
+        minReqLevel = 0;
+    }
 
+    if (Item* currentEquip = me->GetItemByPos(INVENTORY_SLOT_BAG_0, pEquipSlot))
+    {
+        if (currentEquip->GetTemplate()->RequiredLevel < minReqLevel)
+        {
+            me->DestroyItem(INVENTORY_SLOT_BAG_0, pEquipSlot, true);
+        }
+    }
+
+    std::ostringstream msgStream;
+    std::ostringstream itemQueryStream;
+    itemQueryStream << "SELECT entry FROM item_template where class = " << itemClass << " and subclass = " << itemSubclass << " and InventoryType = " << inventoryType << " and RequiredLevel >= " << minReqLevel << " and RequiredLevel <= " << maxReqLevel << " and bonding < 4 and AllowableClass = -1 and AllowableRace = -1 and RequiredSkill = 0 and requiredspell = 0 and requiredhonorrank = 0 and RequiredCityRank = 0 and RequiredReputationFaction = 0 order by rand() ";
+    auto itemQR = WorldDatabase.Query(itemQueryStream.str().c_str());
+    if (itemQR)
+    {
+        do
+        {
+            Field* fields = itemQR->Fetch();
+            uint32 itemEntry = fields[0].Get<uint32>();
+
+            if (Item* pItem = Item::CreateItem(itemEntry, 1))
+            {
+                uint16 dest = 0;
+                me->CombatStopWithPets(true);
+                if (me->CanEquipItem(pEquipSlot, dest, pItem, false) == InventoryResult::EQUIP_ERR_OK)
+                {
+                    me->EquipItem(dest, pItem, true);
+                    msgStream << me->GetName() << " Equiped " << pItem->GetTemplate()->Name1;
+                    sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, msgStream.str());
+                    return;
+                }
+            }
+        } while (itemQR->NextRow());
+    }
+    msgStream << me->GetName() << " No usable equip " << pEquipSlot << " - " << minReqLevel << " - " << maxReqLevel;
+    sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, msgStream.str());
 }

@@ -10,7 +10,6 @@ public:
     bool Attack(Unit* pTarget);
     bool Tank(Unit* pTarget);
     bool Heal(Unit* pTarget);
-    bool Follow(Unit* pTarget);
     bool Cure(Unit* pTarget);
     bool Buff(Unit* pTarget);
     bool Revive(Unit* pTarget);

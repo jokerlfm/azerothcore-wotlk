@@ -35,16 +35,6 @@ bool Nier_Shaman::Heal(Unit* pTarget)
     return false;
 }
 
-bool Nier_Shaman::Follow(Unit* pTarget)
-{
-    if (!Nier_Base::Follow(pTarget))
-    {
-        return false;
-    }
-
-    return true;
-}
-
 bool Nier_Shaman::Cure(Unit* pTarget)
 {
     if (!Nier_Base::Cure(pTarget))

@@ -32,7 +32,6 @@ Nier_Base::Nier_Base()
     accountState = NierAccountState::NierAccountState_None;
     actionState = NierActionState::NierActionState_None;
 
-    elapsed = 0;
     timeValue = 0;
     checkDelay = 0;
 }
@@ -69,10 +68,10 @@ void Nier_Base::Prepare()
 
 void Nier_Base::Update(uint64 pTimeValue)
 {
-    uint64 timeGap = pTimeValue - timeValue;
+    uint64 elapsed = pTimeValue - timeValue;
     timeValue = pTimeValue;
-    elapsed += timeGap;
     checkDelay -= elapsed;
+    actionDuration += elapsed;
     if (checkDelay > 0)
     {
         return;
@@ -80,17 +79,14 @@ void Nier_Base::Update(uint64 pTimeValue)
 
     if (UpdateAccount())
     {
-        elapsed = 0;
         return;
     }
     if (UpdateAction())
     {
-        elapsed = 0;
         return;
     }
     if (UpdateMind())
     {
-        elapsed = 0;
         return;
     }
 }
@@ -99,6 +95,7 @@ bool Nier_Base::UpdateAccount()
 {
     bool accountResult = true;
 
+    std::ostringstream replyStream;
     switch (accountState)
     {
     case NierAccountState_None:
@@ -114,7 +111,8 @@ bool Nier_Base::UpdateAccount()
     case NierAccountState_Enter:
     {
         accountState = NierAccountState::NierAccountState_CheckAccount;
-        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Nier %d - %d - %d go online.", nier_id, account_id, character_id);
+        replyStream << "Nier enter " << nier_id << " - " << account_id << " - " << character_id << " - ";
+        sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
         break;
     }
     case NierAccountState_CheckAccount:
@@ -123,7 +121,8 @@ bool Nier_Base::UpdateAccount()
         {
             accountState = NierAccountState::NierAccountState_None;
             checkDelay = urand(5 * MINUTE * IN_MILLISECONDS, 10 * MINUTE * IN_MILLISECONDS);
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, "invalid nier.");
+            replyStream << "invalid nier";
+            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
             break;
         }
         uint32 queryAccountId = 0;
@@ -142,14 +141,15 @@ bool Nier_Base::UpdateAccount()
             sqlStream << "update nier set account_id = " << account_id << " where account_name = '" << account_name << "'";
             std::string sql = sqlStream.str();
             CharacterDatabase.DirectExecute(sql.c_str());
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Nier account %s is ready.", account_name.c_str());
+            replyStream << "Nier account is ready - " << account_name;
             accountState = NierAccountState::NierAccountState_CheckCharacter;
         }
         else
         {
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Nier account %s is not ready.", account_name.c_str());
+            replyStream << "Nier account is not ready - " << account_name;
             accountState = NierAccountState::NierAccountState_CreateAccount;
         }
+        sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
         break;
     }
     case NierAccountState_CreateAccount:
@@ -158,7 +158,8 @@ bool Nier_Base::UpdateAccount()
         {
             accountState = NierAccountState::NierAccountState_None;
             checkDelay = urand(5 * MINUTE * IN_MILLISECONDS, 10 * MINUTE * IN_MILLISECONDS);
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, "invalid nier.");
+            replyStream << "invalid nier";
+            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
             break;
         }
         if (AccountMgr::CreateAccount(account_name, NIER_MARK) == AccountOpResult::AOR_OK)
@@ -167,7 +168,8 @@ bool Nier_Base::UpdateAccount()
         }
         else
         {
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Nier %d account can not be created.", nier_id);
+            replyStream << "Nier account can not be created - " << nier_id;
+            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
             accountState = NierAccountState::NierAccountState_None;
             checkDelay = urand(5 * MINUTE * IN_MILLISECONDS, 10 * MINUTE * IN_MILLISECONDS);
         }
@@ -188,14 +190,16 @@ bool Nier_Base::UpdateAccount()
                 sqlStream << "update nier set character_id = " << character_id << " where nier_id = " << nier_id;
                 std::string sql = sqlStream.str();
                 CharacterDatabase.DirectExecute(sql.c_str());
-                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Nier account_id %d character_id %d is ready.", account_id, character_id);
+                replyStream << "Nier is ready - " << account_id << " - " << character_id;
+                sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
                 accountState = NierAccountState::NierAccountState_DoEnum;
                 //accountState = NierAccountState::NierAccountState_DoLogin;
                 checkDelay = urand(2 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);
                 break;
             }
         }
-        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Nier account_id %d character_id is not ready.", account_id);
+        replyStream << "Nier is not ready - " << account_id;
+        sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
         accountState = NierAccountState::NierAccountState_CreateCharacter;
         checkDelay = urand(2 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);
         break;
@@ -212,7 +216,8 @@ bool Nier_Base::UpdateAccount()
             QueryResult checkNameQR = CharacterDatabase.Query(queryStream.str().c_str());
             if (!checkNameQR)
             {
-                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Name %s is available", currentName.c_str());
+                replyStream << "Name is available - " << currentName;
+                sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
                 nameValid = true;
             }
             else
@@ -232,7 +237,8 @@ bool Nier_Base::UpdateAccount()
         }
         if (!nameValid)
         {
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, "No available names");
+            replyStream << "No available names";
+            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
             accountState = NierAccountState::NierAccountState_None;
             checkDelay = urand(5 * MINUTE * IN_MILLISECONDS, 10 * MINUTE * IN_MILLISECONDS);
             return false;
@@ -283,14 +289,16 @@ bool Nier_Base::UpdateAccount()
                 {
                     newPlayer->CleanupsBeforeDelete();
                     delete newPlayer;
-                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, "Character create failed, %s %d %d ", currentName.c_str(), target_race, target_class);
+                    replyStream << "create character failed - " << currentName << " - " << target_race << " - " << target_class;
+                    sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
                     accountState = NierAccountState::NierAccountState_None;
                     checkDelay = urand(5 * MINUTE * IN_MILLISECONDS, 10 * MINUTE * IN_MILLISECONDS);
                 }
             }
             else
             {
-                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, "Character create failed, %s %d %d ", currentName.c_str(), target_race, target_class);
+                replyStream << "create character failed - " << currentName << " - " << target_race << " - " << target_class;
+                sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
                 accountState = NierAccountState::NierAccountState_None;
                 checkDelay = urand(5 * MINUTE * IN_MILLISECONDS, 10 * MINUTE * IN_MILLISECONDS);
             }
@@ -298,7 +306,8 @@ bool Nier_Base::UpdateAccount()
         }
         else
         {
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, "create session failed : %d", nier_id);
+            replyStream << "create session failed - " << nier_id;
+            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
             accountState = NierAccountState::NierAccountState_None;
             checkDelay = urand(5 * MINUTE * IN_MILLISECONDS, 10 * MINUTE * IN_MILLISECONDS);
         }
@@ -312,13 +321,11 @@ bool Nier_Base::UpdateAccount()
         {
             if (targetPlayer->IsInWorld())
             {
+                sCharacterCache->RefreshCacheEntry(character_id);
                 targetPlayer->nier = this;
                 me = targetPlayer;
-                std::ostringstream replyStream;
-                replyStream << "nier character logged in : " << account_id << " - " << character_id;
-                std::string replyString = replyStream.str();
+                replyStream << "nier character logged in - " << account_id << " - " << character_id;
                 sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
                 accountState = NierAccountState::NierAccountState_Initialize;
                 break;
             }
@@ -338,11 +345,8 @@ bool Nier_Base::UpdateAccount()
         WorldPacket wpLogin(CMSG_PLAYER_LOGIN, 16);
         wpLogin << playerGuid;
         loginSession->HandlePlayerLoginOpcode(wpLogin);
-        std::ostringstream replyStream;
-        replyStream << "log in character : " << account_id << " - " << character_id;
-        std::string replyString = replyStream.str();
+        replyStream << "log in character - " << account_id << " - " << character_id;
         sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
         accountState = NierAccountState::NierAccountState_CheckLogin;
         checkDelay = urand(2 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);
         break;
@@ -358,7 +362,8 @@ bool Nier_Base::UpdateAccount()
         loginSession->nier_id = nier_id;
         WorldPacket wpEnum(CMSG_CHAR_ENUM, 4);
         loginSession->HandleCharEnumOpcode(wpEnum);
-        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, "Enum character {} {} ", account_id, character_id);
+        replyStream << "enum character - " << account_id << " - " << character_id;
+        sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
         checkDelay = urand(5 * IN_MILLISECONDS, 10 * IN_MILLISECONDS);
         accountState = NierAccountState::NierAccountState_CheckEnum;
         break;
@@ -381,11 +386,8 @@ bool Nier_Base::UpdateAccount()
                     if (master->IsInWorld())
                     {
                         InitializeCharacter(master->GetLevel());
-                        std::ostringstream replyStream;
                         replyStream << "nier initialized : " << account_id << " - " << character_id << " - " << me->GetName();
-                        std::string replyString = replyStream.str();
                         sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-                        sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
                         accountState = NierAccountState::NierAccountState_Equip;
                         checkDelay = urand(2 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);
                         break;
@@ -407,11 +409,8 @@ bool Nier_Base::UpdateAccount()
                 {
                     EquipRandomItem(equipSlot);
                 }
-                std::ostringstream replyStream;
                 replyStream << "nier equipped : " << account_id << " - " << character_id << " - " << me->GetName();
-                std::string replyString = replyStream.str();
                 sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, replyString.c_str());
                 accountState = NierAccountState::NierAccountState_Online;
                 checkDelay = urand(1 * IN_MILLISECONDS, 3 * IN_MILLISECONDS);
             }
@@ -448,7 +447,6 @@ bool Nier_Base::UpdateAction()
 {
     bool actionResult = true;
 
-    actionDuration += elapsed;
     if (actionDuration > actionTimeLimit)
     {
         ClearAction();
@@ -472,6 +470,7 @@ bool Nier_Base::UpdateAction()
     }
     case NierActionState_Follow:
     {
+        Follow();
         break;
     }
     case NierActionState_Tank:
@@ -531,6 +530,11 @@ bool Nier_Base::UpdateAction()
     }
     case NierActionState::NierActionState_Freeze:
     {
+        if (me->isMoving())
+        {
+            me->StopMoving();
+        }
+        actionTimeLimit = 1800000;
         break;
     }
     default:
@@ -544,72 +548,103 @@ bool Nier_Base::UpdateAction()
 
 bool Nier_Base::UpdateMind()
 {
-    if (accountState == NierAccountState::NierAccountState_Online)
+    if (!me)
     {
-        if (me)
+        return false;
+    }
+    if (!me->IsInWorld())
+    {
+        return false;
+    }
+    if (!me->CanFreeMove())
+    {
+        return true;
+    }
+    if (Group* meGroup = me->GetGroup())
+    {
+        // grouping 
+        if (me->IsInCombat())
         {
-            if (me->IsInWorld())
+            Unit* enemy = nullptr;
+            for (auto const& pAttacker : me->getAttackers())
             {
-                if (Group* meGroup = me->GetGroup())
+                float attackerDistance = me->GetDistance(pAttacker);
+                if (attackerDistance < DEFAULT_VISIBILITY_DISTANCE)
                 {
-                    // grouping 
+                    enemy = pAttacker;
+                    if (pAttacker->GetTypeId() == TypeID::TYPEID_PLAYER)
+                    {
+                        break;
+                    }
                 }
-                else
+            }
+            Attack(enemy);
+        }
+        else
+        {
+            if (Rest())
+            {
+                return true;
+            }
+            if (Follow())
+            {
+                return true;
+            }
+        }
+    }
+    else
+    {
+        // solo
+        if (me->IsInCombat())
+        {
+            Unit* enemy = nullptr;
+            for (auto const& pAttacker : me->getAttackers())
+            {
+                float attackerDistance = me->GetDistance(pAttacker);
+                if (attackerDistance < DEFAULT_VISIBILITY_DISTANCE)
                 {
-                    // solo
-                    if (me->IsInCombat())
+                    enemy = pAttacker;
+                    if (pAttacker->GetTypeId() == TypeID::TYPEID_PLAYER)
                     {
-                        Unit* enemy = nullptr;
-                        for (auto const& pAttacker : me->getAttackers())
-                        {
-                            float attackerDistance = me->GetDistance(pAttacker);
-                            if (attackerDistance < DEFAULT_VISIBILITY_DISTANCE)
-                            {
-                                enemy = pAttacker;
-                                if (pAttacker->GetTypeId() == TypeID::TYPEID_PLAYER)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                        Attack(enemy);
+                        break;
                     }
-                    else
-                    {
-                        if (Rest())
-                        {
-                            return true;
-                        }
-                        uint32 actionRate = urand(0, 100);
-                        if (actionRate < 50)
-                        {
-                            if (Wander())
-                            {
-                                return true;
-                            }
-                        }
-                        else if (actionRate < 70)
-                        {
-                            if (PVE())
-                            {
-                                return true;
-                            }
-                        }
-                        else if (actionRate < 90)
-                        {
-                            if (PVP())
-                            {
-                                return true;
-                            }
-                        }
-                        else
-                        {
-                            if (Idle())
-                            {
-                                return true;
-                            }
-                        }
-                    }
+                }
+            }
+            Attack(enemy);
+        }
+        else
+        {
+            if (Rest())
+            {
+                return true;
+            }
+            uint32 actionRate = urand(0, 100);
+            if (actionRate < 50)
+            {
+                if (Wander())
+                {
+                    return true;
+                }
+            }
+            else if (actionRate < 70)
+            {
+                if (PVE())
+                {
+                    return true;
+                }
+            }
+            else if (actionRate < 90)
+            {
+                if (PVP())
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (Idle())
+                {
+                    return true;
                 }
             }
         }
@@ -706,6 +741,10 @@ bool Nier_Base::Attack(Unit* pTarget)
     {
         return false;
     }
+    if (!pTarget)
+    {
+        return false;
+    }
     if (!me->IsValidAttackTarget(pTarget))
     {
         return false;
@@ -732,6 +771,10 @@ bool Nier_Base::Tank(Unit* pTarget)
     {
         return false;
     }
+    if (!pTarget)
+    {
+        return false;
+    }
     if (!me->IsValidAttackTarget(pTarget))
     {
         return false;
@@ -749,7 +792,7 @@ bool Nier_Base::Heal(Unit* pTarget)
     return false;
 }
 
-bool Nier_Base::Follow(Unit* pTarget)
+bool Nier_Base::Follow()
 {
     if (!me)
     {
@@ -763,13 +806,45 @@ bool Nier_Base::Follow(Unit* pTarget)
     {
         return true;
     }
-    if (!pTarget)
+    if (Group* meGroup = me->GetGroup())
     {
-        return false;
-    }
-    ChooseTarget(pTarget);
+        if (Player* leader = meGroup->GetLeader())
+        {
+            ChooseTarget(leader);
 
-    return true;
+            float destTargetDist = leader->GetDistance(actionTargetPos);
+            if (destTargetDist > DEFAULT_COMBAT_REACH)
+            {
+                leader->GetNearPoint(leader, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, leader->GetAbsoluteAngle(me));
+                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                return true;
+            }
+            else
+            {
+                float destDist = me->GetDistance(actionTargetPos);
+                if (destDist > CONTACT_DISTANCE)
+                {
+                    if (!me->isMoving())
+                    {
+                        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (me->isMoving())
+                    {
+                        me->StopMoving();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 bool Nier_Base::Cure(Unit* pTarget)

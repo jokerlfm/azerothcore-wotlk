@@ -61,16 +61,6 @@ bool Nier_Rogue::Heal(Unit* pTarget)
     return false;
 }
 
-bool Nier_Rogue::Follow(Unit* pTarget)
-{
-    if (!Nier_Base::Follow(pTarget))
-    {
-        return false;
-    }
-
-    return true;
-}
-
 bool Nier_Rogue::Cure(Unit* pTarget)
 {
     if (!Nier_Base::Cure(pTarget))

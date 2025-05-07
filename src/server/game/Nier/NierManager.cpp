@@ -24,13 +24,13 @@
 
 NierManager::NierManager()
 {
-    timeValue = 0;
     allianceRaces.clear();
     hordeRaces.clear();
     nameIndex = 0;
     nierMap.clear();
     nierNameMap.clear();
     characterTalentTabNameMap.clear();
+    timeValue = 0;
 }
 
 void NierManager::InitializeManager()
@@ -175,7 +175,6 @@ void NierManager::Update(uint32 pDiff)
         return;
     }
     timeValue += pDiff;
-
     for (std::unordered_map<uint32, Nier_Base*>::iterator reIT = nierMap.begin(); reIT != nierMap.end(); reIT++)
     {
         if (reIT->second)
@@ -305,7 +304,9 @@ bool NierManager::CreateNier(uint32 pMasterCharacterId, uint32 pClass, uint32 pR
 
 bool NierManager::LoginNiers(uint32 pMasterCharacterId)
 {
-    QueryResult nierQR = CharacterDatabase.Query("SELECT nier_id, master_character_id, account_name, account_id, character_id, target_level, target_race, target_class, target_specialty FROM nier where master_character_id = %d", pMasterCharacterId);
+    std::ostringstream queryStream;
+    queryStream << "SELECT nier_id, master_character_id, account_name, account_id, character_id, target_level, target_race, target_class, target_specialty FROM nier where master_character_id = " << pMasterCharacterId;
+    QueryResult nierQR = CharacterDatabase.Query(queryStream.str());
     if (nierQR)
     {
         Field* fields = nierQR->Fetch();
@@ -461,10 +462,6 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
     {
         return;
     }
-    if (!pTarget)
-    {
-        return;
-    }
     Player* chatTarget = pTarget;
     if (!chatTarget)
     {
@@ -539,7 +536,6 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
                 {
                     std::ostringstream replyStream;
                     replyStream << "You level is too low";
-                    sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str().c_str(), pCommander);
                 }
                 else
                 {
@@ -553,7 +549,6 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
                 {
                     std::ostringstream replyStream;
                     replyStream << "You level is too low";
-                    sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str().c_str(), pCommander);
                 }
                 else
                 {
@@ -635,9 +630,24 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
             chatTarget->StopMoving();
             chatTarget->GetMotionMaster()->Clear();
             chatTarget->CombatStop(true);
+        }
+        chatTarget->nier->ClearAction();
+        chatTarget->nier->actionState = NierActionState::NierActionState_Freeze;
+        chatTarget->nier->actionTimeLimit = 3600000;
+        replyStream << "freezing";
+    }
+    else if (commandName == "follow")
+    {
+        if (chatTarget->IsAlive())
+        {
             chatTarget->nier->ClearAction();
-            chatTarget->nier->actionState = NierActionState::NierActionState_Freeze;
-            chatTarget->nier->actionTimeLimit = 3600000;
+            chatTarget->nier->actionState = NierActionState::NierActionState_Follow;
+            chatTarget->nier->actionTimeLimit = 2000;
+            replyStream << "following";
+        }
+        else
+        {
+            replyStream << "can not follow";
         }
     }
     else if (commandName == "rest")
@@ -663,13 +673,17 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
         }
     }
 
-    if (pCommander->GetGUID() == pTarget->GetGUID())
+    std::string replayStr = replyStream.str();
+    if (!replayStr.empty())
     {
-        sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str().c_str(), pCommander);
-    }
-    else
-    {
-        WhisperTo(pCommander, replyStream.str(), pTarget);
+        if (pCommander->GetGUID() == chatTarget->GetGUID())
+        {
+            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replayStr, pCommander);
+        }
+        else
+        {
+            WhisperTo(pCommander, replayStr, pTarget);
+        }
     }
 }
 
@@ -681,7 +695,7 @@ void NierManager::HandlePacket(const WorldSession* pSession, WorldPacket pPacket
         {
         case SMSG_CHAR_ENUM:
         {
-            if (nb->accountState == NierAccountState::NierAccountState_DoEnum)
+            if (nb->accountState == NierAccountState::NierAccountState_CheckEnum)
             {
                 nb->accountState = NierAccountState::NierAccountState_DoLogin;
                 nb->checkDelay = urand(2 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);

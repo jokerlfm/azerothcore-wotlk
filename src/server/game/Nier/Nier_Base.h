@@ -64,7 +64,6 @@ public:
     virtual bool Attack(Unit* pTarget);
     virtual bool Tank(Unit* pTarget);
     virtual bool Heal(Unit* pTarget);
-    virtual bool Follow(Unit* pTarget);
     virtual bool Cure(Unit* pTarget);
     virtual bool Buff(Unit* pTarget);
     virtual bool Revive(Unit* pTarget);
@@ -82,6 +81,7 @@ public:
     bool Wander();
     bool PVE();
     bool PVP();
+    bool Follow();
 
     void RemoveEquipments();
     void LearnTalent(uint32 pTalentId, uint32 pMaxRank = MAX_TALENT_RANK);
@@ -128,9 +128,8 @@ public:
     uint32 target_class;
     uint32 target_specialty;
 
-    uint64 timeValue;
-    uint64 elapsed;
-    uint64 checkDelay;
+    uint64 timeValue;    
+    int checkDelay;
 
 };
 #endif
