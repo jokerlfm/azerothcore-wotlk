@@ -189,6 +189,10 @@ public:
     Group();
     ~Group();
 
+    // lfm nier
+    uint32 GetTargetIconByGuid(ObjectGuid ogTarget);
+    ObjectGuid GetGuidByTargetIcon(uint32 icon);
+
     // group manipulation methods
     bool   Create(Player* leader);
     bool   LoadGroupFromDB(Field* field);

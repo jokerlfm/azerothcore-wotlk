@@ -375,23 +375,35 @@ bool Nier_Base::UpdateAccount()
     }
     case NierAccountState_Initialize:
     {
-        ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-        if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+        if (me->IsInWorld())
         {
-            if (me->IsInWorld())
+            ObjectGuid masterGuid = ObjectGuid(HighGuid::Player, master_character_id);
+            if (Player* master = ObjectAccessor::FindPlayer(masterGuid))
             {
-                ObjectGuid masterGuid = ObjectGuid(HighGuid::Player, master_character_id);
-                if (Player* master = ObjectAccessor::FindPlayer(masterGuid))
+                if (master->IsInWorld())
                 {
-                    if (master->IsInWorld())
+                    InitializeCharacter(master->GetLevel());
+                    replyStream << "nier initialized : " << account_id << " - " << character_id << " - " << me->GetName();
+                    sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
+
+                    // role initialize
+                    uint32 meClass = me->getClass();
+                    if (meClass == Classes::CLASS_WARRIOR)
                     {
-                        InitializeCharacter(master->GetLevel());
-                        replyStream << "nier initialized : " << account_id << " - " << character_id << " - " << me->GetName();
-                        sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-                        accountState = NierAccountState::NierAccountState_Equip;
-                        checkDelay = urand(2 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);
-                        break;
+                        me->nierGroupRole = NierGroupRole::NierGroupRole_Tank;
                     }
+                    else if (meClass == Classes::CLASS_PRIEST)
+                    {
+                        me->nierGroupRole = NierGroupRole::NierGroupRole_Healer;
+                    }
+                    else
+                    {
+                        me->nierGroupRole = NierGroupRole::NierGroupRole_DPS;
+                    }
+
+                    accountState = NierAccountState::NierAccountState_Equip;
+                    checkDelay = urand(2 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);
+                    break;
                 }
             }
         }
@@ -400,20 +412,16 @@ bool Nier_Base::UpdateAccount()
     }
     case NierAccountState_Equip:
     {
-        ObjectGuid playerGuid = ObjectGuid(HighGuid::Player, character_id);
-        if (Player* me = ObjectAccessor::FindPlayer(playerGuid))
+        if (me->IsInWorld())
         {
-            if (me->IsInWorld())
+            for (uint32 equipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; equipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; equipSlot++)
             {
-                for (uint32 equipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; equipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; equipSlot++)
-                {
-                    EquipRandomItem(equipSlot);
-                }
-                replyStream << "nier equipped : " << account_id << " - " << character_id << " - " << me->GetName();
-                sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-                accountState = NierAccountState::NierAccountState_Online;
-                checkDelay = urand(1 * IN_MILLISECONDS, 3 * IN_MILLISECONDS);
+                EquipRandomItem(equipSlot);
             }
+            replyStream << "nier equipped : " << account_id << " - " << character_id << " - " << me->GetName();
+            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
+            accountState = NierAccountState::NierAccountState_Online;
+            checkDelay = urand(1 * IN_MILLISECONDS, 3 * IN_MILLISECONDS);
         }
         break;
     }
@@ -446,12 +454,6 @@ bool Nier_Base::UpdateAccount()
 bool Nier_Base::UpdateAction()
 {
     bool actionResult = true;
-
-    if (actionDuration > actionTimeLimit)
-    {
-        ClearAction();
-        actionResult = false;
-    }
 
     switch (actionState)
     {
@@ -537,10 +539,32 @@ bool Nier_Base::UpdateAction()
         actionTimeLimit = 1800000;
         break;
     }
+    case NierActionState::NierActionState_Assemble:
+    {
+        if (actionDuration > actionTimeLimit)
+        {
+            if (actionTargetUnit)
+            {
+                if (Player* targetPlayer = actionTargetUnit->ToPlayer())
+                {
+                    me->TeleportTo(actionTargetUnit->GetWorldLocation());
+                    sNierManager->WhisperTo(targetPlayer, "coming", me);
+                }
+            }
+        }
+        actionResult = false;
+        break;
+    }
     default:
     {
         break;
     }
+    }
+
+    if (actionDuration > actionTimeLimit)
+    {
+        ClearAction();
+        actionResult = false;
     }
 
     return actionResult;
@@ -562,34 +586,86 @@ bool Nier_Base::UpdateMind()
     }
     if (Group* meGroup = me->GetGroup())
     {
-        // grouping 
-        if (me->IsInCombat())
+        // grouping
+        ObjectGuid ogSkull = meGroup->GetGuidByTargetIcon(7);
+        if (!ogSkull.IsEmpty())
         {
-            Unit* enemy = nullptr;
-            for (auto const& pAttacker : me->getAttackers())
+            if (Unit* enemy = ObjectAccessor::GetCreature(*me, ogSkull))
             {
-                float attackerDistance = me->GetDistance(pAttacker);
-                if (attackerDistance < DEFAULT_VISIBILITY_DISTANCE)
+                if (enemy->IsInCombat())
                 {
-                    enemy = pAttacker;
-                    if (pAttacker->GetTypeId() == TypeID::TYPEID_PLAYER)
+                    float enemyDistance = me->GetDistance(enemy);
+                    if (enemyDistance < VISIBILITY_DISTANCE_NORMAL)
                     {
-                        break;
+                        switch (me->nierGroupRole)
+                        {
+                        case NierGroupRole::NierGroupRole_Tank:
+                        {
+                            if (Tank(enemy))
+                            {
+                                return true;
+                            }
+                            break;
+                        }
+                        case NierGroupRole::NierGroupRole_Healer:
+                        {
+                            ObjectGuid ogTank = meGroup->GetGuidByTargetIcon(0);
+                            if (!ogTank.IsEmpty())
+                            {
+                                if (Player* tank = ObjectAccessor::FindPlayer(ogTank))
+                                {
+                                    float tankDistance = me->GetDistance(tank);
+                                    if (tankDistance < SIGHT_RANGE_UNIT)
+                                    {
+                                        if (Heal(tank))
+                                        {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        case NierGroupRole::NierGroupRole_DPS:
+                        {
+                            if (me->IsInCombat())
+                            {
+                                if (Attack(enemy))
+                                {
+                                    return true;
+                                }
+                            }
+                            break;
+                        }
+                        default:
+                        {
+                            break;
+                        }
+                        }
+                        Attack(enemy);
                     }
                 }
             }
-            Attack(enemy);
         }
-        else
+        for (GroupReference* groupRef = meGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
         {
-            if (Rest())
+            if (Player* member = groupRef->GetSource())
             {
-                return true;
+                if (Buff(member))
+                {
+                    return true;
+                }
             }
-            if (Follow())
-            {
-                return true;
-            }
+        }
+
+        if (Rest())
+        {
+            return true;
+        }
+
+        if (Follow())
+        {
+            return true;
         }
     }
     else
@@ -749,10 +825,6 @@ bool Nier_Base::Attack(Unit* pTarget)
     {
         return false;
     }
-    if (!me->IsInRange(pTarget, 0, VISIBILITY_DISTANCE_NORMAL))
-    {
-        return false;
-    }
 
     return true;
 }
@@ -779,17 +851,30 @@ bool Nier_Base::Tank(Unit* pTarget)
     {
         return false;
     }
-    if (!me->IsInRange(pTarget, 0, VISIBILITY_DISTANCE_NORMAL))
-    {
-        return false;
-    }
 
     return true;
 }
 
 bool Nier_Base::Heal(Unit* pTarget)
 {
-    return false;
+    if (!me)
+    {
+        return false;
+    }
+    if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (!pTarget)
+    {
+        return false;
+    }
+    if (!pTarget->IsAlive())
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool Nier_Base::Follow()
@@ -816,7 +901,7 @@ bool Nier_Base::Follow()
             if (destTargetDist > DEFAULT_COMBAT_REACH)
             {
                 leader->GetNearPoint(leader, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, leader->GetAbsoluteAngle(me));
-                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                MoveToPosition(actionTargetPos);
                 return true;
             }
             else
@@ -826,7 +911,7 @@ bool Nier_Base::Follow()
                 {
                     if (!me->isMoving())
                     {
-                        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                        MoveToPosition(actionTargetPos);
                         return true;
                     }
                 }
@@ -854,7 +939,24 @@ bool Nier_Base::Cure(Unit* pTarget)
 
 bool Nier_Base::Buff(Unit* pTarget)
 {
-    return false;
+    if (!me)
+    {
+        return false;
+    }
+    if (!me->IsAlive())
+    {
+        return false;
+    }
+    if (!pTarget)
+    {
+        return false;
+    }
+    if (!pTarget->IsAlive())
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool Nier_Base::Revive(Unit* pTarget)
@@ -892,6 +994,7 @@ bool Nier_Base::ResetTalentsAndSpells()
         return false;
     }
     me->resetTalents(true);
+    me->SendTalentsInfoData(false);
 
     return true;
 }
@@ -1554,4 +1657,10 @@ Unit* Nier_Base::GetNearbyHostileUnit()
     }
 
     return nullptr;
+}
+
+void Nier_Base::MoveToPosition(Position pTargetpos)
+{
+    me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+    me->GetMotionMaster()->MovePoint(0, pTargetpos);
 }

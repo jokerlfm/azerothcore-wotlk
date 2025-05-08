@@ -1018,10 +1018,17 @@ void Creature::Regenerate(Powers power)
         {
             // lfm create regen 
             float spiritRegen = GetStat(STAT_SPIRIT);
-            addvalue = spiritRegen * 2 / 5;
-            if (IsInCombat())
+            if (spiritRegen > 5)
             {
-                addvalue = addvalue / 3;
+                addvalue = spiritRegen * 2 / 5;
+                if (IsInCombat())
+                {
+                    addvalue = addvalue / 3;
+                }
+            }
+            else
+            {
+                addvalue = maxValue / 10;
             }
             break;
         }

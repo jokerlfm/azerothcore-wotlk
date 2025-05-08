@@ -309,107 +309,110 @@ bool NierManager::LoginNiers(uint32 pMasterCharacterId)
     QueryResult nierQR = CharacterDatabase.Query(queryStream.str());
     if (nierQR)
     {
-        Field* fields = nierQR->Fetch();
-        uint32 nier_id = fields[0].Get<uint32>();
-        uint32 master_character_id = fields[1].Get<uint32>();
-        std::string account_name = fields[2].Get<std::string>();
-        uint32 account_id = fields[3].Get<uint32>();
-        uint32 character_id = fields[4].Get<uint32>();
-        uint32 target_level = fields[5].Get<uint32>();
-        uint32 target_race = fields[6].Get<uint32>();
-        uint32 target_class = fields[7].Get<uint32>();
-        uint32 target_specialty = fields[8].Get<uint32>();
-        Nier_Base* nb = nullptr;
-        if (nierMap.find(nier_id) != nierMap.end())
+        do
         {
-            nb = nierMap[nier_id];
-        }
-        else
-        {
-            switch (target_class)
+            Field* fields = nierQR->Fetch();
+            uint32 nier_id = fields[0].Get<uint32>();
+            uint32 master_character_id = fields[1].Get<uint32>();
+            std::string account_name = fields[2].Get<std::string>();
+            uint32 account_id = fields[3].Get<uint32>();
+            uint32 character_id = fields[4].Get<uint32>();
+            uint32 target_level = fields[5].Get<uint32>();
+            uint32 target_race = fields[6].Get<uint32>();
+            uint32 target_class = fields[7].Get<uint32>();
+            uint32 target_specialty = fields[8].Get<uint32>();
+            Nier_Base* nb = nullptr;
+            if (nierMap.find(nier_id) != nierMap.end())
             {
-            case CLASS_WARRIOR:
+                nb = nierMap[nier_id];
+            }
+            else
             {
-                nb = new Nier_Warrior();
-                break;
+                switch (target_class)
+                {
+                case CLASS_WARRIOR:
+                {
+                    nb = new Nier_Warrior();
+                    break;
+                }
+                case CLASS_PALADIN:
+                {
+                    nb = new Nier_Paladin();
+                    break;
+                }
+                case CLASS_HUNTER:
+                {
+                    nb = new Nier_Hunter();
+                    break;
+                }
+                case CLASS_ROGUE:
+                {
+                    nb = new Nier_Rogue();
+                    break;
+                }
+                case CLASS_PRIEST:
+                {
+                    nb = new Nier_Priest();
+                    break;
+                }
+                case CLASS_SHAMAN:
+                {
+                    nb = new Nier_Shaman();
+                    break;
+                }
+                case CLASS_MAGE:
+                {
+                    nb = new Nier_Mage();
+                    break;
+                }
+                case CLASS_WARLOCK:
+                {
+                    nb = new Nier_Warlock();
+                    break;
+                }
+                case CLASS_DRUID:
+                {
+                    nb = new Nier_Druid();
+                    break;
+                }
+                default:
+                {
+                    nb = new Nier_Base();
+                    break;
+                }
+                }
+                nb->nier_id = nier_id;
+                nb->master_character_id = master_character_id;
+                nb->account_name = account_name;
+                nb->account_id = nier_id;
+                nb->character_id = 0;
+                nb->target_level = 0;
+                nb->target_race = target_race;
+                nb->target_class = target_class;
+                nb->target_specialty = 1;
+                nb->accountState = NierAccountState::NierAccountState_OffLine;
+                nierMap[nier_id] = nb;
             }
-            case CLASS_PALADIN:
+            if (nb)
             {
-                nb = new Nier_Paladin();
-                break;
+                if (nb->accountState == NierAccountState::NierAccountState_OffLine)
+                {
+                    nb->accountState = NierAccountState::NierAccountState_Enter;
+                    nb->checkDelay = urand(1 * IN_MILLISECONDS, 5 * IN_MILLISECONDS);
+                }
+                std::ostringstream replyStream;
+                replyStream << "nier " << nier_id << " - " << account_name << " to login";
+                sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
+                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, replyStream.str().c_str());
             }
-            case CLASS_HUNTER:
+            else
             {
-                nb = new Nier_Hunter();
-                break;
+                std::ostringstream replyStream;
+                replyStream << "nier " << nier_id << " - " << account_name << " has wrong data";
+                sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
+                sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, replyStream.str().c_str());
             }
-            case CLASS_ROGUE:
-            {
-                nb = new Nier_Rogue();
-                break;
-            }
-            case CLASS_PRIEST:
-            {
-                nb = new Nier_Priest();
-                break;
-            }
-            case CLASS_SHAMAN:
-            {
-                nb = new Nier_Shaman();
-                break;
-            }
-            case CLASS_MAGE:
-            {
-                nb = new Nier_Mage();
-                break;
-            }
-            case CLASS_WARLOCK:
-            {
-                nb = new Nier_Warlock();
-                break;
-            }
-            case CLASS_DRUID:
-            {
-                nb = new Nier_Druid();
-                break;
-            }
-            default:
-            {
-                nb = new Nier_Base();
-                break;
-            }
-            }
-            nb->nier_id = nier_id;
-            nb->master_character_id = master_character_id;
-            nb->account_name = account_name;
-            nb->account_id = nier_id;
-            nb->character_id = 0;
-            nb->target_level = 0;
-            nb->target_race = target_race;
-            nb->target_class = target_class;
-            nb->target_specialty = 1;
-            nb->accountState = NierAccountState::NierAccountState_OffLine;
-            nierMap[nier_id] = nb;
-        }
-        if (nb)
-        {
-            if (nb->accountState == NierAccountState::NierAccountState_OffLine)
-            {
-                nb->accountState = NierAccountState::NierAccountState_Enter;
-                nb->checkDelay = urand(1 * IN_MILLISECONDS, 3 * IN_MILLISECONDS);
-            }
-            std::ostringstream replyStream;
-            replyStream << "nier " << nier_id << " - " << account_name << " to login";
-            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, replyStream.str().c_str());
-        }
-        else
-        {
-            std::ostringstream replyStream;
-            replyStream << "nier " << nier_id << " - " << account_name << " has wrong data";
-            sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
-            sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_ERROR, replyStream.str().c_str());
-        }
+        } while (nierQR->NextRow());
     }
 
     return true;
@@ -473,7 +476,6 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
     std::string commandName = commandVector.at(0);
     if (commandName == "role")
     {
-        std::ostringstream replyStream;
         if (commandVector.size() > 1)
         {
             std::string newRole = commandVector.at(1);
@@ -534,7 +536,6 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
                 uint32 playerLevel = pCommander->GetLevel();
                 if (playerLevel < 10)
                 {
-                    std::ostringstream replyStream;
                     replyStream << "You level is too low";
                 }
                 else
@@ -547,7 +548,6 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
                 uint32 playerLevel = pCommander->GetLevel();
                 if (playerLevel < 10)
                 {
-                    std::ostringstream replyStream;
                     replyStream << "You level is too low";
                 }
                 else
@@ -556,6 +556,19 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
                     {
                         uint32 targetClass = atoi(commandVector.at(2).c_str());
                         CreateNier(pCommander->GetGUID().GetCounter(), targetClass, Races::RACE_HUMAN);
+                    }
+                    else
+                    {
+                        std::unordered_set<uint32> nierClassSet;
+                        nierClassSet.insert(Classes::CLASS_WARRIOR);
+                        nierClassSet.insert(Classes::CLASS_MAGE);
+                        nierClassSet.insert(Classes::CLASS_ROGUE);
+                        nierClassSet.insert(Classes::CLASS_PRIEST);
+
+                        for (std::unordered_set<uint32>::iterator classIT = nierClassSet.begin(); classIT != nierClassSet.end(); classIT++)
+                        {
+                            CreateNier(pCommander->GetGUID().GetCounter(), *classIT, Races::RACE_HUMAN);
+                        }
                     }
                 }
             }
@@ -572,11 +585,40 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
         int emoteNumber = atoi(emoteContents.c_str());
         chatTarget->HandleEmoteCommand(emoteNumber);
     }
+    else if (commandName == "equip")
+    {
+        if (chatTarget->IsAlive())
+        {
+            if (chatTarget->nier)
+            {
+                if (!chatTarget->IsInCombat())
+                {
+                    if (commandVector.size() > 1)
+                    {
+                        std::string reset = commandVector.at(1);
+                        if (reset == "reset")
+                        {
+                            chatTarget->nier->RemoveEquipments();
+                        }
+                    }
+                    for (uint32 equipSlot = EquipmentSlots::EQUIPMENT_SLOT_HEAD; equipSlot < EquipmentSlots::EQUIPMENT_SLOT_TABARD; equipSlot++)
+                    {
+                        chatTarget->nier->EquipRandomItem(equipSlot);
+                    }
+                }
+                else
+                {
+                    replyStream << "in combat";
+                }
+            }
+        }
+    }
     else if (commandName == "assemble")
     {
+        chatTarget->nier->actionState = NierActionState::NierActionState_Assemble;
         chatTarget->nier->actionTimeLimit = urand(10000, 20000);
-        int assembleSeconds = chatTarget->nier->actionTimeLimit / 1000;
-        std::ostringstream replyStream;
+        chatTarget->nier->actionTargetUnit = pCommander;
+        int assembleSeconds = chatTarget->nier->actionTimeLimit / 1000;        
         replyStream << "Assemble in " << assembleSeconds << " seconds";
     }
     else if (commandName == "leader")
@@ -605,7 +647,7 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
                 chatTarget->nier->actionTargetUnit = target;
                 chatTarget->nier->actionDuration = 0;
                 chatTarget->nier->actionTargetPos = target->GetPosition();
-                chatTarget->nier->actionTimeLimit = 10000;
+                chatTarget->nier->actionTimeLimit = 5000;
             }
         }
     }
@@ -619,7 +661,7 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
                 chatTarget->nier->actionTargetUnit = target;
                 chatTarget->nier->actionDuration = 0;
                 chatTarget->nier->actionTargetPos = target->GetPosition();
-                chatTarget->nier->actionTimeLimit = 10000;
+                chatTarget->nier->actionTimeLimit = 5000;
             }
         }
     }

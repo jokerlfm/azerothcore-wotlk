@@ -29,7 +29,7 @@ Nier_Mage::Nier_Mage() :Nier_Base()
     aura_Fingers_Of_Frost = 0;
     aura_Fireball = 0;
     item_ManaGem = 0;
-    spell_Portal_Exodar;
+    spell_Portal_Exodar = 0;
     spell_Portal_Dalaran = 0;
     spell_Portal_Orgrimmar = 0;
     spell_Portal_Stormwind = 0;
@@ -47,6 +47,48 @@ bool Nier_Mage::Attack(Unit* pTarget)
     if (!Nier_Base::Attack(pTarget))
     {
         return false;
+    }
+
+    float targetDistance = me->GetDistance(pTarget);
+    if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
+    {
+        return false;
+    }
+
+    ChooseTarget(pTarget);
+    if (targetDistance > VISIBILITY_DISTANCE_TINY)
+    {
+        float destTargetDist = pTarget->GetDistance(actionTargetPos);
+        if (destTargetDist > VISIBILITY_DISTANCE_TINY)
+        {
+            pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, ATTACK_DISTANCE, pTarget->GetAbsoluteAngle(me));
+            me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+        }
+        else
+        {
+            float destDist = me->GetDistance(actionTargetPos);
+            if (destDist > CONTACT_DISTANCE)
+            {
+                if (!me->isMoving())
+                {
+                    me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                }
+            }
+            else
+            {
+                if (me->isMoving())
+                {
+                    me->StopMoving();
+                }
+            }
+        }
+    }
+    else
+    {
+        if (me->isMoving())
+        {
+            me->StopMoving();
+        }
     }
 
     if (spell_Frostbolt > 0)
@@ -95,6 +137,34 @@ bool Nier_Mage::Buff(Unit* pTarget)
     if (!Nier_Base::Buff(pTarget))
     {
         return false;
+    }
+
+    float targetDistance = me->GetDistance(pTarget);
+    if (targetDistance > VISIBILITY_DISTANCE_TINY)
+    {
+        return false;
+    }
+
+    bool doBuff = true;
+    if (spell_ArcaneBrilliance > 0 || spell_ArcaneIntellect > 0)
+    {
+        if (!pTarget->HasAura(spell_ArcaneBrilliance) && !pTarget->HasAura(spell_ArcaneIntellect))
+        {
+            if (spell_ArcaneBrilliance > 0)
+            {
+                if (CastSpell(pTarget, spell_ArcaneBrilliance))
+                {
+                    return true;
+                }
+            }
+            else if (spell_ArcaneIntellect > 0)
+            {
+                if (CastSpell(pTarget, spell_ArcaneIntellect))
+                {
+                    return true;
+                }
+            }
+        }
     }
 
     return false;
@@ -448,6 +518,8 @@ bool Nier_Mage::ResetTalentsAndSpells()
     LearnTalent(62);
     LearnTalent(741);
 
+    me->SendTalentsInfoData(false);
+
     // mage trainer Elsharin
     TrainSpells(5498);
 
@@ -524,18 +596,26 @@ void Nier_Mage::EquipRandomItem(uint32 pEquipSlot)
     }
     else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_BACK)
     {
+        itemClass = 4;
+        itemSubclass = 1;
         inventoryType = 16;
     }
     else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_NECK)
     {
+        itemClass = 4;
+        itemSubclass = 0;
         inventoryType = 2;
     }
     else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER1)
     {
+        itemClass = 4;
+        itemSubclass = 0;
         inventoryType = 11;
     }
     else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_FINGER2)
     {
+        itemClass = 4;
+        itemSubclass = 0;
         inventoryType = 11;
     }
     else if (pEquipSlot == EquipmentSlots::EQUIPMENT_SLOT_MAINHAND)

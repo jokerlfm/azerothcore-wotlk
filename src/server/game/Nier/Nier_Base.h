@@ -48,6 +48,7 @@ enum NierActionState :uint32
     NierActionState_Assist,
     NierActionState_Rest,
     NierActionState_Freeze,
+    NierActionState_Assemble,
 };
 
 enum NierGroupRole :uint32
@@ -97,6 +98,7 @@ public:
     bool Drink();
     bool HealthPotion();
     bool ManaPotion();
+    void MoveToPosition(Position pTargetpos);
 
     void ChooseTarget(Unit* pTarget);
     void ClearTarget();

@@ -2549,3 +2549,26 @@ void Group::DoForAllMembers(std::function<void(Player*)> const& worker)
         worker(member);
     }
 }
+
+// lfm nier
+uint32 Group::GetTargetIconByGuid(ObjectGuid ogTarget)
+{
+    for (uint32 i = 0; i < TARGETICONCOUNT; ++i)
+    {
+        if (m_targetIcons[i] == ogTarget)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// lfm nier
+ObjectGuid Group::GetGuidByTargetIcon(uint32 icon)
+{
+    if (icon >= 0 && icon < TARGETICONCOUNT)
+    {
+        return m_targetIcons[icon];
+    }
+    return ObjectGuid::Empty;
+}

@@ -20,6 +20,9 @@ public:
     void EquipRandomItem(uint32 pEquipSlot);
 
 private:
+    uint32 spell_Shoot;
+    uint32 spell_Smite;
+
     uint32 spell_Renew;
     uint32 spell_LesserHeal;
     uint32 spell_Heal;
