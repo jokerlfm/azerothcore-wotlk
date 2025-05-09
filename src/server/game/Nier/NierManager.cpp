@@ -197,7 +197,7 @@ void NierManager::LogoutNiers(bool pmInstant)
                 {
                     std::ostringstream logStream;
                     logStream << "Logout nier : " << eachPlayer->GetName();
-                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, logStream.str().c_str());
+                    sLog->outMessage(NIER_MARK, LogLevel::LOG_LEVEL_INFO, logStream.str());
                     eachPlayer->GetSession()->LogoutPlayer(true);
                 }
             }

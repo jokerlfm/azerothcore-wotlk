@@ -2419,6 +2419,15 @@ void World::ShutdownServ(uint32 time, uint32 options, uint8 exitcode, std::strin
         ShutdownMsg(true, nullptr, reason);
     }
 
+    // lfm shutdown buffer
+    if (_shutdownTimer < 3)
+    {
+        _shutdownTimer = 3;
+    }
+
+    // lfm nier logout niers
+    sNierManager->LogoutNiers(true);
+
     sScriptMgr->OnShutdownInitiate(ShutdownExitCode(exitcode), ShutdownMask(options));
 }
 

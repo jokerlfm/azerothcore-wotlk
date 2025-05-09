@@ -840,7 +840,7 @@ bool Nier_Base::PVE()
 bool Nier_Base::Wander()
 {
     ClearAction();
-    float distance = frand(VISIBILITY_DISTANCE_TINY, VISIBILITY_DISTANCE_SMALL);
+    float distance = frand(ATTACK_DISTANCE, VISIBILITY_DISTANCE_TINY);
     float angle = frand(0.0f, 2 * M_PI);
     me->GetNearPoint(me, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, me->GetObjectSize(), distance, angle);
     MoveToPosition(actionTargetPos, false);
@@ -966,7 +966,7 @@ bool Nier_Base::Follow()
                 if (destPosTargetDist > followDistance + 1.0f)
                 {
                     leader->GetNearPoint(leader, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, followDistance - 1.0f, leader->GetAbsoluteAngle(me));
-                    me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                    MoveToPosition(actionTargetPos);                    
                 }
                 else
                 {
@@ -975,7 +975,7 @@ bool Nier_Base::Follow()
                     {
                         if (!me->isMoving())
                         {
-                            me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                            MoveToPosition(actionTargetPos);
                         }
                     }
                 }
@@ -1753,7 +1753,7 @@ bool Nier_Base::Chase(Unit* pTarget, float pDistance)
             if (destPosTargetDist > DEFAULT_COMBAT_REACH)
             {
                 pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, pTarget->GetAbsoluteAngle(me));
-                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                MoveToPosition(actionTargetPos);
             }
             else
             {
@@ -1762,7 +1762,7 @@ bool Nier_Base::Chase(Unit* pTarget, float pDistance)
                 {
                     if (!me->isMoving())
                     {
-                        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                        MoveToPosition(actionTargetPos);
                     }
                 }
             }
@@ -1780,7 +1780,7 @@ bool Nier_Base::Chase(Unit* pTarget, float pDistance)
             if (destPosTargetDist > pDistance)
             {
                 pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, pDistance - 1.0f, pTarget->GetAbsoluteAngle(me));
-                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                MoveToPosition(actionTargetPos);
             }
             else
             {
@@ -1789,7 +1789,7 @@ bool Nier_Base::Chase(Unit* pTarget, float pDistance)
                 {
                     if (!me->isMoving())
                     {
-                        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                        MoveToPosition(actionTargetPos);
                     }
                 }
             }
