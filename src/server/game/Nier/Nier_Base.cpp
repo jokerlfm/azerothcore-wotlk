@@ -21,12 +21,16 @@ Nier_Base::Nier_Base()
     character_id = 0;
     target_level = 0;
     target_specialty = 0;
+    target_race = 0;
+    target_class = 0;
 
     me = nullptr;
     actionDuration = 0;
     actionTimeLimit = 0;
     actionTargetUnit = nullptr;
     actionTargetSpell = 0;
+
+    followDistance = 0.0f;
 
     specialty = 0;
     accountState = NierAccountState::NierAccountState_None;
@@ -56,13 +60,11 @@ void Nier_Base::Prepare()
         me->SetPvP(true);
         me->UpdatePvP(true);
         me->DurabilityRepairAll(false, 0, false);
-        if (!me->GetGroup())
+        if (me->GetMap()->Instanceable())
         {
-            if (me->GetMap()->Instanceable())
-            {
-                me->TeleportTo(me->m_homebindMapId, me->m_homebindX, me->m_homebindY, me->m_homebindZ, me->GetOrientation());
-            }
+            me->TeleportTo(me->m_homebindMapId, me->m_homebindX, me->m_homebindY, me->m_homebindZ, me->GetOrientation());
         }
+        followDistance = frand(1.0f, 10.0f);
     }
 }
 
@@ -420,6 +422,7 @@ bool Nier_Base::UpdateAccount()
             }
             replyStream << "nier equipped : " << account_id << " - " << character_id << " - " << me->GetName();
             sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, replyStream.str());
+            Prepare();
             accountState = NierAccountState::NierAccountState_Online;
             checkDelay = urand(1 * IN_MILLISECONDS, 3 * IN_MILLISECONDS);
         }
@@ -549,10 +552,48 @@ bool Nier_Base::UpdateAction()
                 {
                     me->TeleportTo(actionTargetUnit->GetWorldLocation());
                     sNierManager->WhisperTo(targetPlayer, "coming", me);
+                    if (!me->IsAlive())
+                    {
+                        actionState = NierActionState::NierActionState_Corpse;
+                        actionDuration = 0;
+                        actionTimeLimit = urand(1000, 3000);
+                        actionTargetSpell = 0;
+                    }
                 }
             }
         }
         actionResult = false;
+        break;
+    }
+    case NierActionState::NierActionState_Bunch:
+    {
+        if (!me->isMoving())
+        {
+            if (actionTargetUnit)
+            {
+                if (me->GetDistance(actionTargetUnit) > CONTACT_DISTANCE)
+                {
+                    MoveToPosition(actionTargetUnit->GetPosition());
+                }
+            }
+        }
+        break;
+    }
+    case NierActionState::NierActionState_Corpse:
+    {
+        if (actionDuration > actionTimeLimit)
+        {
+            if (!me->IsAlive())
+            {
+                me->ResurrectPlayer(10.0f);
+                me->Say("revived", Language::LANG_UNIVERSAL);
+            }
+        }
+        actionResult = false;
+        break;
+    }
+    case NierActionState::NierActionState_Revive:
+    {
         break;
     }
     default:
@@ -577,6 +618,10 @@ bool Nier_Base::UpdateMind()
         return false;
     }
     if (!me->IsInWorld())
+    {
+        return false;
+    }
+    if (!me->IsAlive())
     {
         return false;
     }
@@ -615,7 +660,7 @@ bool Nier_Base::UpdateMind()
                                 if (Player* tank = ObjectAccessor::FindPlayer(ogTank))
                                 {
                                     float tankDistance = me->GetDistance(tank);
-                                    if (tankDistance < SIGHT_RANGE_UNIT)
+                                    if (tankDistance < VISIBILITY_DISTANCE_NORMAL)
                                     {
                                         if (Heal(tank))
                                         {
@@ -642,10 +687,13 @@ bool Nier_Base::UpdateMind()
                             break;
                         }
                         }
-                        Attack(enemy);
                     }
                 }
             }
+        }
+        if (Rest())
+        {
+            return true;
         }
         for (GroupReference* groupRef = meGroup->GetFirstMember(); groupRef != nullptr; groupRef = groupRef->next())
         {
@@ -655,12 +703,15 @@ bool Nier_Base::UpdateMind()
                 {
                     return true;
                 }
+                if (Revive(member))
+                {
+                    actionState = NierActionState::NierActionState_Revive;
+                    actionTargetUnit = member;
+                    actionDuration = 0;
+                    actionTimeLimit = 12000;
+                    return true;
+                }
             }
-        }
-
-        if (Rest())
-        {
-            return true;
         }
 
         if (Follow())
@@ -789,9 +840,10 @@ bool Nier_Base::PVE()
 bool Nier_Base::Wander()
 {
     ClearAction();
-    float distance = frand(20.0f, 40.0f);
+    float distance = frand(VISIBILITY_DISTANCE_TINY, VISIBILITY_DISTANCE_SMALL);
     float angle = frand(0.0f, 2 * M_PI);
     me->GetNearPoint(me, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, me->GetObjectSize(), distance, angle);
+    MoveToPosition(actionTargetPos, false);
     actionState = NierActionState::NierActionState_Wander;
     actionTimeLimit = urand(5000, 10000);
 
@@ -897,30 +949,34 @@ bool Nier_Base::Follow()
         {
             ChooseTarget(leader);
 
-            float destTargetDist = leader->GetDistance(actionTargetPos);
-            if (destTargetDist > DEFAULT_COMBAT_REACH)
+            if (me->GetDistance(leader) < followDistance)
             {
-                leader->GetNearPoint(leader, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, leader->GetAbsoluteAngle(me));
-                MoveToPosition(actionTargetPos);
-                return true;
+                if (me->isMoving())
+                {
+                    me->StopMoving();
+                }
+                if (!me->isInFront(leader, M_PI_2))
+                {
+                    me->SetFacingToObject(leader);
+                }
             }
             else
             {
-                float destDist = me->GetDistance(actionTargetPos);
-                if (destDist > CONTACT_DISTANCE)
+                float destPosTargetDist = leader->GetDistance(actionTargetPos);
+                if (destPosTargetDist > followDistance + 1.0f)
                 {
-                    if (!me->isMoving())
-                    {
-                        MoveToPosition(actionTargetPos);
-                        return true;
-                    }
+                    leader->GetNearPoint(leader, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, followDistance - 1.0f, leader->GetAbsoluteAngle(me));
+                    me->GetMotionMaster()->MovePoint(0, actionTargetPos);
                 }
                 else
                 {
-                    if (me->isMoving())
+                    float destPosMeDist = me->GetDistance(actionTargetPos);
+                    if (destPosMeDist > CONTACT_DISTANCE)
                     {
-                        me->StopMoving();
-                        return true;
+                        if (!me->isMoving())
+                        {
+                            me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                        }
                     }
                 }
             }
@@ -970,6 +1026,14 @@ bool Nier_Base::Revive(Unit* pTarget)
         return false;
     }
     if (pTarget->GetTypeId() != TypeID::TYPEID_PLAYER)
+    {
+        return false;
+    }
+    if (pTarget->IsAlive())
+    {
+        return false;
+    }
+    if (me->GetDistance(pTarget) > VISIBILITY_DISTANCE_TINY)
     {
         return false;
     }
@@ -1229,7 +1293,7 @@ bool Nier_Base::CastSpell(Unit* pmTarget, uint32 pmSpellId, bool pmCheckAura, bo
                     }
                 }
             }
-            if (!me->isInFront(pmTarget, M_PI / 2))
+            if (!me->isInFront(pmTarget, M_PI_2))
             {
                 me->SetFacingToObject(pmTarget);
             }
@@ -1635,7 +1699,7 @@ Player* Nier_Base::GetNearbyHostilePlayer()
 Unit* Nier_Base::GetNearbyHostileUnit()
 {
     std::list<Creature*> creatureList;
-    me->GetCreatureListWithEntryInGrid(creatureList, 0, VISIBILITY_DISTANCE_NORMAL);
+    me->GetCreatureListWithEntryInGrid(creatureList, 0, VISIBILITY_DISTANCE_TINY);
     if (!creatureList.empty())
     {
         for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
@@ -1659,8 +1723,90 @@ Unit* Nier_Base::GetNearbyHostileUnit()
     return nullptr;
 }
 
-void Nier_Base::MoveToPosition(Position pTargetpos)
+void Nier_Base::MoveToPosition(Position pTargetpos, bool pRun)
 {
     me->SetStandState(UnitStandStateType::UNIT_STAND_STATE_STAND);
+    if (pRun)
+    {
+        me->SetWalk(false);
+    }
+    else
+    {
+        me->SetWalk(true);
+    }
     me->GetMotionMaster()->MovePoint(0, pTargetpos);
+}
+
+bool Nier_Base::Chase(Unit* pTarget, float pDistance)
+{
+    bool inPosition = false;
+
+    if (pDistance < ATTACK_DISTANCE)
+    {
+        if (me->IsWithinMeleeRange(pTarget))
+        {
+            inPosition = true;
+        }
+        else
+        {
+            float destPosTargetDist = pTarget->GetDistance(actionTargetPos);
+            if (destPosTargetDist > DEFAULT_COMBAT_REACH)
+            {
+                pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, pTarget->GetAbsoluteAngle(me));
+                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+            }
+            else
+            {
+                float destPosMeDist = me->GetDistance(actionTargetPos);
+                if (destPosMeDist > CONTACT_DISTANCE)
+                {
+                    if (!me->isMoving())
+                    {
+                        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        if (me->GetDistance(pTarget) < pDistance)
+        {
+            inPosition = true;
+        }
+        else
+        {
+            float destPosTargetDist = pTarget->GetDistance(actionTargetPos);
+            if (destPosTargetDist > pDistance)
+            {
+                pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, pDistance - 1.0f, pTarget->GetAbsoluteAngle(me));
+                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+            }
+            else
+            {
+                float destPosMeDist = me->GetDistance(actionTargetPos);
+                if (destPosMeDist > CONTACT_DISTANCE)
+                {
+                    if (!me->isMoving())
+                    {
+                        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                    }
+                }
+            }
+        }
+    }
+
+    if (inPosition)
+    {
+        if (me->isMoving())
+        {
+            me->StopMoving();
+        }
+        if (!me->isInFront(pTarget, M_PI_2))
+        {
+            me->SetFacingToObject(pTarget);
+        }
+    }
+
+    return inPosition;
 }

@@ -619,7 +619,14 @@ void NierManager::HandleChatCommand(Player* pCommander, std::string pCommand, Pl
         chatTarget->nier->actionTimeLimit = urand(10000, 20000);
         chatTarget->nier->actionTargetUnit = pCommander;
         int assembleSeconds = chatTarget->nier->actionTimeLimit / 1000;        
-        replyStream << "Assemble in " << assembleSeconds << " seconds";
+        replyStream << "assemble in " << assembleSeconds << " seconds";
+    }
+    else if (commandName == "bunch")
+    {
+        chatTarget->nier->actionState = NierActionState::NierActionState_Bunch;
+        chatTarget->nier->actionTimeLimit = 5000;
+        chatTarget->nier->actionTargetUnit = pCommander;
+        replyStream << "bunch up";
     }
     else if (commandName == "leader")
     {
@@ -780,6 +787,7 @@ void NierManager::HandlePacket(const WorldSession* pSession, WorldPacket pPacket
                     std::ostringstream replyStream_Talent;
                     if (Player* inviter = ObjectAccessor::FindPlayer(grp->GetLeaderGUID()))
                     {
+                        nb->Prepare();
                         WhisperTo(inviter, "Greetings! Master", receiver);
                     }
                 }

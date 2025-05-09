@@ -56,32 +56,6 @@ bool Nier_Warrior::Attack(Unit* pTarget)
         return false;
     }
 
-    ChooseTarget(pTarget);
-    me->Attack(pTarget, true);
-    float destTargetDist = pTarget->GetDistance(actionTargetPos);
-    if (destTargetDist > DEFAULT_COMBAT_REACH)
-    {
-        pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, pTarget->GetAbsoluteAngle(me));
-        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-    }
-    else
-    {
-        float destDist = me->GetDistance(actionTargetPos);
-        if (destDist > CONTACT_DISTANCE)
-        {
-            if (!me->isMoving())
-            {
-                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-            }
-        }
-        else
-        {
-            if (me->isMoving())
-            {
-                me->StopMoving();
-            }
-        }
-    }
     float myHealthPCT = me->GetHealthPct();
     if (targetDistance < VISIBILITY_DISTANCE_TINY)
     {
@@ -103,7 +77,9 @@ bool Nier_Warrior::Attack(Unit* pTarget)
             }
         }
     }
-    if (me->IsWithinMeleeRange(pTarget))
+    ChooseTarget(pTarget);
+    me->Attack(pTarget, true);
+    if (Chase(pTarget))
     {
         uint32 myRage = me->GetPower(Powers::POWER_RAGE);
         if (myRage > 200)
@@ -201,42 +177,11 @@ bool Nier_Warrior::Tank(Unit* pTarget)
         return false;
     }
 
-    float targetDistance = me->GetDistance(pTarget);
-    if (targetDistance > VISIBILITY_DISTANCE_NORMAL)
-    {
-        return false;
-    }
-
     ChooseTarget(pTarget);
     me->Attack(pTarget, true);
-    float destTargetDist = pTarget->GetDistance(actionTargetPos);
-    if (destTargetDist > DEFAULT_COMBAT_REACH)
+    if (Chase(pTarget))
     {
-        pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, pTarget->GetAbsoluteAngle(me));
-        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-    }
-    else
-    {
-        float destDist = me->GetDistance(actionTargetPos);
-        if (destDist > CONTACT_DISTANCE)
-        {
-            if (!me->isMoving())
-            {
-                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-            }
-        }
-        else
-        {
-            if (me->isMoving())
-            {
-                me->StopMoving();
-            }
-        }
-    }
-    float myHealthPCT = me->GetHealthPct();
-    if (targetDistance < VISIBILITY_DISTANCE_TINY)
-    {
-        if (myHealthPCT < 20.0f)
+        if (me->GetHealthPct() < 20.0f)
         {
             if (spell_ShieldWall > 0)
             {
@@ -253,9 +198,6 @@ bool Nier_Warrior::Tank(Unit* pTarget)
                 }
             }
         }
-    }
-    if (me->IsWithinMeleeRange(pTarget))
-    {
         uint32 myRage = me->GetPower(Powers::POWER_RAGE);
         if (spell_Taunt > 0)
         {
@@ -264,24 +206,18 @@ bool Nier_Warrior::Tank(Unit* pTarget)
                 return true;
             }
         }
-        if (spell_DemoralizingShout > 0)
-        {
-            if (spellDelay_DemoralizingShout < 0)
-            {
-                if (targetDistance < INTERACTION_DISTANCE)
-                {
-                    if (CastSpell(pTarget, spell_DemoralizingShout, true))
-                    {
-                        spellDelay_DemoralizingShout = DEFAULT_WARRIOR_SPELL_DELAY;
-                        return true;
-                    }
-                }
-            }
-        }
         if (spell_ThunderClap > 0)
         {
             if (CastSpell(pTarget, spell_ThunderClap))
             {
+                return true;
+            }
+        }
+        if (spell_DemoralizingShout > 0)
+        {
+            if (CastSpell(pTarget, spell_DemoralizingShout, true))
+            {
+                spellDelay_DemoralizingShout = DEFAULT_WARRIOR_SPELL_DELAY;
                 return true;
             }
         }
@@ -313,7 +249,7 @@ bool Nier_Warrior::Tank(Unit* pTarget)
         {
             if (spellDelay_BattleShout < 0)
             {
-                if (CastSpell(nullptr, spell_BattleShout, true))
+                if (CastSpell(me, spell_BattleShout, true))
                 {
                     spellDelay_BattleShout = DEFAULT_WARRIOR_SPELL_DELAY;
                     return true;

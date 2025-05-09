@@ -56,34 +56,6 @@ public:
 private:
     uint64 timeValue;
 };
-
-class AllCreaturesOfEntryInRange_Nier
-{
-public:
-    AllCreaturesOfEntryInRange_Nier(WorldObject const* pObject, uint32 uiEntry, float fMaxRange) : m_pObject(pObject), m_uiEntry(uiEntry), m_fRange(fMaxRange) {}
-    bool operator() (Unit* pUnit)
-    {
-        if (m_uiEntry > 0)
-        {
-            if (pUnit->GetEntry() != m_uiEntry)
-            {
-                return false;
-            }
-        }
-        if (!m_pObject->IsWithinDist(pUnit, m_fRange, false))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-private:
-    WorldObject const* m_pObject;
-    uint32 m_uiEntry;
-    float m_fRange;
-};
-
 #define sNierManager NierManager::instance()
 
 #endif

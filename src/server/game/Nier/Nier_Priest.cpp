@@ -64,101 +64,70 @@ bool Nier_Priest::Heal(Unit* pTarget)
     }
 
     ChooseTarget(pTarget);
-    if (targetDistance > VISIBILITY_DISTANCE_TINY)
+    if (Chase(pTarget))
     {
-        float destTargetDist = pTarget->GetDistance(actionTargetPos);
-        if (destTargetDist > VISIBILITY_DISTANCE_TINY)
+        float targetHealthPct = pTarget->GetHealthPct();
+        if (targetHealthPct < 90.0f)
         {
-            pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, ATTACK_DISTANCE, pTarget->GetAbsoluteAngle(me));
-            me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-        }
-        else
-        {
-            float destDist = me->GetDistance(actionTargetPos);
-            if (destDist > CONTACT_DISTANCE)
+            if (targetHealthPct < 30.0f)
             {
-                if (!me->isMoving())
+                if (spell_PowerWord_Shield > 0)
                 {
-                    me->GetMotionMaster()->MovePoint(0, actionTargetPos);
+                    if (!pTarget->HasAura(spell_Weakened_Soul))
+                    {
+                        if (CastSpell(pTarget, spell_PowerWord_Shield))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
-            else
+            if (spell_Renew > 0)
             {
-                if (me->isMoving())
+                if (CastSpell(pTarget, spell_Renew, true, true))
                 {
-                    me->StopMoving();
+                    return true;
                 }
             }
-        }
-    }
-    else
-    {
-        if (me->isMoving())
-        {
-            me->StopMoving();
-        }
-    }
-
-    float targetHealthPct = pTarget->GetHealthPct();
-    if (targetHealthPct < 90.0f)
-    {
-        if (targetHealthPct < 30.0f)
-        {
-            if (spell_PowerWord_Shield > 0)
+            if (targetHealthPct < 70.0f)
             {
-                if (!pTarget->HasAura(spell_Weakened_Soul))
+                if (spell_GreaterHeal > 0)
                 {
-                    if (CastSpell(pTarget, spell_PowerWord_Shield))
+                    if (spell_InnerFocus > 0)
+                    {
+                        CastSpell(me, spell_InnerFocus);
+                    }
+                    if (CastSpell(pTarget, spell_GreaterHeal))
+                    {
+                        return true;
+                    }
+                }
+                if (spell_Heal > 0)
+                {
+                    if (CastSpell(pTarget, spell_Heal))
+                    {
+                        return true;
+                    }
+                }
+                if (spell_LesserHeal > 0)
+                {
+                    if (CastSpell(pTarget, spell_LesserHeal))
+                    {
+                        return true;
+                    }
+                }
+                if (spell_FlashHeal > 0)
+                {
+                    if (CastSpell(pTarget, spell_FlashHeal))
                     {
                         return true;
                     }
                 }
             }
         }
-        if (spell_Renew > 0)
-        {
-            if (CastSpell(pTarget, spell_Renew, true, true))
-            {
-                return true;
-            }
-        }
-        if (targetHealthPct < 70.0f)
-        {
-            if (spell_GreaterHeal > 0)
-            {
-                if (spell_InnerFocus > 0)
-                {
-                    CastSpell(me, spell_InnerFocus);
-                }
-                if (CastSpell(pTarget, spell_GreaterHeal))
-                {
-                    return true;
-                }
-            }
-            if (spell_Heal > 0)
-            {
-                if (CastSpell(pTarget, spell_Heal))
-                {
-                    return true;
-                }
-            }
-            if (spell_LesserHeal > 0)
-            {
-                if (CastSpell(pTarget, spell_LesserHeal))
-                {
-                    return true;
-                }
-            }
-            if (spell_FlashHeal > 0)
-            {
-                if (CastSpell(pTarget, spell_FlashHeal))
-                {
-                    return true;
-                }
-            }
-        }
     }
-    return false;
+
+    return true;
 }
 
 bool Nier_Priest::Cure(Unit* pTarget)
@@ -207,6 +176,15 @@ bool Nier_Priest::Revive(Unit* pTarget)
     if (!Nier_Base::Revive(pTarget))
     {
         return false;
+    }
+
+    ChooseTarget(pTarget);
+    if (spell_Resurrection > 0)
+    {
+        if (CastSpell(pTarget, spell_Resurrection))
+        {
+            return true;
+        }
     }
 
     return true;

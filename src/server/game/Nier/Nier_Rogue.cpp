@@ -44,32 +44,6 @@ bool Nier_Rogue::Attack(Unit* pTarget)
         return false;
     }
 
-    ChooseTarget(pTarget);
-    me->Attack(pTarget, true);
-    float destTargetDist = pTarget->GetDistance(actionTargetPos);
-    if (destTargetDist > DEFAULT_COMBAT_REACH)
-    {
-        pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, CONTACT_DISTANCE, pTarget->GetAbsoluteAngle(me));
-        me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-    }
-    else
-    {
-        float destDist = me->GetDistance(actionTargetPos);
-        if (destDist > CONTACT_DISTANCE)
-        {
-            if (!me->isMoving())
-            {
-                me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-            }
-        }
-        else
-        {
-            if (me->isMoving())
-            {
-                me->StopMoving();
-            }
-        }
-    }
     if (targetDistance > VISIBILITY_DISTANCE_TINY)
     {
         if (CastSpell(me, spell_Sprint))
@@ -77,10 +51,12 @@ bool Nier_Rogue::Attack(Unit* pTarget)
             return true;
         }
     }
-    uint32 myEnergy = me->GetPower(Powers::POWER_ENERGY);
-    uint32 comboPoints = me->GetComboPoints();
-    if (me->IsWithinMeleeRange(pTarget))
+    ChooseTarget(pTarget);
+    me->Attack(pTarget, true);
+    if (Chase(pTarget))
     {
+        uint32 myEnergy = me->GetPower(Powers::POWER_ENERGY);
+        uint32 comboPoints = me->GetComboPoints();
         if (me->HasAura(spell_Stealth))
         {
             if (const SpellInfo* pS = sSpellMgr->GetSpellInfo(spell_CheapShot))

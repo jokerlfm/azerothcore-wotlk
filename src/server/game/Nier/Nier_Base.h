@@ -49,6 +49,9 @@ enum NierActionState :uint32
     NierActionState_Rest,
     NierActionState_Freeze,
     NierActionState_Assemble,
+    NierActionState_Bunch,
+    NierActionState_Revive,
+    NierActionState_Corpse,
 };
 
 enum NierGroupRole :uint32
@@ -83,6 +86,7 @@ public:
     bool PVE();
     bool PVP();
     bool Follow();
+    bool Chase(Unit* pTarget, float pDistance = CONTACT_DISTANCE);
 
     void RemoveEquipments();
     void LearnTalent(uint32 pTalentId, uint32 pMaxRank = MAX_TALENT_RANK);
@@ -98,7 +102,7 @@ public:
     bool Drink();
     bool HealthPotion();
     bool ManaPotion();
-    void MoveToPosition(Position pTargetpos);
+    void MoveToPosition(Position pTargetpos, bool pRun = true);
 
     void ChooseTarget(Unit* pTarget);
     void ClearTarget();
@@ -115,6 +119,8 @@ public:
     Unit* actionTargetUnit;
     Position actionTargetPos;
     uint32 actionTargetSpell;
+
+    float followDistance;
 
     uint32 specialty;
     uint32 accountState;

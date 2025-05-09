@@ -56,46 +56,14 @@ bool Nier_Mage::Attack(Unit* pTarget)
     }
 
     ChooseTarget(pTarget);
-    if (targetDistance > VISIBILITY_DISTANCE_TINY)
+    if (Chase(pTarget, VISIBILITY_DISTANCE_TINY))
     {
-        float destTargetDist = pTarget->GetDistance(actionTargetPos);
-        if (destTargetDist > VISIBILITY_DISTANCE_TINY)
+        if (spell_Frostbolt > 0)
         {
-            pTarget->GetNearPoint(pTarget, actionTargetPos.m_positionX, actionTargetPos.m_positionY, actionTargetPos.m_positionZ, 0.0f, ATTACK_DISTANCE, pTarget->GetAbsoluteAngle(me));
-            me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-        }
-        else
-        {
-            float destDist = me->GetDistance(actionTargetPos);
-            if (destDist > CONTACT_DISTANCE)
+            if (CastSpell(pTarget, spell_Frostbolt))
             {
-                if (!me->isMoving())
-                {
-                    me->GetMotionMaster()->MovePoint(0, actionTargetPos);
-                }
+                return true;
             }
-            else
-            {
-                if (me->isMoving())
-                {
-                    me->StopMoving();
-                }
-            }
-        }
-    }
-    else
-    {
-        if (me->isMoving())
-        {
-            me->StopMoving();
-        }
-    }
-
-    if (spell_Frostbolt > 0)
-    {
-        if (CastSpell(pTarget, spell_Frostbolt))
-        {
-            return true;
         }
     }
 
