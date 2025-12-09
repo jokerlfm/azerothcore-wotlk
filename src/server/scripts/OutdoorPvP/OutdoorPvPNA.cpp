@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -16,6 +16,7 @@
  */
 
 #include "OutdoorPvPNA.h"
+#include "AreaDefines.h"
 #include "CreatureScript.h"
 #include "GameGraveyard.h"
 #include "GridNotifiers.h"
@@ -59,7 +60,7 @@ void OutdoorPvPNA::HandleKill(Player* killer, Unit* killed)
 
             // creature kills must be notified, even if not inside objective / not outdoor pvp active
             // player kills only count if active and inside objective
-            if ((groupGuy->IsOutdoorPvPActive() && groupGuy->GetAreaId() == NA_HALAA_ZONE_ID) || killed->IsCreature())
+            if ((groupGuy->IsOutdoorPvPActive() && groupGuy->GetAreaId() == AREA_HALAA) || killed->IsCreature())
             {
                 HandleKillImpl(groupGuy, killed);
             }
@@ -68,7 +69,7 @@ void OutdoorPvPNA::HandleKill(Player* killer, Unit* killed)
     else
     {
         // creature kills must be notified, even if not inside objective / not outdoor pvp active
-        if (killer && ((killer->IsOutdoorPvPActive() && killer->ToPlayer()->GetAreaId() == NA_HALAA_ZONE_ID) || killed->IsCreature()))
+        if (killer && ((killer->IsOutdoorPvPActive() && killer->ToPlayer()->GetAreaId() == AREA_HALAA) || killed->IsCreature()))
         {
             HandleKillImpl(killer, killed);
         }
@@ -196,9 +197,9 @@ void OPvPCapturePointNA::FactionTakeOver(TeamId teamId)
     if (m_ControllingFaction != TEAM_NEUTRAL)
         sGraveyard->RemoveGraveyardLink(NA_HALAA_GRAVEYARD, NA_HALAA_GRAVEYARD_ZONE, m_ControllingFaction, false);
     if (m_ControllingFaction == TEAM_ALLIANCE)
-        sWorldSessionMgr->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_LOSE_A));
+        _pvp->GetMap()->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_LOSE_A).c_str());
     else if (m_ControllingFaction == TEAM_HORDE)
-        sWorldSessionMgr->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_LOSE_H));
+        _pvp->GetMap()->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_LOSE_H).c_str());
     DespawnCreatures(GetControllingFaction() == TEAM_HORDE ? halaaNPCHorde : halaaNPCAlly);
     m_ControllingFaction = teamId;
     if (m_ControllingFaction != TEAM_NEUTRAL)
@@ -220,7 +221,7 @@ void OPvPCapturePointNA::FactionTakeOver(TeamId teamId)
         _pvp->SendUpdateWorldState(WORLD_STATE_OPVP_NA_UI_HORDE_GUARDS_SHOW, 0);
         _pvp->SendUpdateWorldState(WORLD_STATE_OPVP_NA_UI_ALLIANCE_GUARDS_SHOW, 1);
         _pvp->SendUpdateWorldState(WORLD_STATE_OPVP_NA_UI_GUARDS_LEFT, m_GuardsAlive);
-        sWorldSessionMgr->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_CAPTURE_A));
+        _pvp->GetMap()->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_CAPTURE_A).c_str());
     }
     else
     {
@@ -232,7 +233,7 @@ void OPvPCapturePointNA::FactionTakeOver(TeamId teamId)
         _pvp->SendUpdateWorldState(WORLD_STATE_OPVP_NA_UI_HORDE_GUARDS_SHOW, 1);
         _pvp->SendUpdateWorldState(WORLD_STATE_OPVP_NA_UI_ALLIANCE_GUARDS_SHOW, 0);
         _pvp->SendUpdateWorldState(WORLD_STATE_OPVP_NA_UI_GUARDS_LEFT, m_GuardsAlive);
-        sWorldSessionMgr->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_CAPTURE_H));
+        _pvp->GetMap()->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_CAPTURE_H).c_str());
     }
     UpdateWyvernRoostWorldState(NA_ROOST_S);
     UpdateWyvernRoostWorldState(NA_ROOST_N);
@@ -264,7 +265,7 @@ OPvPCapturePointNA::OPvPCapturePointNA(OutdoorPvP* pvp) :
     m_WyvernStateNorth(0), m_WyvernStateSouth(0), m_WyvernStateEast(0), m_WyvernStateWest(0),
     m_HalaaState(HALAA_N), m_RespawnTimer(NA_RESPAWN_TIME), m_GuardCheckTimer(NA_GUARD_CHECK_TIME), m_canRecap(true)
 {
-    SetCapturePointData(182210, 530, -1572.57f, 7945.3f, -22.475f, 2.05949f, 0.0f, 0.0f, 0.857167f, 0.515038f);
+    SetCapturePointData(182210, MAP_OUTLAND, -1572.57f, 7945.3f, -22.475f, 2.05949f, 0.0f, 0.0f, 0.857167f, 0.515038f);
 }
 
 bool OutdoorPvPNA::SetupOutdoorPvP()
@@ -614,7 +615,7 @@ bool OPvPCapturePointNA::Update(uint32 diff)
     std::list<Player*> players;
     Acore::AnyPlayerInObjectRangeCheck checker(_capturePoint, radius);
     Acore::PlayerListSearcher<Acore::AnyPlayerInObjectRangeCheck> searcher(_capturePoint, players, checker);
-    Cell::VisitWorldObjects(_capturePoint, searcher, radius);
+    Cell::VisitObjects(_capturePoint, searcher, radius);
 
     for (Player* player : players)
     {
@@ -636,7 +637,7 @@ bool OPvPCapturePointNA::Update(uint32 diff)
             {
                 m_capturable = true;
                 m_RespawnTimer = NA_RESPAWN_TIME;
-                sWorldSessionMgr->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_DEFENSELESS));
+                _pvp->GetMap()->SendZoneText(NA_HALAA_GRAVEYARD_ZONE, sObjectMgr->GetAcoreStringForDBCLocale(LANG_OPVP_NA_DEFENSELESS).c_str());
             }
             else
                 m_capturable = false;
@@ -815,7 +816,7 @@ void OPvPCapturePointNA::ChangeState()
             break;
     }
 
-    auto bounds = sMapMgr->FindMap(530, 0)->GetGameObjectBySpawnIdStore().equal_range(m_capturePointSpawnId);
+    auto bounds = sMapMgr->FindMap(MAP_OUTLAND, 0)->GetGameObjectBySpawnIdStore().equal_range(m_capturePointSpawnId);
     for (auto itr = bounds.first; itr != bounds.second; ++itr)
         itr->second->SetGoArtKit(artkit);
 

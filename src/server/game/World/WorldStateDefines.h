@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -595,12 +595,6 @@ enum WorldStateIDs
     // Trial of the Crusader
     WORLD_STATE_TRIAL_OF_THE_CRUSADER_UI_COUNT = 4389,
     WORLD_STATE_TRIAL_OF_THE_CRUSADER_UI_SHOW  = 4390,
-
-    // Unknown
-    WORLD_STATE_GENERIC_UNK_0 = 2322,
-    WORLD_STATE_GENERIC_UNK_1 = 2323,
-    WORLD_STATE_GENERIC_UNK_2 = 2324,
-    WORLD_STATE_GENERIC_UNK_3 = 2325,
 
     // Stranglethorn Fishing Extravaganza (Are these custom IDs?)
     WORLD_STATE_STRANGLETHORN_VALE_FISHING_PREV_WIN_TIME          = 197,

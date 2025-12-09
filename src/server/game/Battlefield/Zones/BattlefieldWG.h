@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -21,6 +21,7 @@
 #include "Battlefield.h"
 #include "Log.h"
 #include "World.h"
+#include "WorldState.h"
 #include "WorldStateDefines.h"
 #include "WorldStatePackets.h"
 
@@ -98,20 +99,6 @@ enum WintergraspData
     BATTLEFIELD_WG_DATA_VEHICLE_A,
     BATTLEFIELD_WG_DATA_VEHICLE_H,
     BATTLEFIELD_WG_DATA_MAX,
-};
-
-enum WintergraspAreaIds
-{
-    BATTLEFIELD_WG_ZONEID           = 4197,             // Wintergrasp
-    BATTLEFIELD_WG_MAPID            = 571,              // Northrend
-
-    AREA_WINTERGRASP_FORTRESS       = 4575,
-    AREA_THE_SUNKEN_RING            = 4538,
-    AREA_THE_BROKEN_TEMPLE          = 4539,
-    AREA_WESTPARK_WORKSHOP          = 4611,
-    AREA_EASTPARK_WORKSHOP          = 4612,
-    AREA_WINTERGRASP                = 4197,
-    AREA_THE_CHILLED_QUAGMIRE       = 4589,
 };
 
 /*#########################
@@ -1238,7 +1225,7 @@ struct BfWGGameObjectBuilding
                 break;
         }
 
-        m_State = sWorld->getWorldState(m_WorldState);
+        m_State = sWorldState->getWorldState(m_WorldState);
         if (gobj)
         {
             switch (m_State)
@@ -1418,7 +1405,7 @@ struct BfWGGameObjectBuilding
 
     void Save()
     {
-        sWorld->setWorldState(m_WorldState, m_State);
+        sWorldState->setWorldState(m_WorldState, m_State);
     }
 };
 
@@ -1503,7 +1490,7 @@ struct WGWorkshop
 
     void Save()
     {
-        sWorld->setWorldState(WorkshopsData[workshopId].worldstate, state);
+        sWorldState->setWorldState(WorkshopsData[workshopId].worldstate, state);
     }
 };
 

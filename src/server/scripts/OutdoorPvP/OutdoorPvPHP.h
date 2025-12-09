@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -22,8 +22,16 @@
 #include "WorldStateDefines.h"
 
 #define OutdoorPvPHPBuffZonesNum 6
-//  HP, citadel, ramparts, blood furnace, shattered halls, mag's lair
-const uint32 OutdoorPvPHPBuffZones[OutdoorPvPHPBuffZonesNum] = { 3483, 3563, 3562, 3713, 3714, 3836 };
+
+const uint32 OutdoorPvPHPBuffZones[OutdoorPvPHPBuffZonesNum] =
+{
+    AREA_HELLFIRE_PENINSULA,
+    AREA_HELLFIRE_CITADEL,
+    AREA_HELLFIRE_RAMPARTS,
+    AREA_THE_BLOOD_FURNACE,
+    AREA_THE_SHATTERED_HALLS,
+    AREA_MAGTHERIDONS_LAIR
+};
 
 enum OutdoorPvPHPSpells
 {
@@ -61,16 +69,16 @@ const uint32 HP_TowerArtKit_N[HP_TOWER_NUM] = {66, 63, 69};
 
 const go_type HPCapturePoints[HP_TOWER_NUM] =
 {
-    {182175, 530, -471.462f, 3451.09f, 34.6432f, 0.174533f, 0.0f, 0.0f, 0.087156f, 0.996195f},      // 0 - Broken Hill
-    {182174, 530, -184.889f, 3476.93f, 38.205f, -0.017453f, 0.0f, 0.0f, 0.008727f, -0.999962f},     // 1 - Overlook
-    {182173, 530, -290.016f, 3702.42f, 56.6729f, 0.034907f, 0.0f, 0.0f, 0.017452f, 0.999848f}     // 2 - Stadium
+    {182175, MAP_OUTLAND, -471.462f, 3451.09f, 34.6432f, 0.174533f, 0.0f, 0.0f, 0.087156f, 0.996195f},      // 0 - Broken Hill
+    {182174, MAP_OUTLAND, -184.889f, 3476.93f, 38.205f, -0.017453f, 0.0f, 0.0f, 0.008727f, -0.999962f},     // 1 - Overlook
+    {182173, MAP_OUTLAND, -290.016f, 3702.42f, 56.6729f, 0.034907f, 0.0f, 0.0f, 0.017452f, 0.999848f}     // 2 - Stadium
 };
 
 const go_type HPTowerFlags[HP_TOWER_NUM] =
 {
-    {183514, 530, -467.078f, 3528.17f, 64.7121f, 3.14159f, 0.0f, 0.0f, 1.0f, 0.0f},  // 0 broken hill
-    {182525, 530, -187.887f, 3459.38f, 60.0403f, -3.12414f, 0.0f, 0.0f, 0.999962f, -0.008727f}, // 1 overlook
-    {183515, 530, -289.610f, 3696.83f, 75.9447f, 3.12414f, 0.0f, 0.0f, 0.999962f, 0.008727f} // 2 stadium
+    {183514, MAP_OUTLAND, -467.078f, 3528.17f, 64.7121f, 3.14159f, 0.0f, 0.0f, 1.0f, 0.0f},  // 0 broken hill
+    {182525, MAP_OUTLAND, -187.887f, 3459.38f, 60.0403f, -3.12414f, 0.0f, 0.0f, 0.999962f, -0.008727f}, // 1 overlook
+    {183515, MAP_OUTLAND, -289.610f, 3696.83f, 75.9447f, 3.12414f, 0.0f, 0.0f, 0.999962f, 0.008727f} // 2 stadium
 };
 
 class OPvPCapturePointHP : public OPvPCapturePoint
